@@ -1,4 +1,4 @@
-import subprocess
+﻿import subprocess
 import json
 import time
 import asyncio
@@ -8,7 +8,8 @@ from botpy import logging
 from utils.interact import *
 
 _log = logging.get_logger()
-_path = "/home/floatingcean/fjnuacm_rank"
+_path = "C:\\Users\\caiyunsen\\Desktop\\fjnuacm_rank"
+_jdk = _path + "\\jdk\\bin"
 
 
 def classify_verdicts(content):
@@ -41,6 +42,7 @@ def classify_verdicts(content):
 
 
 def run_shell(shell):
+    _log.info(shell)
     cmd = subprocess.Popen(shell, stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE,
                            universal_newlines=True, shell=True, bufsize=1)
     result = ""
@@ -62,10 +64,11 @@ def run_shell(shell):
 async def execute_lib_method(prop, me=None, message=None):
     for _t in range(1, 11):
         run = run_shell(
-            f"sudo java -DproxyHost=127.0.0.1 -DproxyPort=7890 -Djava.net.useSystemProxies=true -jar "
-            f"{_path}/lib/module_peeper_fjnuoj.jar {prop}")
+            # f"java -DproxyHost=127.0.0.1 -DproxyPort=7890 -Djava.net.useSystemProxies=true -jar "
+            f"{_jdk}\\java.exe -jar "
+            f"{_path}\\lib\\module_peeper_fjnuoj.jar {prop}")
 
-        result_file = open(f"{_path}/lib/bug/out.txt")
+        result_file = open(f"{_path}\\lib\\bug\\out.txt")
         result = result_file.read()
         if result == "ok":
             return run

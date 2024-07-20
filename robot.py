@@ -1,4 +1,4 @@
-import os
+﻿import os
 import time
 import re
 
@@ -164,4 +164,4 @@ if __name__ == "__main__":
     noon_thread = threading.Thread(target=noon_sched_thread, args=[asyncio.get_event_loop(), client])
     noon_thread.start()
 
-    client.run(appid=test_config["appid"], token=test_config["token"])
+    client.run(appid=test_config["appid"], secret=test_config["secret"])
