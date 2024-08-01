@@ -10,6 +10,7 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 
 from utils.cf import reply_cf_request
 from utils.oj_lib import *
+from utils.uptime import send_is_alive
 
 _config = read(os.path.join(os.path.dirname(__file__), "config.yaml"))
 _log = logging.get_logger()

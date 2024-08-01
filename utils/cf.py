@@ -3,7 +3,7 @@ import re
 import time
 from typing import Any, Tuple
 
-import httpx
+import requests
 
 from utils.interact import *
 
@@ -14,20 +14,17 @@ async def get_json(url: str) -> Any:
                       "Chrome/91.0.4472.77 Safari/537.36",
         'Connection': 'close'
     }
-    try:
-        async with httpx.AsyncClient() as client:
-            response = await client.get(url=url, headers=headers)
-        json_data = response.json()
-        return json_data
-    except:
-        return -1
+    response = requests.post(url, headers=headers)
+
+    if response.status_code == 200:
+        return response.json()
+    else:
+        raise ConnectionError(f"Filed to connect {url}, code {response.status_code}.")
 
 
 async def get_prob_tags_all() -> list[str] | None:
     url = f"https://codeforces.com/api/problemset.problems"
     json_data = await get_json(url)
-    if json_data == -1:
-        return None
     tags = []
     for problems in json_data['result']['problems']:
         for tag in problems['tags']:
@@ -37,7 +34,7 @@ async def get_prob_tags_all() -> list[str] | None:
 
 
 async def get_prob_filter_tag(message: RobotMessage, tag_needed: str,
-                              limit: str = None, newer: bool = False) -> Tuple[str, str] | None:
+                              limit: str = None, newer: bool = False) -> dict | None:
     if tag_needed == "all":
         url = f"https://codeforces.com/api/problemset.problems"
     else:
@@ -57,8 +54,6 @@ async def get_prob_filter_tag(message: RobotMessage, tag_needed: str,
         url = f"https://codeforces.com/api/problemset.problems?tags={now_tag}"
 
     json_data = await get_json(url)
-    if json_data == -1:
-        return None
 
     min_point = 0
     max_point = 0
@@ -68,53 +63,56 @@ async def get_prob_filter_tag(message: RobotMessage, tag_needed: str,
         else:
             min_point = max_point = int(limit)
 
-    filtered_data = [prob for prob in json_data['result']['problems'] if
-                     'rating' in prob and min_point <= prob['rating'] <= max_point] if limit is not None else \
-        json_data['result']['problems']
-    filtered_data = [prob for prob in filtered_data if prob['contestId'] >= 1000] if newer else filtered_data
-    return tag_needed, random.choice(filtered_data)
+    filtered_data = json_data['result']['problems']
+    if limit is not None:
+        filtered_data = [prob for prob in json_data['result']['problems']
+                         if 'rating' in prob and min_point <= prob['rating'] <= max_point]
+    if newer:
+        filtered_data = [prob for prob in filtered_data if prob['contestId'] >= 1000]
+
+    return random.choice(filtered_data)
 
 
-def rating_type(rating: int) -> str:
-    if rating < 1200:
-        return "Newbie"
-    if rating < 1400:
-        return 'Pupil'
-    if rating < 1600:
-        return 'Specialist'
-    if rating < 1900:
-        return 'Expert'
-    if rating < 2100:
-        return 'Candidate master'
-    if rating < 2300:
-        return 'International Master'
-    if rating < 2400:
-        return 'Master'
-    if rating < 2600:
-        return 'Grandmaster'
-    if rating < 3000:
-        return 'International Grandmaster'
-    else:
-        return 'Legendary Grandmaster'
-
-
-async def get_user_rating(handle: str) -> str:
-    url = f"https://codeforces.com/api/user.rating?handle={handle}"
+async def get_user_info(handle: str) -> Tuple[str, str | None]:
+    url = f"https://codeforces.com/api/user.info?handles={handle}"
     json_data = await get_json(url)
-    if json_data == -1:
-        return "查询异常"
-    json_data = dict(json_data)
 
-    if json_data['status'] == "OK":
-        json_data = json_data['result']
-        contest_len = len(json_data)
-        if contest_len == 0:
-            return "还未进行过比赛"
-        final_contest = json_data[-1]
-        now_rating = int(final_contest['newRating'])
-        return f"{now_rating} {rating_type(now_rating)}"
-    else:
-        return "用户不存在"
+    if json_data['status'] != "OK":
+        return "用户不存在", None
+
+    result = json_data['result'][-1]
+    sections = []
+
+    # 归属地
+    belong, home, name = [], [], []
+    if 'firstName' in result:
+        name.append(result['firstName'])
+    if 'lastName' in result:
+        name.append(result['lastName'])
+    if len(name) > 0:
+        home.append(' '.join(name))
+    if 'city' in result:
+        home.append(result['city'])
+    if 'country' in result:
+        home.append(result['country'])
+    if len(home) > 0:
+        belong.append(', '.join(home))
+    if 'organization' in result:
+        belong.append(f"来自 {result['organization']}")
+    if len(belong) > 0:
+        sections.append('\n'.join(belong))
+
+    # 平台上的信息
+    rating = "0 Unrated"
+    if 'rating' in result:
+        rating = (f"{result['rating']} {result['rank'].capitalize()} "
+                  f"(max. {result['maxRating']} {result['maxRank']})")
+    platform = (f"比赛Rating: {rating}\n"
+                f"贡献: {result['contribution']}\n"
+                f"粉丝: {result['friendOfCount']}")
+    sections.append(platform)
+
+    return '\n\n'.join(sections), result.get('titlePhoto')
 
 
 def format_verdict(verdict: str, passed_count: int) -> str:
@@ -124,49 +122,73 @@ def format_verdict(verdict: str, passed_count: int) -> str:
         return f"{verdict} on test {passed_count + 1}"
 
 
-async def get_user_last_submit(handle: str) -> str:
-    url = f"https://codeforces.com/api/user.status?handle={handle}&from=1&count=3"
+async def get_user_last_contest(handle: str) -> str:
+    url = f"https://codeforces.com/api/user.rating?handle={handle}"
     json_data = await get_json(url)
-    if json_data == -1:
-        return "查询异常"
-    json_data = dict(json_data)
 
-    if json_data['status'] == "OK":
-        json_data = list(json_data['result'])
-        submit_len = len(json_data)
-        if submit_len == 0:
-            return "还未提交过题目"
-        ans = ""
-        for submit in json_data:
-            ans += f"""
-[{submit['id']}] {format_verdict(submit['verdict'], submit['passedTestCount'])}
-P{submit['problem']['contestId']}{submit['problem']['index']} at {time.strftime("%Y/%m/%d %H:%M:%S", time.localtime(int(submit['creationTimeSeconds'])))}"""
-        return ans
-    else:
+    if json_data['status'] != "OK":
         return "用户不存在"
+
+    result = list(json_data['result'])
+    contest_count = len(result)
+    if contest_count == 0:
+        return "还未参加过 Rated 比赛"
+
+    last = result[-1]
+    info = (f"Rated 比赛数: {contest_count}\n"
+            f"最近一次比赛: {last['contestName']}\n"
+            f"比赛id: {last['contestId']}\n"
+            f"位次: {last['rank']}\n"
+            f"Rating变化: {last['newRating'] - last['oldRating']}")
+
+    return info
+
+
+async def get_user_last_submit(handle: str) -> str:
+    url = f"https://codeforces.com/api/user.status?handle={handle}&from=1&count=5"
+    json_data = await get_json(url)
+
+    if json_data['status'] != "OK":
+        return "用户不存在"
+
+    result = list(json_data['result'])
+    submit_len = len(result)
+    if submit_len == 0:
+        return "还未提交过题目"
+
+    info = "最近几次提交:\n"
+    for submit in result:
+        info += (f"[{submit['id']}] {format_verdict(submit['verdict'], submit['passedTestCount'])} "
+                 f"P{submit['problem']['contestId']}{submit['problem']['index']} at "
+                 f"{time.strftime('%Y/%m/%d %H:%M:%S', time.localtime(int(submit['creationTimeSeconds'])))}\n")
+
+    return info
 
 
 async def send_user_info(message: RobotMessage, handle: str):
-    rating = await get_user_rating(handle)
+    await message.reply(f"正在查询 {handle} 的 Codeforces 平台信息，请稍等")
+
+    info, avatar = await get_user_info(handle)
+    last_contest = await get_user_last_contest(handle)
     last_submit = await get_user_last_submit(handle)
 
-    content = f"""
-[Codeforces] {handle}
+    content = (f"[Codeforces] {handle}\n\n"
+               f"{info}\n\n"
+               f"{last_contest}\n\n"
+               f"{last_submit}")
 
-Rating: {rating}
-
-Recent Submit:{last_submit}"""
-
-    await message.reply(content)
+    await message.reply(content, img_url=avatar)
 
 
 async def send_prob_tags(message: RobotMessage):
+    await message.reply("正在查询 Codeforces 平台的所有问题标签，请稍等")
+
     prob_tags = await get_prob_tags_all()
 
     if prob_tags is None:
         content = "查询异常"
     else:
-        content = "\n[Codeforces] Problem Tags:\n"
+        content = "\n[Codeforces] 问题标签:\n"
         for tag in prob_tags:
             content += "\n" + tag
 
@@ -174,22 +196,21 @@ async def send_prob_tags(message: RobotMessage):
 
 
 async def send_prob_filter_tag(message: RobotMessage, tag: str, limit: str = None, newer: bool = False):
+    await message.reply("正在随机选题，请稍等")
+
     chosen_prob = await get_prob_filter_tag(message, tag, limit, newer)
 
     if chosen_prob is None:
         content = "查询异常"
     else:
-        content = f"""
-[Codeforces] Problem Choose
+        tags = ', '.join(chosen_prob['tags'])
+        content = (f"[Codeforces] 随机选题\n\n"
+                   f"P{chosen_prob['contestId']}{chosen_prob['index']} {chosen_prob['name']}\n\n"
+                   f"链接: [codeforces] /contest/{chosen_prob['contestId']}/problem/{chosen_prob['index']}\n"
+                   f"标签: {tags}")
 
-Tag: {chosen_prob[0]}
-
-Link: [codeforces] /contest/{chosen_prob[1]['contestId']}/problem/{chosen_prob[1]['index']}
-
-Problem: P{chosen_prob[1]['contestId']}{chosen_prob[1]['index']} {chosen_prob[1]['name']}"""
-
-        if 'rating' in chosen_prob[1]:
-            content += "\n\nDifficulty: *" + str(chosen_prob[1]['rating'])
+        if 'rating' in chosen_prob:
+            content += f"\n难度: *{chosen_prob['rating']}"
 
     await message.reply(content)
 

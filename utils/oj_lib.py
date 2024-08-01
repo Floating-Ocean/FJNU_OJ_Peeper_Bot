@@ -198,17 +198,3 @@ async def send_version_info(message: RobotMessage):
 
     result = open(f"{_output_path}/version.txt").read()
     await message.reply(f"{result}")
-
-
-# todo: uptime robot api on python
-async def send_is_alive(message: RobotMessage):
-    # # 调用jar
-    # run = await call_lib_method(me, message,
-    #                             f"/alive {_output_path}/text_alive.txt")
-    # if run is None:
-    #     return
-    #
-    # result = open(f"{_output_path}/text_alive.txt").read()
-    # await reply(me, message, f"[UptimeRobot Api] {result}")
-    await message.reply(f"[UptimeRobot Api] 孩子们，我还没做，你就当他活着吧")
-
