@@ -1,0 +1,5 @@
+appid: "xxx"
+secret: "xxx"
+push_channel: "xxx"
+lib_path: "xxx\\Peeper-Board-Generator"
+output_path: "xxx"

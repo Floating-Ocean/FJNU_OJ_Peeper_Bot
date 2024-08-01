@@ -1,4 +1,8 @@
+import base64
 import random
+
+from botpy import BotAPI
+from botpy.message import Message, GroupMessage
 
 _key_words = {
     "傻逼": "谢谢夸奖",
@@ -13,23 +17,81 @@ _key_words = {
 _capoo_list_len = 456
 
 
-def match_key_words(content):
+class RobotMessage:
+    def __init__(self, api: BotAPI):
+        self.api = api
+        self.guild = False
+        self.guild_message = None
+        self.group_message = None
+        self.content = ""
+        self.msg_seq = 0
+
+    def setup_guild_message(self, message: Message):
+        self.guild = True
+        self.guild_message = message
+        self.content = message.content
+        self.msg_seq = 0
+
+    def setup_group_message(self, message: GroupMessage):
+        self.guild = False
+        self.group_message = message
+        self.content = message.content
+        self.msg_seq = 0
+
+    async def reply(self, content: str, img_path: str = None, img_url: str = None):
+        self.msg_seq += 1
+        if self.guild:  # 频道消息
+            await self.api.post_message(channel_id=self.guild_message.channel_id, msg_id=self.guild_message.id,
+                                        content=f"<@{self.guild_message.author.id}>{content}", file_image=img_path,
+                                        image=img_url)
+        else:  # 群消息
+            if img_path is not None:
+                with open(img_path, "rb") as img:
+                    file_image = img.read()
+                media = await self.api.post_group_file(
+                    group_openid=self.group_message.group_openid,
+                    file_type=1,
+                    file_data=base64.b64encode(file_image).decode('UTF-8'),
+                )
+                await self.api.post_group_message(
+                    group_openid=self.group_message.group_openid,
+                    msg_type=7,
+                    msg_id=self.group_message.id,
+                    content=content,
+                    media=media,
+                    msg_seq=self.msg_seq
+                )
+            elif img_url is not None:
+                media = await self.api.post_group_file(
+                    group_openid=self.group_message.group_openid,
+                    file_type=1,
+                    url=img_url,
+                )
+                await self.api.post_group_message(
+                    group_openid=self.group_message.group_openid,
+                    msg_type=7,
+                    msg_id=self.group_message.id,
+                    content=content,
+                    media=media,
+                    msg_seq=self.msg_seq
+                )
+            else:
+                await self.api.post_group_message(
+                    group_openid=self.group_message.group_openid,
+                    msg_type=0,
+                    msg_id=self.group_message.id,
+                    content=content,
+                    msg_seq=self.msg_seq
+                )
+
+
+def match_key_words(content: str) -> str:
     for each in _key_words:
         if each in content:
             return _key_words[each]
     return "你干嘛"
 
 
-async def reply(me, message, content, img_path=None):
-    await me.api.post_message(channel_id=message.channel_id, msg_id=message.id,
-                                content=f"<@{message.author.id}>{content}", file_image=img_path)
-
-
-async def reply_directly(me, channel_id, content, img_path=None):
-    await me.api.post_message(channel_id=channel_id, content=f"{content}", file_image=img_path)
-
-
-async def reply_capoo(me, message):
-    await me.api.post_message(channel_id=message.channel_id, msg_id=message.id,
-                                content=f"<@{message.author.id}>[capoo]",
-                                image=f"https://git.acwing.com/HuParry/capoo/-/raw/master/capoo ({random.randint(1, _capoo_list_len)}).gif")
+async def reply_capoo(message: RobotMessage):
+    await message.reply("[capoo]",
+                        img_url=f"https://git.acwing.com/HuParry/capoo/-/raw/master/capoo ({random.randint(1, _capoo_list_len)}).gif")

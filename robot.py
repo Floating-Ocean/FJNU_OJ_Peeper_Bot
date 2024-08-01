@@ -1,41 +1,34 @@
-﻿import os
-import time
+﻿import asyncio
 import re
+import threading
+import time
+import traceback
+from typing import Dict, Any
 
 import botpy
-from botpy.ext.cog_yaml import read
-from botpy.message import Message, DirectMessage
+from apscheduler.schedulers.blocking import BlockingScheduler
 
-from utils.oj_lib import *
 from utils.cf import reply_cf_request
+from utils.oj_lib import *
 
-import threading
-from datetime import date
-from apscheduler.schedulers.blocking import BlockingScheduler 
-
-import asyncio
-
-test_config = read(os.path.join(os.path.dirname(__file__), "config.yaml"))
-
+_config = read(os.path.join(os.path.dirname(__file__), "config.yaml"))
 _log = logging.get_logger()
 
 daily_sched = BlockingScheduler()
 noon_sched = BlockingScheduler()
 
-
 help_content = """[Functions]
 
 [Main]
-/今日题数 [full/留空]: 查询今天从凌晨到现在的做题数情况，第二参数若为 full，那么将会返回完整榜单，否则只返回前 5.
-/评测榜单 [verdict]: 查询分类型榜单，其中指定评测结果为第二参数 verdict，需要保证参数中无空格，如 wa, TimeExceeded.
+/今日题数: 查询今天从凌晨到现在的做题数情况.
 /昨日总榜: 查询昨日的完整榜单.
+/评测榜单 [verdict]: 查询分类型榜单，其中指定评测结果为第二参数 verdict，需要保证参数中无空格，如 wa, TimeExceeded.
 
 [sub]
 /user id [uid]: 查询 uid 对应用户的信息.
 /user name [name]: 查询名为 name 对应用户的信息，支持模糊匹配.
 /alive: 检查 OJ, Codeforces, AtCoder 的可连通性.
 /api: 获取当前 module-api 的构建信息.
-/check: 查询昨日榜单是否生成过.
 
 [robot]
 /活着吗: 顾名思义，只要活着回你一句话，不然就不理你.
@@ -48,78 +41,80 @@ help_content = """[Functions]
 /cf prob [tag/all] [int/range/留空]: 从 Codeforces 上随机选择一道题，并给出题目的信息。若第二参数不为 all，那么将搜索范围缩小到标签为 tag。若第三参数不为空，那么将搜索范围缩小到难度为给定值 int 或给定范围 range (格式为 l-r)."""
 
 
-def daily_sched_thread(loop):
-    daily_sched.add_job(daily_update_job, "cron", hour=0,minute=0, args=[loop])
+def daily_sched_thread(loop: AbstractEventLoop):
+    daily_sched.add_job(daily_update_job, "cron", hour=0, minute=0, args=[loop])
     daily_sched.start()
 
 
-def noon_sched_thread(loop, client):
-    noon_sched.add_job(noon_report_job, "cron", hour=13,minute=0, args=[loop, client])
+def noon_sched_thread(loop: AbstractEventLoop, api: BotAPI):
+    noon_sched.add_job(noon_report_job, "cron", hour=13, minute=0, args=[loop, api])
     noon_sched.start()
 
 
-async def call_handle_message(self, message, is_public):
-    content = re.sub(r'<@!\d+>', '', message.content).strip()
+async def call_handle_message(message: RobotMessage, is_public: bool):
+    try:
+        content = re.sub(r'<@!\d+>', '', message.content).strip().split()
+        func = content[0]
 
-    if content == "/help":
-        await reply(self, message, help_content)
+        if func == "/help":
+            await message.reply(help_content)
 
-    elif content == "/api":
-        await send_version_info(self, message)
+        elif func == "/今日题数" or func == "/today":
+            await send_today_count(message)
 
-    elif content == "/alive":
-        await send_is_alive(self, message)
+        elif func == "/昨日总榜" or func == "/yesterday" or func == "/full":
+            await send_yesterday_count(message)
 
-    elif content == "/check":
-        await send_necessity_info(self, message)
+        elif func == "/评测榜单" or func == "/verdict":
+            await send_verdict_count(message, content[1] if len(content) == 2 else "")
 
-    elif content == "/capoo":
-        await reply_capoo(self, message)
-
-    else:
-        contents = content.split()
-
-        if contents[0] == "/今日题数":
-            if len(contents) == 3:
-                await send_today_count(self, message, contents[1], contents[2] != "plain")
+        elif func == "/user":
+            if len(content) < 3:
+                await message.reply(f"请输入三个参数，如 /user id 1")
+            elif len(content) > 3:
+                await message.reply(f"请输入三个参数，第三个参数不要加上空格")
             else:
-                await send_today_count(self, message, "tp5" if (len(contents) < 2 or contents[1] == "plain") else contents[1], not(len(contents) == 2 and contents[1] == "plain"))
-
-        elif contents[0] == "/昨日总榜":
-            await send_yesterday_count(self, message, not(len(contents) == 2 and contents[1] == "plain"))
-
-        elif contents[0] == "/评测榜单":
-            await send_verdict_count(self, message, contents[1] if len(contents) >= 2 else "", not((len(contents) == 2 and contents[1] == "plain") or (len(contents) == 3 and contents[2] == "plain")))
-
-        elif contents[0] == "/user":
-            if len(contents) < 3:
-                await reply(self, message, f"请输入三个参数，如 /user id 1")
-            elif len(contents) > 3:
-                await reply(self, message, f"请输入三个参数，第三个参数不要加上空格")
-            else:
-                if contents[1] == "id":
-                    await send_user_info_uid(self, message, contents[2])
-                elif contents[1] == "name":
-                    await send_user_info_name(self, message, contents[2])
+                if content[1] == "id":
+                    await send_user_info_uid(message, content[2])
+                elif content[1] == "name":
+                    await send_user_info_name(message, content[2])
                 else:
-                    await reply(self, message, f"请输入正确的参数，如/user id, /user name")
-            
-        elif contents[0] == "/cf":
-            await reply_cf_request(self, message)
+                    await message.reply(f"请输入正确的参数，如/user id, /user name")
+
+        elif func == "/alive":
+            await send_is_alive(message)
+
+        elif func == "/api":
+            await send_version_info(message)
+
+        elif func == "/capoo":
+            await reply_capoo(message)
+
+        elif func == "/cf":
+            await reply_cf_request(message)
 
         elif is_public:
-            if content == "/活着吗":
-                await reply(self, message, f"你猜")
+            if func == "/活着吗":
+                await message.reply(f"你猜")
 
-            elif content == "/似了吗":
-                await reply(self, message, f"你猜我接下来一分钟是生是似")
+            elif func == "/似了吗":
+                await message.reply(f"你猜我接下来一分钟是生是似")
                 time.sleep(60)
 
-            elif "/" in content:
-                await reply(self, message, f"其他指令还在开发中qaq")
+            elif "/" in func:
+                await message.reply(f"其他指令还在开发中qaq")
 
             else:
-                await reply(self, message, f"{match_key_words(content)}")
+                await message.reply(f"{match_key_words(func)}")
+    except Exception as e:
+        error_stack = traceback.format_exc()
+        _log.error(error_stack)
+        # 替换 Windows用户文件夹 为变量
+        error_stack = re.sub(r'[A-Za-z]:\\Users\\[^\\]+', r'%userProfile%', error_stack)
+        error_stack = error_stack.replace(".", " . ")
+        if len(error_stack) > 2000:
+            error_stack = error_stack[:500] + "\n...\n" + error_stack[-1500:]
+        await message.reply(f"[Operation failed] in module Robot.\n\n{error_stack}")
 
 
 class MyClient(botpy.Client):
@@ -127,41 +122,39 @@ class MyClient(botpy.Client):
         _log.info(f"robot 「{self.robot.name}」 on_ready!")
 
     async def on_at_message_create(self, message: Message):
-        _log.info(f"{self.robot.name}receive public message {message.content}")
-        content = re.sub(r'<@!\d+>', '', message.content).strip()
+        _log.info(f"{self.robot.name} receive public message {message.content}")
+        packed_message = RobotMessage(self.api)
+        packed_message.setup_guild_message(message)
+        await call_handle_message(packed_message, True)
 
-        if message.channel_id != "633467826":
-            _log.info("在频道id {} 中出现了一条消息".format(message.channel_id))
-            await reply(self, message, f"请到 \"Bot 互动\" 子频道和Bot进行互动")
-            return
-
-        await call_handle_message(self, message, True)
-        
     async def on_message_create(self, message: Message):
-        #_log.info(f"{self.robot.name}receive global message {message.content}")
+        _log.info(f"{self.robot.name} receive global message {message.content}")
         content = message.content
 
-        if message.channel_id != "633467826":
-            #_log.info("在频道id {} 中出现了一条消息".format(message.channel_id))
-            # await reply(self, message, f"请到 \"Bot 互动\" 子频道和Bot进行互动")
-            return
+        packed_message = RobotMessage(self.api)
+        packed_message.setup_guild_message(message)
 
         if not re.search(r'<@!\d+>', content):
-            await call_handle_message(self, message, False)
-            
+            await call_handle_message(packed_message, False)
+
+    async def on_group_at_message_create(self, message: GroupMessage):
+        _log.info(f"{self.robot.name} receive group message {message.content}")
+        packed_message = RobotMessage(self.api)
+        packed_message.setup_group_message(message)
+        await call_handle_message(packed_message, True)
+
 
 if __name__ == "__main__":
-    # 通过预设置的类型，设置需要监听的事件通道
-    # intents = botpy.Intents.none()
-    # intents.public_guild_messages=True
-
     # 通过kwargs，设置需要监听的事件通道
-    intents = botpy.Intents(public_guild_messages=True, guild_messages=True)
+    intents = botpy.Intents(public_messages=True, public_guild_messages=True, guild_messages=True)
     client = MyClient(intents=intents)
 
+    # 更新每日排行榜
     daily_thread = threading.Thread(target=daily_sched_thread, args=[asyncio.get_event_loop()])
     daily_thread.start()
-    noon_thread = threading.Thread(target=noon_sched_thread, args=[asyncio.get_event_loop(), client])
+
+    # 午间推送机制
+    noon_thread = threading.Thread(target=noon_sched_thread, args=[asyncio.get_event_loop(), client.api])
     noon_thread.start()
 
-    client.run(appid=test_config["appid"], secret=test_config["secret"])
+    client.run(appid=_config["appid"], secret=_config["secret"])
