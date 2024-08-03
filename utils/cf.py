@@ -1,25 +1,18 @@
 import difflib
+import random
 import re
-import time
-from typing import Any, Tuple
+import traceback
+from typing import Tuple
 
-import requests
+from utils.interact import RobotMessage
+from utils.tools import report_exception, get_json, format_timestamp, format_timestamp_diff
 
-from utils.interact import *
+cf_help_content = """[Codeforces]
 
-
-async def get_json(url: str) -> Any:
-    headers = {
-        'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
-                      "Chrome/91.0.4472.77 Safari/537.36",
-        'Connection': 'close'
-    }
-    response = requests.post(url, headers=headers)
-
-    if response.status_code == 200:
-        return response.json()
-    else:
-        raise ConnectionError(f"Filed to connect {url}, code {response.status_code}.")
+/cf info [handle]: 获取用户名为 handle 的 Codeforces 基础用户信息.
+/cf pick [标签|all] (难度) (New): 从 Codeforces 上随机选题. 标签中间不能有空格，支持模糊匹配. 难度为整数或一个区间，格式为xxx-xxx. 末尾加上 New 参数则会忽视 P1000A 以前的题.
+/cf contest: 列出最近的 Codeforces 比赛.
+/cf tags: 列出 Codeforces 上的所有题目标签."""
 
 
 async def get_prob_tags_all() -> list[str] | None:
@@ -156,11 +149,46 @@ async def get_user_last_submit(handle: str) -> str:
     if submit_len == 0:
         return "还未提交过题目"
 
-    info = "最近几次提交:\n"
+    info = "最近几次提交:"
     for submit in result:
-        info += (f"[{submit['id']}] {format_verdict(submit['verdict'], submit['passedTestCount'])} "
+        info += (f"\n[{submit['id']}] {format_verdict(submit['verdict'], submit['passedTestCount'])} "
                  f"P{submit['problem']['contestId']}{submit['problem']['index']} at "
-                 f"{time.strftime('%Y/%m/%d %H:%M:%S', time.localtime(int(submit['creationTimeSeconds'])))}\n")
+                 f"{format_timestamp(submit['creationTimeSeconds'])}")
+
+    return info
+
+
+async def get_recent_contests() -> str:
+    url = "https://codeforces.com/api/contest.list"
+    json_data = await get_json(url)
+
+    if json_data['status'] != "OK":
+        return "查询异常"
+
+    result = list(json_data['result'])
+
+    limit = len(result) - 1
+    for i, contest in enumerate(result):
+        if contest['phase'] == 'FINISHED':
+            limit = i - 1
+            break
+
+    before_contests = result[limit::-1]  # 按日期升序排列
+    info = ""
+    for contest in before_contests:
+        duration = "{:.1f}".format(contest['durationSeconds'] / 3600.0)
+        info += (f"[{contest['id']}] {contest['name']}\n"
+                 f"{format_timestamp_diff(contest['relativeTimeSeconds'])}, "
+                 f"{format_timestamp(contest['startTimeSeconds'])}\n"
+                 f"持续 {duration} 小时, {contest['type']}赛制\n\n")
+
+    last_finished_contest = result[limit + 1]
+    duration = "{:.1f}".format(last_finished_contest['durationSeconds'] / 3600.0)
+    info += (f"上一场已结束的比赛:\n"
+             f"[{last_finished_contest['id']}] {last_finished_contest['name']}\n"
+             f"{format_timestamp_diff(last_finished_contest['relativeTimeSeconds'])}, "
+             f"{format_timestamp(last_finished_contest['startTimeSeconds'])}\n"
+             f"持续 {duration} 小时, {last_finished_contest['type']}赛制")
 
     return info
 
@@ -195,48 +223,76 @@ async def send_prob_tags(message: RobotMessage):
     await message.reply(content)
 
 
-async def send_prob_filter_tag(message: RobotMessage, tag: str, limit: str = None, newer: bool = False):
+async def send_prob_filter_tag(message: RobotMessage, tag: str, limit: str = None, newer: bool = False) -> bool:
     await message.reply("正在随机选题，请稍等")
 
     chosen_prob = await get_prob_filter_tag(message, tag, limit, newer)
 
     if chosen_prob is None:
-        content = "查询异常"
-    else:
-        tags = ', '.join(chosen_prob['tags'])
-        content = (f"[Codeforces] 随机选题\n\n"
-                   f"P{chosen_prob['contestId']}{chosen_prob['index']} {chosen_prob['name']}\n\n"
-                   f"链接: [codeforces] /contest/{chosen_prob['contestId']}/problem/{chosen_prob['index']}\n"
-                   f"标签: {tags}")
+        return False
 
-        if 'rating' in chosen_prob:
-            content += f"\n难度: *{chosen_prob['rating']}"
+    tags = ', '.join(chosen_prob['tags'])
+    content = (f"[Codeforces] 随机选题\n\n"
+               f"P{chosen_prob['contestId']}{chosen_prob['index']} {chosen_prob['name']}\n\n"
+               f"链接: [codeforces] /contest/{chosen_prob['contestId']}/problem/{chosen_prob['index']}\n"
+               f"标签: {tags}")
+
+    if 'rating' in chosen_prob:
+        content += f"\n难度: *{chosen_prob['rating']}"
+
+    await message.reply(content)
+
+    return True
+
+
+async def send_contest(message: RobotMessage):
+    await message.reply(f"正在查询近期 Codeforces 比赛，请稍等")
+
+    info = await get_recent_contests()
+
+    content = (f"[Codeforces] 近期比赛\n\n"
+               f"{info}")
 
     await message.reply(content)
 
 
 async def reply_cf_request(message: RobotMessage):
-    content = re.sub(r'<@!\d+>', '', message.content).strip().split()
-    if content[1] == "info":
-        if len(content) != 3:
-            await message.reply("请输入正确的指令格式，如 /cf info jiangly")
+    try:
+        content = re.sub(r'<@!\d+>', '', message.content).strip().split()
+        if len(content) < 2:
+            await message.reply(cf_help_content)
             return
-        await send_user_info(message, content[2])
-    elif content[1] == "prob":
-        if content[2] == "pick":
-            await send_prob_filter_tag(message, content[3],
-                                       content[4] if len(content) >= 5 and content[4] != "new" else None,
-                                       content[4] == "new" if len(content) == 5 else (
-                                           content[5] == "new" if len(content) == 6 else False))
-        elif content[2] == "tags":
+
+        func = content[1]
+
+        if func == "info":
+            if len(content) != 3:
+                await message.reply("请输入正确的指令格式，如 /cf info jiangly")
+                return
+
+            await send_user_info(message, content[2])
+
+        elif func == "pick":
+            if not await send_prob_filter_tag(
+                    message=message,
+                    tag=content[2],
+                    limit=content[3] if len(content) >= 4 and content[3] != "new" else None,
+                    newer=content[3] == "new" if len(content) == 4 else (
+                    content[4] == "new" if len(content) == 5 else False)
+            ):
+                await message.reply("请输入正确的指令格式，如:\n\n"
+                                    "/cf pick dp 1700-1900 new\n"
+                                    "/cf pick dfs-and-similar\n"
+                                    "/cf pick all 1800")
+
+        elif func == "contest":
+            await send_contest(message)
+
+        elif func == "tags":
             await send_prob_tags(message)
+
         else:
-            await message.reply("请输入正确的指令格式，如:\n\n"
-                                "/cf prob pick dp 1700-1900\n"
-                                "/cf prob pick dfs-and-similar\n"
-                                "/cf prob pick all 1800\n"
-                                "/cf prob tags")
-    else:
-        await message.reply("目前仅支持 info 和 prob 指令\n\ninfo:\n/cf info [用户名]\n\n"
-                            "prob:\n/cf prob pick [题目tag/all] [难度/可留空]\n"
-                            "/cf prob tags")
+            await message.reply(cf_help_content)
+
+    except Exception as e:
+        await report_exception(message, 'Codeforces', traceback.format_exc())

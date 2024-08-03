@@ -1,7 +1,9 @@
 import base64
+import os
 import random
 
 from botpy import BotAPI
+from botpy.ext.cog_yaml import read
 from botpy.message import Message, GroupMessage
 
 _key_words = {
@@ -14,7 +16,9 @@ _key_words = {
     "愚蠢": "yes，我只会关键词匹配",
     "龟": "乌龟是什么，我只知道杰尼龟",
 }
-_capoo_list_len = 456
+
+_config = read(os.path.join(os.path.join(os.path.dirname(__file__), ".."), "config.yaml"))
+_lib_path = _config["lib_path"] + "\\Pick-One"
 
 
 class RobotMessage:
@@ -92,6 +96,10 @@ def match_key_words(content: str) -> str:
     return "你干嘛"
 
 
-async def reply_capoo(message: RobotMessage):
-    await message.reply("[capoo]",
-                        img_url=f"https://git.acwing.com/HuParry/capoo/-/raw/master/capoo ({random.randint(1, _capoo_list_len)}).gif")
+async def reply_pick_one(message: RobotMessage, what: str):
+    if what == "咖波" or what.lower() == "capoo" or len(what) == 0:
+        dir_path = _lib_path + "\\capoo\\"
+        capoo_len = len(os.listdir(dir_path))
+        await message.reply("[来只 Capoo]", img_path=f"{dir_path}Capoo_{random.randint(1, capoo_len)}.gif")
+    else:
+        await message.reply("目前只有capoo表情包qaq")

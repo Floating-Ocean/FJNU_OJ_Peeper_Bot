@@ -1,16 +1,25 @@
 ﻿import asyncio
+import os
 import re
 import threading
-import time
 import traceback
-from typing import Dict, Any
+from asyncio import AbstractEventLoop
 
 import botpy
+import nest_asyncio
 from apscheduler.schedulers.blocking import BlockingScheduler
+from botpy import logging, BotAPI, Client
+from botpy.ext.cog_yaml import read
+from botpy.message import Message, GroupMessage
 
 from utils.cf import reply_cf_request
-from utils.oj_lib import *
+from utils.interact import RobotMessage, reply_pick_one, match_key_words
+from utils.oj_lib import send_today_count, send_yesterday_count, send_verdict_count, send_user_info_uid, \
+    send_user_info_name, send_version_info, daily_update_job, noon_report_job
+from utils.tools import report_exception
 from utils.uptime import send_is_alive
+
+nest_asyncio.apply()
 
 _config = read(os.path.join(os.path.dirname(__file__), "config.yaml"))
 _log = logging.get_logger()
@@ -33,13 +42,13 @@ help_content = """[Functions]
 
 [robot]
 /活着吗: 顾名思义，只要活着回你一句话，不然就不理你.
-/似了吗: 如果机器人活着，它将在你回复这句话之后一分钟内无响应.
 
 [3-party]
-/capoo: 获取一个 capoo 表情包.
+/来只 [what]: 获取一个随机表情包，目前只有 capoo.
 /cf info [handle]: 获取用户名为 handle 的 Codeforces 基础用户信息.
-/cf prob tags: 列出 Codeforces 上的所有题目标签.
-/cf prob [tag/all] [int/range/留空]: 从 Codeforces 上随机选择一道题，并给出题目的信息。若第二参数不为 all，那么将搜索范围缩小到标签为 tag。若第三参数不为空，那么将搜索范围缩小到难度为给定值 int 或给定范围 range (格式为 l-r)."""
+/cf pick [标签|all] (难度) (New): 从 Codeforces 上随机选题. 标签中间不能有空格，支持模糊匹配. 难度为整数或一个区间，格式为xxx-xxx. 末尾加上 New 参数则会忽视 P1000A 以前的题.
+/cf contest: 列出最近的 Codeforces 比赛.
+/cf tags: 列出 Codeforces 上的所有题目标签."""
 
 
 def daily_sched_thread(loop: AbstractEventLoop):
@@ -88,37 +97,39 @@ async def call_handle_message(message: RobotMessage, is_public: bool):
         elif func == "/api":
             await send_version_info(message)
 
-        elif func == "/capoo":
-            await reply_capoo(message)
+        elif func.startswith("/来只"):
+            what = func[3::] if func != "/来只" else ""  # 支持不加空格的形式
+            if len(content) >= 2:
+                what = content[1]
+            await reply_pick_one(message, what)
+
+        elif func == "/capoo" or func == "/咖波":
+            await reply_pick_one(message, "capoo")
 
         elif func == "/cf":
             await reply_cf_request(message)
+
+        elif func == "/去死":
+            raise ModuleNotFoundError("阿米诺斯")
 
         elif is_public:
             if func == "/活着吗":
                 await message.reply(f"你猜")
 
-            elif func == "/似了吗":
-                await message.reply(f"你猜我接下来一分钟是生是似")
-                time.sleep(60)
+            elif func == "/ping":
+                await message.reply(f"pong")
 
             elif "/" in func:
                 await message.reply(f"其他指令还在开发中qaq")
 
             else:
                 await message.reply(f"{match_key_words(func)}")
+
     except Exception as e:
-        error_stack = traceback.format_exc()
-        _log.error(error_stack)
-        # 替换 Windows用户文件夹 为变量
-        error_stack = re.sub(r'[A-Za-z]:\\Users\\[^\\]+', r'%userProfile%', error_stack)
-        error_stack = error_stack.replace(".", " . ")
-        if len(error_stack) > 2000:
-            error_stack = error_stack[:500] + "\n...\n" + error_stack[-1500:]
-        await message.reply(f"[Operation failed] in module Robot.\n\n{error_stack}")
+        await report_exception(message, 'Robot-Interact', traceback.format_exc())
 
 
-class MyClient(botpy.Client):
+class MyClient(Client):
     async def on_ready(self):
         _log.info(f"robot 「{self.robot.name}」 on_ready!")
 

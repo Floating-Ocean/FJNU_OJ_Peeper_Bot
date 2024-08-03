@@ -1,17 +1,16 @@
 ﻿import datetime
 import json
 import os
-import re
-import subprocess
 from asyncio import AbstractEventLoop
 
-from botpy import logging
+from botpy import logging, BotAPI
 from botpy.ext.cog_yaml import read
 
-from utils.interact import *
+from utils.interact import RobotMessage
+from utils.tools import run_shell, run_async, report_exception
 
 _config = read(os.path.join(os.path.join(os.path.dirname(__file__), ".."), "config.yaml"))
-_lib_path = _config["lib_path"]
+_lib_path = _config["lib_path"] + "\\Peeper-Board-Generator"
 _output_path = _config["output_path"]
 _log = logging.get_logger()
 
@@ -36,24 +35,6 @@ def classify_verdicts(content: str) -> str:
     return content.upper()
 
 
-def run_shell(shell: str) -> str:
-    _log.info(shell)
-    cmd = subprocess.Popen(shell, stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE,
-                           universal_newlines=True, shell=True, bufsize=1)
-    info = ""
-    # 实时输出
-    while True:
-        line = cmd.stderr.readline().strip()
-        info = info + line
-
-        _log.info(line)
-
-        if line == "" or subprocess.Popen.poll(cmd) == 0:  # 判断子进程是否结束
-            break
-
-    return info
-
-
 async def execute_lib_method(prop: str, message: RobotMessage | None) -> str | None:
     traceback = ""
     for _t in range(3):  # 尝试3次，
@@ -64,13 +45,7 @@ async def execute_lib_method(prop: str, message: RobotMessage | None) -> str | N
             return result
 
     if message is not None:
-        _log.error(traceback)
-        # 替换 Windows用户文件夹 为变量
-        traceback = re.sub(r'[A-Za-z]:\\Users\\[^\\]+', r'%userProfile%', traceback)
-        traceback = traceback.replace(".", " . ")
-        if len(traceback) > 2000:
-            traceback = traceback[:500] + "\n...\n" + traceback[-1500:]
-        await message.reply(f"[Operation failed] in module Peeper-Board-Generator.\n\n{traceback}")
+        await report_exception(message, 'Peeper-Board-Generator', traceback)
 
     return None
 
@@ -83,20 +58,12 @@ async def call_lib_method_directly(prop: str) -> str | None:
     return await execute_lib_method(prop, None)
 
 
-def run_async_using_loop(loop: AbstractEventLoop, func: any):
-    task = loop.create_task(func)
-    loop.run_until_complete(task)
-    run = task.result()
-    loop.close()
-    return run
-
-
 def daily_update_job(loop: AbstractEventLoop):
-    run_async_using_loop(loop, call_lib_method_directly(f"--full --output {_output_path}/full.png"))
+    run_async(loop, call_lib_method_directly(f"--full --output {_output_path}/full.png"))
 
 
 def noon_report_job(loop: AbstractEventLoop, api: BotAPI):
-    run_async_using_loop(loop, call_noon_report(api))
+    run_async(call_noon_report(loop, api))
 
 
 async def call_noon_report(api: BotAPI):
