@@ -63,7 +63,7 @@ def daily_update_job(loop: AbstractEventLoop):
 
 
 def noon_report_job(loop: AbstractEventLoop, api: BotAPI):
-    run_async(call_noon_report(loop, api))
+    run_async(loop, call_noon_report(api))
 
 
 async def call_noon_report(api: BotAPI):
@@ -74,16 +74,18 @@ async def call_noon_report(api: BotAPI):
     # 调用jar
     run = await call_lib_method_directly(f"--full --output {_output_path}/full.png")
     if run is None:
-        await api.post_message(channel_id="633509366", content="推送昨日卷王天梯榜失败")
+        await api.post_message(channel_id=_config['push_channel'], content="推送昨日卷王天梯榜失败")
     else:
-        await api.post_message(channel_id="633509366", content=f"{yesterday} 卷王天梯榜", file_image=f"{_output_path}/full.png")
+        await api.post_message(channel_id=_config['push_channel'], content=f"{yesterday} 卷王天梯榜",
+                               file_image=f"{_output_path}/full.png")
 
     # 调用jar
     run = await call_lib_method_directly(f"--now --output {_output_path}/now.png")
     if run is None:
-        await api.post_message(channel_id="633509366", content="推送今日题数失败")
+        await api.post_message(channel_id=_config['push_channel'], content="推送今日题数失败")
     else:
-        await api.post_message(channel_id="633509366", content=f"{today} 半天做题总榜", file_image=f"{_output_path}/now.png")
+        await api.post_message(channel_id=_config['push_channel'], content=f"{today} 半天做题总榜",
+                               file_image=f"{_output_path}/now.png")
 
 
 # todo: 等待api添加功能
