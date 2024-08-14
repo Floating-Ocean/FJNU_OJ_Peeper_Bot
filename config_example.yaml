@@ -4,3 +4,4 @@ push_channel: "xxx"
 lib_path: "一般指Peeper-Board-Generator的父文件夹"
 output_path: "xxx"
 uptime_apikey: "xxx"
+admin_qq_id: ["xxxxxxxx"]

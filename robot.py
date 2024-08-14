@@ -1,6 +1,7 @@
 ﻿import asyncio
 import os
 import re
+import sys
 import threading
 import traceback
 from asyncio import AbstractEventLoop
@@ -13,9 +14,10 @@ from botpy.ext.cog_yaml import read
 from botpy.message import Message, GroupMessage
 
 from utils.cf import reply_cf_request
-from utils.interact import RobotMessage, reply_pick_one, match_key_words
+from utils.interact import RobotMessage, match_key_words
 from utils.oj_lib import send_today_count, send_yesterday_count, send_verdict_count, send_user_info_uid, \
     send_user_info_name, send_version_info, daily_update_job, noon_report_job
+from utils.pick_one import reply_pick_one
 from utils.tools import report_exception
 from utils.uptime import send_is_alive
 
@@ -64,6 +66,11 @@ def noon_sched_thread(loop: AbstractEventLoop, api: BotAPI):
 async def call_handle_message(message: RobotMessage, is_public: bool):
     try:
         content = re.sub(r'<@!\d+>', '', message.content).strip().split()
+
+        if len(content) == 0:
+            await message.reply(f"{match_key_words('')}")
+            return
+
         func = content[0]
 
         if func == "/help":
@@ -109,15 +116,21 @@ async def call_handle_message(message: RobotMessage, is_public: bool):
         elif func == "/cf":
             await reply_cf_request(message)
 
-        elif func == "/去死":
-            raise ModuleNotFoundError("阿米诺斯")
-
         elif is_public:
             if func == "/活着吗":
                 await message.reply(f"你猜")
 
             elif func == "/ping":
                 await message.reply(f"pong")
+
+            elif func == "/去死" or func == "/重启" or func == "/restart" or func == "/reboot":
+                _log.info(f"{message.get_author()} attempted to restart bot.")
+                if message.get_author() in _config['admin_qq_id']:
+                    await message.reply(f"好的捏，正在重启bot")
+                    _log.info(f"Restarting bot...")
+                    os.execl(sys.executable, sys.executable, *sys.argv)
+                else:
+                    raise PermissionError("阿米诺斯" if func == "/去死" else "非bot管理员，操作被拒绝")
 
             elif "/" in func:
                 await message.reply(f"其他指令还在开发中qaq")

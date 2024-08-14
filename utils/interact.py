@@ -1,10 +1,10 @@
 import base64
-import os
-import random
+import json
 
 from botpy import BotAPI
-from botpy.ext.cog_yaml import read
 from botpy.message import Message, GroupMessage
+
+__interact_version__ = "v2.0.1"
 
 _key_words = {
     "傻逼": "谢谢夸奖",
@@ -14,11 +14,8 @@ _key_words = {
     "qaq": "qwq",
     "你是谁": "猜猜我是谁",
     "愚蠢": "yes，我只会关键词匹配",
-    "龟": "乌龟是什么，我只知道杰尼龟",
+    "丁真": "妈妈生的",
 }
-
-_config = read(os.path.join(os.path.join(os.path.dirname(__file__), ".."), "config.yaml"))
-_lib_path = _config["lib_path"] + "\\Pick-One"
 
 
 class RobotMessage:
@@ -41,6 +38,12 @@ class RobotMessage:
         self.group_message = message
         self.content = message.content
         self.msg_seq = 0
+
+    def get_author(self):
+        if self.guild:
+            return self.guild_message.author.__dict__['id']
+        else:
+            return self.group_message.author.__dict__['member_openid']
 
     async def reply(self, content: str, img_path: str = None, img_url: str = None):
         self.msg_seq += 1
@@ -95,11 +98,3 @@ def match_key_words(content: str) -> str:
             return _key_words[each]
     return "你干嘛"
 
-
-async def reply_pick_one(message: RobotMessage, what: str):
-    if what == "咖波" or what.lower() == "capoo" or len(what) == 0:
-        dir_path = _lib_path + "\\capoo\\"
-        capoo_len = len(os.listdir(dir_path))
-        await message.reply("[来只 Capoo]", img_path=f"{dir_path}Capoo_{random.randint(1, capoo_len)}.gif")
-    else:
-        await message.reply("目前只有capoo表情包qaq")

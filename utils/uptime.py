@@ -1,11 +1,10 @@
 import os
 
 import requests
-from botpy.ext.cog_yaml import read
 
 from utils.interact import RobotMessage
+from utils.tools import _config
 
-_config = read(os.path.join(os.path.join(os.path.dirname(__file__), ".."), "config.yaml"))
 _api_key = _config["uptime_apikey"]
 
 

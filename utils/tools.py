@@ -1,3 +1,4 @@
+import os
 import re
 import subprocess
 import time
@@ -6,10 +7,12 @@ from typing import Any
 
 import requests
 from botpy import logging
+from botpy.ext.cog_yaml import read
 
 from utils.interact import RobotMessage
 
 _log = logging.get_logger()
+_config = read(os.path.join(os.path.join(os.path.dirname(__file__), ".."), "config.yaml"))
 
 
 def run_shell(shell: str) -> str:
@@ -90,3 +93,8 @@ def format_timestamp_diff(diff: int) -> str:
 
 def format_timestamp(timestamp: int) -> str:
     return time.strftime('%Y/%m/%d %H:%M:%S', time.localtime(timestamp))
+
+
+def escape_mail_url(content: str) -> str:
+    email_pattern = r'([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{1,})'
+    return re.sub(email_pattern, lambda x: x.group().replace('.', ' . '), content)

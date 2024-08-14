@@ -7,6 +7,8 @@ from typing import Tuple
 from utils.interact import RobotMessage
 from utils.tools import report_exception, get_json, format_timestamp, format_timestamp_diff
 
+__cf_version__ = "v2.0.1"
+
 cf_help_content = """[Codeforces]
 
 /cf info [handle]: 获取用户名为 handle 的 Codeforces 基础用户信息.
@@ -128,11 +130,12 @@ async def get_user_last_contest(handle: str) -> str:
         return "还未参加过 Rated 比赛"
 
     last = result[-1]
+    symbol = "" if (last['newRating'] - last['oldRating'] <= 0) else "+"
     info = (f"Rated 比赛数: {contest_count}\n"
             f"最近一次比赛: {last['contestName']}\n"
             f"比赛id: {last['contestId']}\n"
             f"位次: {last['rank']}\n"
-            f"Rating变化: {last['newRating'] - last['oldRating']}")
+            f"Rating变化: {symbol}{last['newRating'] - last['oldRating']}")
 
     return info
 
