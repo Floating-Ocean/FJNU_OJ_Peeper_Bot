@@ -1,5 +1,3 @@
-import os
-
 import requests
 
 from utils.interact import RobotMessage

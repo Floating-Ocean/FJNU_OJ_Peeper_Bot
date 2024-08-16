@@ -1,6 +1,7 @@
 ﻿import asyncio
 import os
 import re
+import ssl
 import sys
 import threading
 import traceback
@@ -8,10 +9,13 @@ from asyncio import AbstractEventLoop
 
 import botpy
 import nest_asyncio
+import requests
+import urllib3
 from apscheduler.schedulers.blocking import BlockingScheduler
 from botpy import logging, BotAPI, Client
 from botpy.ext.cog_yaml import read
 from botpy.message import Message, GroupMessage
+from requests.adapters import HTTPAdapter
 
 from utils.cf import reply_cf_request
 from utils.interact import RobotMessage, match_key_words
@@ -22,6 +26,7 @@ from utils.tools import report_exception
 from utils.uptime import send_is_alive
 
 nest_asyncio.apply()
+urllib3.disable_warnings()
 
 _config = read(os.path.join(os.path.dirname(__file__), "config.yaml"))
 _log = logging.get_logger()
@@ -105,10 +110,16 @@ async def call_handle_message(message: RobotMessage, is_public: bool):
             await send_version_info(message)
 
         elif func.startswith("/来只"):
-            what = func[3::] if func != "/来只" else ""  # 支持不加空格的形式
+            what = func[3::].strip() if func != "/来只" else ""  # 支持不加空格的形式
             if len(content) >= 2:
                 what = content[1]
             await reply_pick_one(message, what)
+
+        elif func.startswith("/添加来只"):
+            what = func[5::].strip() if func != "/添加来只" else ""  # 支持不加空格的形式
+            if len(content) >= 2:
+                what = content[1]
+            await reply_pick_one(message, what, add=True)
 
         elif func == "/capoo" or func == "/咖波":
             await reply_pick_one(message, "capoo")
@@ -124,8 +135,8 @@ async def call_handle_message(message: RobotMessage, is_public: bool):
                 await message.reply(f"pong")
 
             elif func == "/去死" or func == "/重启" or func == "/restart" or func == "/reboot":
-                _log.info(f"{message.get_author()} attempted to restart bot.")
-                if message.get_author() in _config['admin_qq_id']:
+                _log.info(f"{message.author_id} attempted to restart bot.")
+                if message.author_id in _config['admin_qq_id']:
                     await message.reply(f"好的捏，正在重启bot")
                     _log.info(f"Restarting bot...")
                     os.execl(sys.executable, sys.executable, *sys.argv)
@@ -147,13 +158,13 @@ class MyClient(Client):
         _log.info(f"robot 「{self.robot.name}」 on_ready!")
 
     async def on_at_message_create(self, message: Message):
-        _log.info(f"{self.robot.name} receive public message {message.content}")
+        _log.info(f"{self.robot.name} receive public message {message.content} {message.attachments}")
         packed_message = RobotMessage(self.api)
         packed_message.setup_guild_message(message)
         await call_handle_message(packed_message, True)
 
     async def on_message_create(self, message: Message):
-        _log.info(f"{self.robot.name} receive global message {message.content}")
+        _log.info(f"{self.robot.name} receive global message {message.content} {message.attachments}")
         content = message.content
 
         packed_message = RobotMessage(self.api)
@@ -163,7 +174,7 @@ class MyClient(Client):
             await call_handle_message(packed_message, False)
 
     async def on_group_at_message_create(self, message: GroupMessage):
-        _log.info(f"{self.robot.name} receive group message {message.content}")
+        _log.info(f"{self.robot.name} receive group message {message.content} {message.attachments}")
         packed_message = RobotMessage(self.api)
         packed_message.setup_group_message(message)
         await call_handle_message(packed_message, True)

@@ -1,16 +1,12 @@
 ﻿import datetime
-import json
-import os
-import time
 from asyncio import AbstractEventLoop
 
 from botpy import logging, BotAPI
-from botpy.ext.cog_yaml import read
 
 from utils.cf import __cf_version__
 from utils.interact import RobotMessage, __interact_version__
-from utils.tools import run_shell, run_async, report_exception, escape_mail_url, _config
 from utils.pick_one import __pick_one_version__
+from utils.tools import run_shell, run_async, report_exception, escape_mail_url, _config
 
 _lib_path = _config["lib_path"] + "\\Peeper-Board-Generator"
 _output_path = _config["output_path"]
