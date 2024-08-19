@@ -1,6 +1,7 @@
 import json
 import os
 import random
+
 import traceback
 
 from utils.interact import RobotMessage
@@ -25,7 +26,7 @@ async def reply_pick_one(message: RobotMessage, what: str, add: bool = False):
         else:
             await pick_one(message, what)
     except Exception as e:
-        await report_exception(message, 'Pick-One', traceback.format_exc())
+        await report_exception(message, 'Pick-One', traceback.format_exc(), repr(e))
 
 
 async def pick_one(message: RobotMessage, what: str):
@@ -52,6 +53,7 @@ async def save_one(message: RobotMessage, what: str):
     _log.info(f"{message.author_id} attempted to add new img.")
     if message.author_id not in _config['admin_qq_id'] and message.author_id not in _config['mod_qq_id']:
         await message.reply("添加失败，只有bot管理员才能添加")
+        return
 
     if what.lower() in _match_dict.keys():
         current_key = _match_dict[what.lower()]

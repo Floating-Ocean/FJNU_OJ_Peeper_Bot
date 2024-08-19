@@ -1,7 +1,6 @@
 ﻿import asyncio
 import os
 import re
-import ssl
 import sys
 import threading
 import traceback
@@ -9,19 +8,18 @@ from asyncio import AbstractEventLoop
 
 import botpy
 import nest_asyncio
-import requests
 import urllib3
 from apscheduler.schedulers.blocking import BlockingScheduler
 from botpy import logging, BotAPI, Client
 from botpy.ext.cog_yaml import read
 from botpy.message import Message, GroupMessage
-from requests.adapters import HTTPAdapter
 
-from utils.cf import reply_cf_request
+from utils.cf import reply_cf_request, __cf_help_content__
 from utils.interact import RobotMessage, match_key_words
-from utils.oj_lib import send_today_count, send_yesterday_count, send_verdict_count, send_user_info_uid, \
+from utils.peeper import send_today_count, send_yesterday_count, send_verdict_count, send_user_info_uid, \
     send_user_info_name, send_version_info, daily_update_job, noon_report_job
 from utils.pick_one import reply_pick_one
+from utils.rand import reply_rand_request, __rand_help_content__
 from utils.tools import report_exception
 from utils.uptime import send_is_alive
 
@@ -34,7 +32,7 @@ _log = logging.get_logger()
 daily_sched = BlockingScheduler()
 noon_sched = BlockingScheduler()
 
-help_content = """[Functions]
+help_content = f"""[Functions]
 
 [Main]
 /今日题数: 查询今天从凌晨到现在的做题数情况.
@@ -50,12 +48,14 @@ help_content = """[Functions]
 [robot]
 /活着吗: 顾名思义，只要活着回你一句话，不然就不理你.
 
-[3-party]
-/来只 [what]: 获取一个随机表情包，目前只有 capoo.
-/cf info [handle]: 获取用户名为 handle 的 Codeforces 基础用户信息.
-/cf pick [标签|all] (难度) (New): 从 Codeforces 上随机选题. 标签中间不能有空格，支持模糊匹配. 难度为整数或一个区间，格式为xxx-xxx. 末尾加上 New 参数则会忽视 P1000A 以前的题.
-/cf contest: 列出最近的 Codeforces 比赛.
-/cf tags: 列出 Codeforces 上的所有题目标签."""
+[pick-one]
+/来只 [what]: 获取一个随机表情包.
+
+[codeforces]
+{__cf_help_content__}
+
+[random]
+{__rand_help_content__}"""
 
 
 def daily_sched_thread(loop: AbstractEventLoop):
@@ -127,7 +127,11 @@ async def call_handle_message(message: RobotMessage, is_public: bool):
         elif func == "/cf":
             await reply_cf_request(message)
 
-        elif is_public:
+        elif (func.startswith("/选择") or func == "/rand" or
+              func == "/shuffle" or func == "/打乱"):
+            await reply_rand_request(message)
+
+        elif is_public:  # 是否被at
             if func == "/活着吗":
                 await message.reply(f"你猜")
 
@@ -135,13 +139,7 @@ async def call_handle_message(message: RobotMessage, is_public: bool):
                 await message.reply(f"pong")
 
             elif func == "/去死" or func == "/重启" or func == "/restart" or func == "/reboot":
-                _log.info(f"{message.author_id} attempted to restart bot.")
-                if message.author_id in _config['admin_qq_id']:
-                    await message.reply(f"好的捏，正在重启bot")
-                    _log.info(f"Restarting bot...")
-                    os.execl(sys.executable, sys.executable, *sys.argv)
-                else:
-                    raise PermissionError("阿米诺斯" if func == "/去死" else "非bot管理员，操作被拒绝")
+                await reply_restart_bot(func, message)
 
             elif "/" in func:
                 await message.reply(f"其他指令还在开发中qaq")
@@ -150,7 +148,17 @@ async def call_handle_message(message: RobotMessage, is_public: bool):
                 await message.reply(f"{match_key_words(func)}")
 
     except Exception as e:
-        await report_exception(message, 'Robot-Interact', traceback.format_exc())
+        await report_exception(message, 'Robot-Interact', traceback.format_exc(), repr(e))
+
+
+async def reply_restart_bot(func, message):
+    _log.info(f"{message.author_id} attempted to restart bot.")
+    if message.author_id in _config['admin_qq_id']:
+        await message.reply(f"好的捏，正在重启bot")
+        _log.info(f"Restarting bot...")
+        os.execl(sys.executable, sys.executable, *sys.argv)
+    else:
+        raise PermissionError("阿米诺斯" if func == "/去死" else "非bot管理员，操作被拒绝")
 
 
 class MyClient(Client):

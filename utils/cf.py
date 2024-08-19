@@ -1,5 +1,6 @@
 import difflib
 import random
+
 import re
 import traceback
 from typing import Tuple
@@ -7,11 +8,9 @@ from typing import Tuple
 from utils.interact import RobotMessage
 from utils.tools import report_exception, get_json, format_timestamp, format_timestamp_diff
 
-__cf_version__ = "v2.0.1"
+__cf_version__ = "v2.0.2"
 
-cf_help_content = """[Codeforces]
-
-/cf info [handle]: 获取用户名为 handle 的 Codeforces 基础用户信息.
+__cf_help_content__ = """/cf info [handle]: 获取用户名为 handle 的 Codeforces 基础用户信息.
 /cf pick [标签|all] (难度) (New): 从 Codeforces 上随机选题. 标签中间不能有空格，支持模糊匹配. 难度为整数或一个区间，格式为xxx-xxx. 末尾加上 New 参数则会忽视 P1000A 以前的题.
 /cf contest: 列出最近的 Codeforces 比赛.
 /cf tags: 列出 Codeforces 上的所有题目标签."""
@@ -154,7 +153,8 @@ async def get_user_last_submit(handle: str) -> str:
 
     info = "最近几次提交:"
     for submit in result:
-        info += (f"\n[{submit['id']}] {format_verdict(submit['verdict'], submit['passedTestCount'])} "
+        verdict = format_verdict(submit['verdict'], submit['passedTestCount']) if 'verdict' in submit else "IN_QUEUE"
+        info += (f"\n[{submit['id']}] {verdict} "
                  f"P{submit['problem']['contestId']}{submit['problem']['index']} at "
                  f"{format_timestamp(submit['creationTimeSeconds'])}")
 
@@ -263,7 +263,7 @@ async def reply_cf_request(message: RobotMessage):
     try:
         content = re.sub(r'<@!\d+>', '', message.content).strip().split()
         if len(content) < 2:
-            await message.reply(cf_help_content)
+            await message.reply(f"[Codeforces]\n\n{__cf_help_content__}")
             return
 
         func = content[1]
@@ -295,7 +295,7 @@ async def reply_cf_request(message: RobotMessage):
             await send_prob_tags(message)
 
         else:
-            await message.reply(cf_help_content)
+            await message.reply(f"[Codeforces]\n\n{__cf_help_content__}")
 
     except Exception as e:
-        await report_exception(message, 'Codeforces', traceback.format_exc())
+        await report_exception(message, 'Codeforces', traceback.format_exc(), repr(e))

@@ -1,16 +1,16 @@
 ﻿import datetime
 from asyncio import AbstractEventLoop
 
-from botpy import logging, BotAPI
+from botpy import BotAPI
 
 from utils.cf import __cf_version__
 from utils.interact import RobotMessage, __interact_version__
 from utils.pick_one import __pick_one_version__
+from utils.rand import __rand_version__
 from utils.tools import run_shell, run_async, report_exception, escape_mail_url, _config
 
 _lib_path = _config["lib_path"] + "\\Peeper-Board-Generator"
 _output_path = _config["output_path"]
-_log = logging.get_logger()
 
 
 def classify_verdicts(content: str) -> str:
@@ -44,7 +44,7 @@ async def execute_lib_method(prop: str, message: RobotMessage | None, no_id: boo
             return result
 
     if message is not None:
-        await report_exception(message, 'Peeper-Board-Generator', traceback)
+        await report_exception(message, 'Peeper-Board-Generator', traceback, traceback.split('\n')[-1])
 
     return None
 
@@ -70,7 +70,6 @@ async def call_noon_report(api: BotAPI):
     oneday = datetime.timedelta(days=1)
     yesterday = (datetime.datetime.now() - oneday).strftime("%Y/%m/%d")
 
-    # 调用jar
     run = await call_lib_method_directly(f"--full --output {_output_path}/full.png")
     if run is None:
         await api.post_message(channel_id=_config['push_channel'], content="推送昨日卷王天梯榜失败")
@@ -78,7 +77,6 @@ async def call_noon_report(api: BotAPI):
         await api.post_message(channel_id=_config['push_channel'], content=f"{yesterday} 卷王天梯榜",
                                file_image=f"{_output_path}/full.png")
 
-    # 调用jar
     run = await call_lib_method_directly(f"--now --output {_output_path}/now.png")
     if run is None:
         await api.post_message(channel_id=_config['push_channel'], content="推送今日题数失败")
@@ -90,7 +88,6 @@ async def call_noon_report(api: BotAPI):
 async def send_user_info_name(message: RobotMessage, content: str):
     await message.reply(f"正在查询用户名为 {content} 的用户数据，请稍等")
 
-    # 调用jar
     run = await call_lib_method(message, f"--query_name {content} --output {_output_path}/user.txt")
     if run is None:
         return
@@ -103,7 +100,6 @@ async def send_user_info_name(message: RobotMessage, content: str):
 async def send_user_info_uid(message: RobotMessage, content: str):
     await message.reply(f"正在查询 uid 为 {content} 的用户数据，请稍等")
 
-    # 调用jar
     run = await call_lib_method(message, f"--query_uid {content} --output {_output_path}/user.txt")
     if run is None:
         return
@@ -121,7 +117,6 @@ async def send_verdict_count(message: RobotMessage, content: str):
 
     await message.reply(f"正在查询今日 {verdict} 榜单，请稍等")
 
-    # 调用jar
     run = await call_lib_method(message, f"--now --verdict {verdict} --output {_output_path}/verdict_{verdict}.png")
     if run is None:
         return
@@ -132,7 +127,6 @@ async def send_verdict_count(message: RobotMessage, content: str):
 async def send_today_count(message: RobotMessage):
     await message.reply(f"正在查询今日题数，请稍等")
 
-    # 调用jar
     run = await call_lib_method(message, f"--now --output {_output_path}/now.png")
     if run is None:
         return
@@ -143,7 +137,6 @@ async def send_today_count(message: RobotMessage):
 async def send_yesterday_count(message: RobotMessage):
     await message.reply(f"正在查询总榜，请稍等")
 
-    # 调用jar
     run = await call_lib_method(message, f"--full --output {_output_path}/full.png")
     if run is None:
         return
@@ -153,7 +146,7 @@ async def send_yesterday_count(message: RobotMessage):
 
 async def send_version_info(message: RobotMessage):
     await message.reply(f"正在查询各模块版本，请稍等")
-    # 调用jar
+
     run = await call_lib_method(message, f"--version --output {_output_path}/version.txt", no_id=True)
     if run is None:
         return
@@ -163,4 +156,5 @@ async def send_version_info(message: RobotMessage):
                         f"Robot-Interact {__interact_version__}\n"
                         f"{result}\n"
                         f"Pick-One {__pick_one_version__}\n"
-                        f"Codeforces {__cf_version__}")
+                        f"Codeforces {__cf_version__}\n"
+                        f"Random {__rand_version__}")

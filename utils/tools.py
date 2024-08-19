@@ -42,13 +42,9 @@ def run_async(loop: AbstractEventLoop, func: any):
     return task.result()
 
 
-async def report_exception(message: RobotMessage, name: str, trace: str):
+async def report_exception(message: RobotMessage, name: str, trace: str, info: str):
     _log.error(trace)
-    trace = re.sub(r'[A-Za-z]:\\Users\\[^\\]+', r'%userProfile%', trace)
-    trace = trace.replace(".", " . ")
-    if len(trace) > 2000:
-        trace = trace[:500] + "\n...\n" + trace[-1500:]
-    await message.reply(f"[Operation failed] in module {name}.\n\n{trace}")
+    await message.reply(f"[Operation failed] in module {name}.\n\n{info}")
 
 
 async def get_json(url: str) -> Any:
@@ -100,6 +96,14 @@ def format_timestamp(timestamp: int) -> str:
 def escape_mail_url(content: str) -> str:
     email_pattern = r'([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{1,})'
     return re.sub(email_pattern, lambda x: x.group().replace('.', ' . '), content)
+
+
+def check_is_int(value: str) -> bool:
+    try:
+        int(value)
+        return True
+    except ValueError:
+        return False
 
 
 async def save_img(url: str, file_path: str) -> bool:
