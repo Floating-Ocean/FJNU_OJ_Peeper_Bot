@@ -1,19 +1,20 @@
 import base64
+import random
 
 from botpy import BotAPI
 from botpy.message import Message, GroupMessage
 
-__interact_version__ = "v2.0.2"
+__interact_version__ = "v2.0.3"
 
 _key_words = {
-    "傻逼": "谢谢夸奖",
-    "性别": "盲猜我的性别是武装直升机",
-    "干嘛": "how",
-    "谢谢": "qaq",
-    "qaq": "qwq",
-    "你是谁": "猜猜我是谁",
-    "愚蠢": "yes，我只会关键词匹配",
-    "省": "妈妈生的"
+    "傻逼": ["谢谢夸奖", "反弹", "可能还真被你说对了", "嗯", "好的"],
+    "性别": ["盲猜我的性别是武装直升机", "我也不知道我的性别是啥"],
+    "干嘛": ["how", "what", "which", "why", "whether", "when"],
+    "谢谢": ["qaq", "不用谢qaq", "qwq"],
+    "qaq": ["qwq"],
+    "你是谁": ["猜猜我是谁", "我也不知道", "你是谁"],
+    "愚蠢": ["yes，我只会关键词匹配"],
+    "省": ["妈妈生的", "一眼丁真"]
 }
 
 
@@ -102,6 +103,5 @@ class RobotMessage:
 def match_key_words(content: str) -> str:
     for each in _key_words:
         if each in content:
-            return _key_words[each]
-    return "你干嘛"
-
+            return random.choice(_key_words[each])
+    return random.choice(["你干嘛", "咋了", "how", "what"])
