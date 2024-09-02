@@ -8,7 +8,7 @@ from typing import Tuple
 from utils.interact import RobotMessage
 from utils.tools import report_exception, get_json, format_timestamp, format_timestamp_diff
 
-__cf_version__ = "v2.0.2"
+__cf_version__ = "v2.0.3"
 
 __cf_help_content__ = """/cf info [handle]: 获取用户名为 handle 的 Codeforces 基础用户信息.
 /cf pick [标签|all] (难度) (New): 从 Codeforces 上随机选题. 标签中间不能有空格，支持模糊匹配. 难度为整数或一个区间，格式为xxx-xxx. 末尾加上 New 参数则会忽视 P1000A 以前的题.
@@ -38,7 +38,7 @@ async def get_prob_filter_tag(message: RobotMessage, tag_needed: str,
 
         # 模糊匹配
         if tag_needed not in all_tags:
-            closet_tag = difflib.get_close_matches(tag_needed, all_tags, 1, cutoff=0.6)
+            closet_tag = difflib.get_close_matches(tag_needed, all_tags)
             if len(closet_tag) == 0:
                 return None
             tag_needed = closet_tag[0]
@@ -208,7 +208,7 @@ async def send_user_info(message: RobotMessage, handle: str):
                f"{last_contest}\n\n"
                f"{last_submit}")
 
-    await message.reply(content, img_url=avatar)
+    await message.reply(content, img_url=avatar, modal_words=False)
 
 
 async def send_prob_tags(message: RobotMessage):
@@ -223,7 +223,7 @@ async def send_prob_tags(message: RobotMessage):
         for tag in prob_tags:
             content += "\n" + tag
 
-    await message.reply(content)
+    await message.reply(content, modal_words=False)
 
 
 async def send_prob_filter_tag(message: RobotMessage, tag: str, limit: str = None, newer: bool = False) -> bool:
@@ -243,7 +243,7 @@ async def send_prob_filter_tag(message: RobotMessage, tag: str, limit: str = Non
     if 'rating' in chosen_prob:
         content += f"\n难度: *{chosen_prob['rating']}"
 
-    await message.reply(content)
+    await message.reply(content, modal_words=False)
 
     return True
 
@@ -256,21 +256,26 @@ async def send_contest(message: RobotMessage):
     content = (f"[Codeforces] 近期比赛\n\n"
                f"{info}")
 
-    await message.reply(content)
+    await message.reply(content, modal_words=False)
+
+
+async def send_logo(message: RobotMessage):
+    await message.reply("[Codeforces] 网站当前的图标",
+                        img_url="https://codeforces.org/s/24321/images/codeforces-sponsored-by-ton.png")
 
 
 async def reply_cf_request(message: RobotMessage):
     try:
         content = re.sub(r'<@!\d+>', '', message.content).strip().split()
         if len(content) < 2:
-            await message.reply(f"[Codeforces]\n\n{__cf_help_content__}")
+            await message.reply(f"[Codeforces]\n\n{__cf_help_content__}", modal_words=False)
             return
 
         func = content[1]
 
         if func == "info":
             if len(content) != 3:
-                await message.reply("请输入正确的指令格式，如 /cf info jiangly")
+                await message.reply("请输入正确的指令格式，如\"/cf info jiangly\"")
                 return
 
             await send_user_info(message, content[2])
@@ -286,7 +291,7 @@ async def reply_cf_request(message: RobotMessage):
                 await message.reply("请输入正确的指令格式，如:\n\n"
                                     "/cf pick dp 1700-1900 new\n"
                                     "/cf pick dfs-and-similar\n"
-                                    "/cf pick all 1800")
+                                    "/cf pick all 1800", modal_words=False)
 
         elif func == "contest":
             await send_contest(message)
@@ -294,8 +299,11 @@ async def reply_cf_request(message: RobotMessage):
         elif func == "tags":
             await send_prob_tags(message)
 
+        elif func == "logo":
+            await send_logo(message)
+
         else:
-            await message.reply(f"[Codeforces]\n\n{__cf_help_content__}")
+            await message.reply(f"[Codeforces]\n\n{__cf_help_content__}", modal_words=False)
 
     except Exception as e:
         await report_exception(message, 'Codeforces', traceback.format_exc(), repr(e))

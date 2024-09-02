@@ -1,4 +1,5 @@
 ﻿import datetime
+import logging
 from asyncio import AbstractEventLoop
 
 from botpy import BotAPI
@@ -38,13 +39,13 @@ async def execute_lib_method(prop: str, message: RobotMessage | None, no_id: boo
     for _t in range(2):  # 尝试2次
         id_prop = "" if no_id else "--id hydro "
         result = run_shell(f"cd {_lib_path} & python main.py {id_prop}{prop}")
-        traceback = open(f"{_lib_path}\\last_traceback.log", "r").read()
+        traceback = open(f"{_lib_path}\\last_traceback.log", "r", encoding='utf-8').read()
 
         if traceback == "ok":
             return result
 
     if message is not None:
-        await report_exception(message, 'Peeper-Board-Generator', traceback, traceback.split('\n')[-1])
+        await report_exception(message, 'Peeper-Board-Generator', traceback, traceback.split('\n')[-2])
 
     return None
 
@@ -94,7 +95,7 @@ async def send_user_info_name(message: RobotMessage, content: str):
 
     result = open(f"{_output_path}/user.txt", encoding="utf-8").read()
     result = escape_mail_url(result)
-    await message.reply(f"[Name {content}]\n\n{result}")
+    await message.reply(f"[Name {content}]\n\n{result}", modal_words=False)
 
 
 async def send_user_info_uid(message: RobotMessage, content: str):
@@ -106,7 +107,7 @@ async def send_user_info_uid(message: RobotMessage, content: str):
 
     result = open(f"{_output_path}/user.txt", encoding="utf-8").read()
     result = escape_mail_url(result)
-    await message.reply(f"[Uid {content}]\n\n{result}")
+    await message.reply(f"[Uid {content}]\n\n{result}", modal_words=False)
 
 
 async def send_verdict_count(message: RobotMessage, content: str):
@@ -157,4 +158,4 @@ async def send_version_info(message: RobotMessage):
                         f"{result}\n"
                         f"Pick-One {__pick_one_version__}\n"
                         f"Codeforces {__cf_version__}\n"
-                        f"Random {__rand_version__}")
+                        f"Random {__rand_version__}", modal_words=False)

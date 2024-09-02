@@ -79,7 +79,7 @@ async def call_handle_message(message: RobotMessage, is_public: bool):
         func = content[0]
 
         if func == "/help":
-            await message.reply(help_content)
+            await message.reply(help_content, modal_words=False)
 
         elif func == "/今日题数" or func == "/today":
             await send_today_count(message)
@@ -92,7 +92,7 @@ async def call_handle_message(message: RobotMessage, is_public: bool):
 
         elif func == "/user":
             if len(content) < 3:
-                await message.reply(f"请输入三个参数，如 /user id 1")
+                await message.reply(f"请输入三个参数，比如说\"/user id 1\"")
             elif len(content) > 3:
                 await message.reply(f"请输入三个参数，第三个参数不要加上空格")
             else:
@@ -101,7 +101,7 @@ async def call_handle_message(message: RobotMessage, is_public: bool):
                 elif content[1] == "name":
                     await send_user_info_name(message, content[2])
                 else:
-                    await message.reply(f"请输入正确的参数，如/user id, /user name")
+                    await message.reply(f"请输入正确的参数，如\"/user id\", \"/user name\"")
 
         elif func == "/alive":
             await send_is_alive(message)
@@ -121,6 +121,9 @@ async def call_handle_message(message: RobotMessage, is_public: bool):
                 what = content[1]
             await reply_pick_one(message, what, add=True)
 
+        elif func == "/随机来只" or func == "/随便来只":
+            await reply_pick_one(message, "rand")
+
         elif func == "/capoo" or func == "/咖波":
             await reply_pick_one(message, "capoo")
 
@@ -136,13 +139,13 @@ async def call_handle_message(message: RobotMessage, is_public: bool):
                 await message.reply(f"你猜")
 
             elif func == "/ping":
-                await message.reply(f"pong")
+                await message.reply(f"pong", modal_words=False)
 
             elif func == "/去死" or func == "/重启" or func == "/restart" or func == "/reboot":
                 await reply_restart_bot(func, message)
 
             elif "/" in func:
-                await message.reply(f"其他指令还在开发中qaq")
+                await message.reply(f"其他指令还在开发中")
 
             else:
                 await message.reply(f"{match_key_words(func)}")
@@ -158,7 +161,10 @@ async def reply_restart_bot(func, message):
         _log.info(f"Restarting bot...")
         os.execl(sys.executable, sys.executable, *sys.argv)
     else:
-        raise PermissionError("阿米诺斯" if func == "/去死" else "非bot管理员，操作被拒绝")
+        if func == "/去死":
+            raise PermissionError("阿米诺斯")
+        else:
+            raise PermissionError("非bot管理员，操作被拒绝")
 
 
 class MyClient(Client):

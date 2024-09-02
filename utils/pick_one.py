@@ -1,3 +1,4 @@
+import difflib
 import json
 import os
 import random
@@ -8,7 +9,7 @@ from utils.interact import RobotMessage
 from utils.tools import _config, report_exception, save_img, _log
 
 _lib_path = _config["lib_path"] + "\\Pick-One"
-__pick_one_version__ = "v2.1.2"
+__pick_one_version__ = "v2.2.3"
 
 with open(_lib_path + "\\config.json", 'r', encoding="utf-8") as f:
     _lib_config: dict = json.load(f)
@@ -30,23 +31,30 @@ async def reply_pick_one(message: RobotMessage, what: str, add: bool = False):
 
 
 async def pick_one(message: RobotMessage, what: str):
-    if what.lower() in _match_dict.keys():
+    if what.lower() == "random" or what.lower() == "rand" or what.lower() == "随机" or what.lower() == "随便":
+        current_key = random.choice(list(_lib_config.keys()))
+    elif what.lower() in _match_dict.keys():
         current_key = _match_dict[what.lower()]
-        current_config = _lib_config[current_key]
-        dir_path = _lib_path + f"\\{current_key}\\"
-        img_len = len(os.listdir(dir_path))
+    else:  # 支持一下模糊匹配
+        matches = difflib.get_close_matches(what.lower(), _match_dict.keys())
+        if len(matches) == 0:
+            img_help = "目前可以来只:\n\n"
+            img_help += ", ".join(_ids)
+            await message.reply(img_help, modal_words=False)
+            return
+        current_key = _match_dict[matches[0]]
 
-        if img_len == 0:
-            await message.reply(f"[来只 {current_config['_id']}] 这里还没有图片呢")
-        else:
-            rnd_idx = random.randint(1, img_len) + random.randint(1, img_len) + random.randint(1, img_len)
-            rnd_idx = (rnd_idx - 1) % img_len + 1
-            await message.reply(f"[来只 {current_config['_id']}]",
-                                img_path=f"{dir_path}{current_config['_id']}_{rnd_idx}.gif")
+    current_config = _lib_config[current_key]
+    dir_path = _lib_path + f"\\{current_key}\\"
+    img_len = len(os.listdir(dir_path))
+
+    if img_len == 0:
+        await message.reply(f"这里还没有 {current_config['_id']} 的图片")
     else:
-        img_help = "目前可以来只:\n\n"
-        img_help += ", ".join(_ids)
-        await message.reply(img_help)
+        rnd_idx = random.randint(1, img_len) + random.randint(1, img_len) + random.randint(1, img_len)
+        rnd_idx = (rnd_idx - 1) % img_len + 1
+        await message.reply(f"来了一只{current_config['_id']}",
+                            img_path=f"{dir_path}{current_config['_id']}_{rnd_idx}.gif")
 
 
 async def save_one(message: RobotMessage, what: str):

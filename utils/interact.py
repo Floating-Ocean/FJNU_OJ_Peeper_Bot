@@ -4,7 +4,7 @@ import random
 from botpy import BotAPI
 from botpy.message import Message, GroupMessage
 
-__interact_version__ = "v2.0.3"
+__interact_version__ = "v2.1.0"
 
 _key_words = {
     "傻逼": ["谢谢夸奖", "反弹", "可能还真被你说对了", "嗯", "好的"],
@@ -45,7 +45,10 @@ class RobotMessage:
         self.attachments = message.attachments
         self.msg_seq = 0
 
-    async def reply(self, content: str, img_path: str = None, img_url: str = None):
+    async def reply(self, content: str, img_path: str = None, img_url: str = None, modal_words: bool = True):
+        if modal_words:  # 加点语气词
+            content += random.choice(["喵", "呢", "捏", "qaq"])
+
         self.msg_seq += 1
         if self.guild:  # 频道消息
             await self.api.post_message(channel_id=self.guild_message.channel_id, msg_id=self.guild_message.id,

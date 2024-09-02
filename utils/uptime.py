@@ -48,5 +48,5 @@ async def send_is_alive(message: RobotMessage):
         status_text = "正常" if status[i] == 1 else "异常"
         info += f"\n[{services[i]}] {status_text}"
 
-    await message.reply(info)
+    await message.reply(info, modal_words=False)
 

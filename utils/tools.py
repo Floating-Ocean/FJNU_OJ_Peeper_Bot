@@ -44,7 +44,7 @@ def run_async(loop: AbstractEventLoop, func: any):
 
 async def report_exception(message: RobotMessage, name: str, trace: str, info: str):
     _log.error(trace)
-    await message.reply(f"[Operation failed] in module {name}.\n\n{info}")
+    await message.reply(f"[Operation failed] in module {name}.\n\n{info}", modal_words=False)
 
 
 async def get_json(url: str) -> Any:
