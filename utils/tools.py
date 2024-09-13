@@ -4,7 +4,6 @@ import ssl
 import subprocess
 import time
 from asyncio import AbstractEventLoop
-from typing import Any
 
 import requests
 from botpy import logging
@@ -25,9 +24,8 @@ def run_shell(shell: str) -> str:
     # 实时输出
     while True:
         line = cmd.stderr.readline().strip()
-        info = info + line
-
         _log.info(line)
+        info += line
 
         if line == "" or subprocess.Popen.poll(cmd) == 0:  # 判断子进程是否结束
             break
@@ -47,13 +45,13 @@ async def report_exception(message: RobotMessage, name: str, trace: str, info: s
     await message.reply(f"[Operation failed] in module {name}.\n\n{info}", modal_words=False)
 
 
-async def get_json(url: str) -> Any:
+def fetch_json(url: str, payload: dict = None) -> dict:
     headers = {
         'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
                       "Chrome/91.0.4472.77 Safari/537.36",
         'Connection': 'close'
     }
-    response = requests.post(url, headers=headers)
+    response = requests.post(url, headers=headers, json=payload)
 
     if response.status_code == 200:
         return response.json()

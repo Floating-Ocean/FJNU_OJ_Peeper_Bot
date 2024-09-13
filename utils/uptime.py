@@ -1,20 +1,13 @@
-import requests
-
 from utils.interact import RobotMessage
-from utils.tools import _config
+from utils.tools import _config, fetch_json
 
 _api_key = _config["uptime_apikey"]
 
 
 def fetch_status(check_url: str) -> int:
-    url = "https://api.uptimerobot.com/v2/getMonitors"
-    payload = {"api_key": _api_key}
-    response = requests.post(url, json=payload)
+    data = fetch_json("https://api.uptimerobot.com/v2/getMonitors",
+                      {"api_key": _api_key})
 
-    if response.status_code != 200:
-        raise ConnectionError(f"Filed to connect {check_url}, code {response.status_code}.")
-
-    data = response.json()
     if data["stat"] != "ok":
         return -1  # API 异常
 
@@ -49,4 +42,3 @@ async def send_is_alive(message: RobotMessage):
         info += f"\n[{services[i]}] {status_text}"
 
     await message.reply(info, modal_words=False)
-

@@ -104,4 +104,3 @@ async def reply_rand_request(message: RobotMessage):
 
     except Exception as e:
         await report_exception(message, 'Random', traceback.format_exc(), repr(e))
-

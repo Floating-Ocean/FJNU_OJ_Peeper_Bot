@@ -11,16 +11,21 @@ from utils.tools import _config, report_exception, save_img, _log
 _lib_path = _config["lib_path"] + "\\Pick-One"
 __pick_one_version__ = "v2.2.3"
 
-with open(_lib_path + "\\config.json", 'r', encoding="utf-8") as f:
-    _lib_config: dict = json.load(f)
-    _match_dict, _ids = {}, []
-    for key, value in _lib_config.items():  # 方便匹配
-        _ids.append(value['_id'])
-        for keys in value['key']:
-            _match_dict[keys] = key
+_lib_config, _match_dict, _ids = {}, {}, []
+
+
+def load_pick_one_config():
+    with open(_lib_path + "\\config.json", 'r', encoding="utf-8") as f:
+        _lib_config.clear()
+        _lib_config.update(json.load(f))
+        for key, value in _lib_config.items():  # 方便匹配
+            _ids.append(value['_id'])
+            for keys in value['key']:
+                _match_dict[keys] = key
 
 
 async def reply_pick_one(message: RobotMessage, what: str, add: bool = False):
+    load_pick_one_config()
     try:
         if add:
             await save_one(message, what)

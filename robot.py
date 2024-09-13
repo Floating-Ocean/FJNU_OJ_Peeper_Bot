@@ -16,8 +16,8 @@ from botpy.message import Message, GroupMessage
 
 from utils.cf import reply_cf_request, __cf_help_content__
 from utils.interact import RobotMessage, match_key_words
-from utils.peeper import send_today_count, send_yesterday_count, send_verdict_count, send_user_info_uid, \
-    send_user_info_name, send_version_info, daily_update_job, noon_report_job
+from utils.peeper import send_now_board, send_yesterday_full_board, send_now_board_with_verdict, send_user_info, \
+    send_version_info, daily_update_job, noon_report_job
 from utils.pick_one import reply_pick_one
 from utils.rand import reply_rand_request, __rand_help_content__
 from utils.tools import report_exception
@@ -82,13 +82,13 @@ async def call_handle_message(message: RobotMessage, is_public: bool):
             await message.reply(help_content, modal_words=False)
 
         elif func == "/今日题数" or func == "/today":
-            await send_today_count(message)
+            await send_now_board(message)
 
         elif func == "/昨日总榜" or func == "/yesterday" or func == "/full":
-            await send_yesterday_count(message)
+            await send_yesterday_full_board(message)
 
         elif func == "/评测榜单" or func == "/verdict":
-            await send_verdict_count(message, content[1] if len(content) == 2 else "")
+            await send_now_board_with_verdict(message, content[1] if len(content) == 2 else "")
 
         elif func == "/user":
             if len(content) < 3:
@@ -96,10 +96,8 @@ async def call_handle_message(message: RobotMessage, is_public: bool):
             elif len(content) > 3:
                 await message.reply(f"请输入三个参数，第三个参数不要加上空格")
             else:
-                if content[1] == "id":
-                    await send_user_info_uid(message, content[2])
-                elif content[1] == "name":
-                    await send_user_info_name(message, content[2])
+                if content[1] == "id" or content[1] == "name":
+                    await send_user_info(message, content[2], by_name=(content[1] == "name"))
                 else:
                     await message.reply(f"请输入正确的参数，如\"/user id\", \"/user name\"")
 
@@ -157,7 +155,10 @@ async def call_handle_message(message: RobotMessage, is_public: bool):
 async def reply_restart_bot(func, message):
     _log.info(f"{message.author_id} attempted to restart bot.")
     if message.author_id in _config['admin_qq_id']:
-        await message.reply(f"好的捏，正在重启bot")
+        if func == "/去死":
+            await message.reply(f"好的捏，正在原地去世")
+        else:
+            await message.reply(f"好的捏，正在重启bot")
         _log.info(f"Restarting bot...")
         os.execl(sys.executable, sys.executable, *sys.argv)
     else:
@@ -197,7 +198,7 @@ class MyClient(Client):
 if __name__ == "__main__":
     # 通过kwargs，设置需要监听的事件通道
     intents = botpy.Intents(public_messages=True, public_guild_messages=True, guild_messages=True)
-    client = MyClient(intents=intents)
+    client = MyClient(intents=intents, timeout=20)
 
     # 更新每日排行榜
     daily_thread = threading.Thread(target=daily_sched_thread, args=[asyncio.get_event_loop()])

@@ -4,18 +4,20 @@ import random
 from botpy import BotAPI
 from botpy.message import Message, GroupMessage
 
-__interact_version__ = "v2.1.0"
+__interact_version__ = "v2.1.2"
 
 _key_words = {
-    "傻逼": ["谢谢夸奖", "反弹", "可能还真被你说对了", "嗯", "好的"],
+    "傻逼": ["谢谢夸奖", "反弹", "可能还真被你说对了", "嗯", "好的", "哼，你才是"],
     "性别": ["盲猜我的性别是武装直升机", "我也不知道我的性别是啥"],
     "干嘛": ["how", "what", "which", "why", "whether", "when"],
     "谢谢": ["qaq", "不用谢qaq", "qwq"],
     "qaq": ["qwq"],
     "你是谁": ["猜猜我是谁", "我也不知道", "你是谁"],
-    "愚蠢": ["yes，我只会关键词匹配"],
-    "省": ["妈妈生的", "一眼丁真"]
+    "省": ["妈妈生的", "一眼丁真"],
+    "似": ["看上去我还活着", "似了"]
 }
+
+_modal_words = ["喵", "呢", "捏", "qaq"]
 
 
 class RobotMessage:
@@ -47,7 +49,7 @@ class RobotMessage:
 
     async def reply(self, content: str, img_path: str = None, img_url: str = None, modal_words: bool = True):
         if modal_words:  # 加点语气词
-            content += random.choice(["喵", "呢", "捏", "qaq"])
+            content += random.choice(_modal_words)
 
         self.msg_seq += 1
         if self.guild:  # 频道消息

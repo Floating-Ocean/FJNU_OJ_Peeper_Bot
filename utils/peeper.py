@@ -1,5 +1,5 @@
 ﻿import datetime
-import logging
+import difflib
 from asyncio import AbstractEventLoop
 
 from botpy import BotAPI
@@ -15,23 +15,24 @@ _output_path = _config["output_path"]
 
 
 def classify_verdicts(content: str) -> str:
-    match = {
+    alias_to_full = {
         "ac": ["accepted", "accept", "ac"],
-        "wa": ["wronganswer", "rejected", "reject", "wa", "rj"],
-        "tle": ["timeexceeded", "timelimitexceeded", "timeexceed", "timelimitexceed", "tle", "te"],
-        "mle": ["memoryexceeded", "memorylimitexceeded", "memoryexceed", "memorylimitexceed", "mle", "me"],
-        "ole": ["outputexceeded", "outputlimitexceeded", "outputexceed", "outputlimitexceed", "ole", "oe"],
-        "re": ["runtimeerror", "re"],
-        "ce": ["compileerror", "ce"],
-        "se": ["systemerror", "se"],
-        "fe": ["formaterror", "se"],
+        "wa": ["wrong answer", "rejected", "reject", "wa", "rj"],
+        "tle": ["time exceeded", "time limit exceeded", "time exceed", "time limit exceed", "tle", "te"],
+        "mle": ["memory exceeded", "memory limit exceeded", "memory exceed", "memory limit exceed", "mle", "me"],
+        "ole": ["output exceeded", "output limit exceeded", "output exceed", "output limit exceed", "ole", "oe"],
+        "re": ["runtime error", "re"],
+        "ce": ["compile error", "ce"],
+        "se": ["system error", "se"],
+        "fe": ["format error", "se"],
     }
+    full_to_alias = {val: key for key, alters in alias_to_full.items() for val in alters}
+    # 模糊匹配
+    matches = difflib.get_close_matches(content.lower(), full_to_alias.keys())
+    if len(matches) == 0:
+        return ""
 
-    for verdict, alias in match.items():
-        if content in alias:
-            return verdict.upper()
-
-    return ""
+    return full_to_alias[matches[0]].upper()
 
 
 async def execute_lib_method(prop: str, message: RobotMessage | None, no_id: bool) -> str | None:
@@ -86,32 +87,22 @@ async def call_noon_report(api: BotAPI):
                                file_image=f"{_output_path}/now.png")
 
 
-async def send_user_info_name(message: RobotMessage, content: str):
-    await message.reply(f"正在查询用户名为 {content} 的用户数据，请稍等")
+async def send_user_info(message: RobotMessage, content: str, by_name: bool = False):
+    type_name = "用户名" if by_name else " uid "
+    type_id = "name" if by_name else "uid"
+    await message.reply(f"正在查询{type_name}为 {content} 的用户数据，请稍等")
 
-    run = await call_lib_method(message, f"--query_name {content} --output {_output_path}/user.txt")
+    run = await call_lib_method(message, f"--query_{type_id} {content} --output {_output_path}/user.txt")
     if run is None:
         return
 
     result = open(f"{_output_path}/user.txt", encoding="utf-8").read()
     result = escape_mail_url(result)
-    await message.reply(f"[Name {content}]\n\n{result}", modal_words=False)
+    await message.reply(f"[{type_id.capitalize()} {content}]\n\n{result}", modal_words=False)
 
 
-async def send_user_info_uid(message: RobotMessage, content: str):
-    await message.reply(f"正在查询 uid 为 {content} 的用户数据，请稍等")
-
-    run = await call_lib_method(message, f"--query_uid {content} --output {_output_path}/user.txt")
-    if run is None:
-        return
-
-    result = open(f"{_output_path}/user.txt", encoding="utf-8").read()
-    result = escape_mail_url(result)
-    await message.reply(f"[Uid {content}]\n\n{result}", modal_words=False)
-
-
-async def send_verdict_count(message: RobotMessage, content: str):
-    verdict = classify_verdicts(content.lower().replace(" ", ""))
+async def send_now_board_with_verdict(message: RobotMessage, content: str):
+    verdict = classify_verdicts(content)
     if verdict == "":
         await message.reply(f"请在 /评测榜单 后面添加正确的参数，如 ac, Accepted, TimeExceeded, WrongAnswer")
         return
@@ -125,7 +116,7 @@ async def send_verdict_count(message: RobotMessage, content: str):
     await message.reply(f"今日 {verdict} 榜单", f"{_output_path}/verdict_{verdict}.png")
 
 
-async def send_today_count(message: RobotMessage):
+async def send_now_board(message: RobotMessage):
     await message.reply(f"正在查询今日题数，请稍等")
 
     run = await call_lib_method(message, f"--now --output {_output_path}/now.png")
@@ -135,8 +126,8 @@ async def send_today_count(message: RobotMessage):
     await message.reply("今日题数", f"{_output_path}/now.png")
 
 
-async def send_yesterday_count(message: RobotMessage):
-    await message.reply(f"正在查询总榜，请稍等")
+async def send_yesterday_full_board(message: RobotMessage):
+    await message.reply(f"正在查询昨日总榜，请稍等")
 
     run = await call_lib_method(message, f"--full --output {_output_path}/full.png")
     if run is None:

@@ -6,7 +6,7 @@ import traceback
 from typing import Tuple
 
 from utils.interact import RobotMessage
-from utils.tools import report_exception, get_json, format_timestamp, format_timestamp_diff
+from utils.tools import report_exception, fetch_json, format_timestamp, format_timestamp_diff
 
 __cf_version__ = "v2.0.3"
 
@@ -16,9 +16,9 @@ __cf_help_content__ = """/cf info [handle]: 获取用户名为 handle 的 Codefo
 /cf tags: 列出 Codeforces 上的所有题目标签."""
 
 
-async def get_prob_tags_all() -> list[str] | None:
+def get_prob_tags_all() -> list[str] | None:
     url = f"https://codeforces.com/api/problemset.problems"
-    json_data = await get_json(url)
+    json_data = fetch_json(url)
     tags = []
     for problems in json_data['result']['problems']:
         for tag in problems['tags']:
@@ -32,7 +32,7 @@ async def get_prob_filter_tag(message: RobotMessage, tag_needed: str,
     if tag_needed == "all":
         url = f"https://codeforces.com/api/problemset.problems"
     else:
-        all_tags = await get_prob_tags_all()
+        all_tags = get_prob_tags_all()
         if all_tags is None:
             return None
 
@@ -47,7 +47,7 @@ async def get_prob_filter_tag(message: RobotMessage, tag_needed: str,
         now_tag = tag_needed.replace("-", " ")
         url = f"https://codeforces.com/api/problemset.problems?tags={now_tag}"
 
-    json_data = await get_json(url)
+    json_data = fetch_json(url)
 
     min_point = 0
     max_point = 0
@@ -67,9 +67,9 @@ async def get_prob_filter_tag(message: RobotMessage, tag_needed: str,
     return random.choice(filtered_data)
 
 
-async def get_user_info(handle: str) -> Tuple[str, str | None]:
+def get_user_info(handle: str) -> Tuple[str, str | None]:
     url = f"https://codeforces.com/api/user.info?handles={handle}"
-    json_data = await get_json(url)
+    json_data = fetch_json(url)
 
     if json_data['status'] != "OK":
         return "用户不存在", None
@@ -116,9 +116,9 @@ def format_verdict(verdict: str, passed_count: int) -> str:
         return f"{verdict} on test {passed_count + 1}"
 
 
-async def get_user_last_contest(handle: str) -> str:
+def get_user_last_contest(handle: str) -> str:
     url = f"https://codeforces.com/api/user.rating?handle={handle}"
-    json_data = await get_json(url)
+    json_data = fetch_json(url)
 
     if json_data['status'] != "OK":
         return "用户不存在"
@@ -139,9 +139,9 @@ async def get_user_last_contest(handle: str) -> str:
     return info
 
 
-async def get_user_last_submit(handle: str) -> str:
+def get_user_last_submit(handle: str) -> str:
     url = f"https://codeforces.com/api/user.status?handle={handle}&from=1&count=5"
-    json_data = await get_json(url)
+    json_data = fetch_json(url)
 
     if json_data['status'] != "OK":
         return "用户不存在"
@@ -161,9 +161,9 @@ async def get_user_last_submit(handle: str) -> str:
     return info
 
 
-async def get_recent_contests() -> str:
+def get_recent_contests() -> str:
     url = "https://codeforces.com/api/contest.list"
-    json_data = await get_json(url)
+    json_data = fetch_json(url)
 
     if json_data['status'] != "OK":
         return "查询异常"
@@ -199,9 +199,9 @@ async def get_recent_contests() -> str:
 async def send_user_info(message: RobotMessage, handle: str):
     await message.reply(f"正在查询 {handle} 的 Codeforces 平台信息，请稍等")
 
-    info, avatar = await get_user_info(handle)
-    last_contest = await get_user_last_contest(handle)
-    last_submit = await get_user_last_submit(handle)
+    info, avatar = get_user_info(handle)
+    last_contest = get_user_last_contest(handle)
+    last_submit = get_user_last_submit(handle)
 
     content = (f"[Codeforces] {handle}\n\n"
                f"{info}\n\n"
@@ -214,7 +214,7 @@ async def send_user_info(message: RobotMessage, handle: str):
 async def send_prob_tags(message: RobotMessage):
     await message.reply("正在查询 Codeforces 平台的所有问题标签，请稍等")
 
-    prob_tags = await get_prob_tags_all()
+    prob_tags = get_prob_tags_all()
 
     if prob_tags is None:
         content = "查询异常"
@@ -251,7 +251,7 @@ async def send_prob_filter_tag(message: RobotMessage, tag: str, limit: str = Non
 async def send_contest(message: RobotMessage):
     await message.reply(f"正在查询近期 Codeforces 比赛，请稍等")
 
-    info = await get_recent_contests()
+    info = get_recent_contests()
 
     content = (f"[Codeforces] 近期比赛\n\n"
                f"{info}")
