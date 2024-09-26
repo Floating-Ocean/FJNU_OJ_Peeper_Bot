@@ -15,12 +15,13 @@ from botpy.ext.cog_yaml import read
 from botpy.message import Message, GroupMessage
 
 from utils.cf import reply_cf_request, __cf_help_content__
+from utils.hitokoto import reply_hitokoto, __hitokoto_help_content__
 from utils.interact import RobotMessage, match_key_words
 from utils.peeper import send_now_board, send_yesterday_full_board, send_now_board_with_verdict, send_user_info, \
     send_version_info, daily_update_job, noon_report_job
-from utils.pick_one import reply_pick_one
+from utils.pick_one import reply_pick_one, __pick_one_help_content__
 from utils.rand import reply_rand_request, __rand_help_content__
-from utils.tools import report_exception
+from utils.tools import report_exception, check_is_int
 from utils.uptime import send_is_alive
 
 nest_asyncio.apply()
@@ -49,13 +50,16 @@ help_content = f"""[Functions]
 /活着吗: 顾名思义，只要活着回你一句话，不然就不理你.
 
 [pick-one]
-/来只 [what]: 获取一个随机表情包.
+{__pick_one_help_content__}
 
 [codeforces]
 {__cf_help_content__}
 
 [random]
-{__rand_help_content__}"""
+{__rand_help_content__}
+
+[hitokoto]
+{__hitokoto_help_content__}"""
 
 
 def daily_sched_thread(loop: AbstractEventLoop):
@@ -82,24 +86,29 @@ async def call_handle_message(message: RobotMessage, is_public: bool):
             await message.reply(help_content, modal_words=False)
 
         elif func == "/今日题数" or func == "/today":
-            await send_now_board(message)
+            await send_now_board(message, (content[1] == "single") if len(content) == 2 else False)
 
         elif func == "/昨日总榜" or func == "/yesterday" or func == "/full":
-            await send_yesterday_full_board(message)
+            await send_yesterday_full_board(message, (content[1] == "single") if len(content) == 2 else False)
 
         elif func == "/评测榜单" or func == "/verdict":
-            await send_now_board_with_verdict(message, content[1] if len(content) == 2 else "")
+            await send_now_board_with_verdict(message, content[1] if len(content) == 2 else "",
+                                              (content[2] == "single") if len(content) == 3 else False)
 
         elif func == "/user":
             if len(content) < 3:
-                await message.reply(f"请输入三个参数，比如说\"/user id 1\"")
-            elif len(content) > 3:
-                await message.reply(f"请输入三个参数，第三个参数不要加上空格")
+                await message.reply("请输入三个参数，第三个参数前要加空格，比如说\"/user id 1\"，\"/user name Hydro\"")
+                return
+            if len(content) > 3:
+                await message.reply("请输入三个参数，第三个参数不要加上空格")
+                return
+            if content[1] == "id" and (len(content[2]) > 9 or not check_is_int(content[2])):
+                await message.reply("参数错误，id必须为整数")
+                return
+            if content[1] == "id" or content[1] == "name":
+                await send_user_info(message, content[2], by_name=(content[1] == "name"))
             else:
-                if content[1] == "id" or content[1] == "name":
-                    await send_user_info(message, content[2], by_name=(content[1] == "name"))
-                else:
-                    await message.reply(f"请输入正确的参数，如\"/user id\", \"/user name\"")
+                await message.reply("请输入正确的参数，如\"/user id ...\", \"/user name ...\"")
 
         elif func == "/alive":
             await send_is_alive(message)
@@ -131,6 +140,10 @@ async def call_handle_message(message: RobotMessage, is_public: bool):
         elif (func.startswith("/选择") or func == "/rand" or
               func == "/shuffle" or func == "/打乱"):
             await reply_rand_request(message)
+
+        elif (func == "/hitokoto" or func == "/来句" or
+              func == "/来一句" or func == "/来句话" or func == "/来一句话"):
+            await reply_hitokoto(message)
 
         elif is_public:  # 是否被at
             if func == "/活着吗":

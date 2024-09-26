@@ -8,6 +8,7 @@ from asyncio import AbstractEventLoop
 import requests
 from botpy import logging
 from botpy.ext.cog_yaml import read
+from PIL import Image
 from requests.adapters import HTTPAdapter
 
 from utils.interact import RobotMessage
@@ -124,6 +125,13 @@ async def save_img(url: str, file_path: str) -> bool:
         return True
 
     return False
+
+
+def png2jpg(path: str) -> str:
+    img = Image.open(path)
+    new_path = os.path.splitext(path)[0] + '.jpg'
+    img.convert('RGB').save(new_path)
+    return new_path
 
 
 class SSLAdapter(HTTPAdapter):

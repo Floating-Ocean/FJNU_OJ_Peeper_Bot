@@ -8,7 +8,7 @@ from utils.cf import __cf_version__
 from utils.interact import RobotMessage, __interact_version__
 from utils.pick_one import __pick_one_version__
 from utils.rand import __rand_version__
-from utils.tools import run_shell, run_async, report_exception, escape_mail_url, _config
+from utils.tools import run_shell, run_async, report_exception, escape_mail_url, _config, png2jpg
 
 _lib_path = _config["lib_path"] + "\\Peeper-Board-Generator"
 _output_path = _config["output_path"]
@@ -77,14 +77,14 @@ async def call_noon_report(api: BotAPI):
         await api.post_message(channel_id=_config['push_channel'], content="推送昨日卷王天梯榜失败")
     else:
         await api.post_message(channel_id=_config['push_channel'], content=f"{yesterday} 卷王天梯榜",
-                               file_image=f"{_output_path}/full.png")
+                               file_image=png2jpg(f"{_output_path}/full.png"))
 
     run = await call_lib_method_directly(f"--now --output {_output_path}/now.png")
     if run is None:
         await api.post_message(channel_id=_config['push_channel'], content="推送今日题数失败")
     else:
         await api.post_message(channel_id=_config['push_channel'], content=f"{today} 半天做题总榜",
-                               file_image=f"{_output_path}/now.png")
+                               file_image=png2jpg(f"{_output_path}/now.png"))
 
 
 async def send_user_info(message: RobotMessage, content: str, by_name: bool = False):
@@ -101,7 +101,7 @@ async def send_user_info(message: RobotMessage, content: str, by_name: bool = Fa
     await message.reply(f"[{type_id.capitalize()} {content}]\n\n{result}", modal_words=False)
 
 
-async def send_now_board_with_verdict(message: RobotMessage, content: str):
+async def send_now_board_with_verdict(message: RobotMessage, content: str, single_col: bool):
     verdict = classify_verdicts(content)
     if verdict == "":
         await message.reply(f"请在 /评测榜单 后面添加正确的参数，如 ac, Accepted, TimeExceeded, WrongAnswer")
@@ -109,31 +109,35 @@ async def send_now_board_with_verdict(message: RobotMessage, content: str):
 
     await message.reply(f"正在查询今日 {verdict} 榜单，请稍等")
 
-    run = await call_lib_method(message, f"--now --verdict {verdict} --output {_output_path}/verdict_{verdict}.png")
+    single_arg = "" if single_col else " --separate_cols"
+    run = await call_lib_method(message,
+                                f"--now {single_arg} --verdict {verdict} --output {_output_path}/verdict_{verdict}.png")
     if run is None:
         return
 
-    await message.reply(f"今日 {verdict} 榜单", f"{_output_path}/verdict_{verdict}.png")
+    await message.reply(f"今日 {verdict} 榜单", png2jpg(f"{_output_path}/verdict_{verdict}.png"))
 
 
-async def send_now_board(message: RobotMessage):
+async def send_now_board(message: RobotMessage, single_col: bool):
     await message.reply(f"正在查询今日题数，请稍等")
 
-    run = await call_lib_method(message, f"--now --output {_output_path}/now.png")
+    single_arg = "" if single_col else " --separate_cols"
+    run = await call_lib_method(message, f"--now {single_arg} --output {_output_path}/now.png")
     if run is None:
         return
 
-    await message.reply("今日题数", f"{_output_path}/now.png")
+    await message.reply("今日题数", png2jpg(f"{_output_path}/now.png"))
 
 
-async def send_yesterday_full_board(message: RobotMessage):
+async def send_yesterday_full_board(message: RobotMessage, single_col: bool):
     await message.reply(f"正在查询昨日总榜，请稍等")
 
-    run = await call_lib_method(message, f"--full --output {_output_path}/full.png")
+    single_arg = "" if single_col else " --separate_cols"
+    run = await call_lib_method(message, f"--full {single_arg} --output {_output_path}/full.png")
     if run is None:
         return
 
-    await message.reply("昨日卷王天梯榜", f"{_output_path}/full.png")
+    await message.reply("昨日卷王天梯榜", png2jpg(f"{_output_path}/full.png"))
 
 
 async def send_version_info(message: RobotMessage):

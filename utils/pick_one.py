@@ -9,19 +9,23 @@ from utils.interact import RobotMessage
 from utils.tools import _config, report_exception, save_img, _log
 
 _lib_path = _config["lib_path"] + "\\Pick-One"
-__pick_one_version__ = "v2.2.3"
+__pick_one_version__ = "v2.2.4"
+
+__pick_one_help_content__ = """/来只 [what]: 获取一个类别为 what 的随机表情包.
+/随便来只: 获取一个随机类别的随机表情包."""
 
 _lib_config, _match_dict, _ids = {}, {}, []
 
 
 def load_pick_one_config():
     with open(_lib_path + "\\config.json", 'r', encoding="utf-8") as f:
-        _lib_config.clear()
+        _lib_config.clear(), _ids.clear(), _match_dict.clear()
         _lib_config.update(json.load(f))
         for key, value in _lib_config.items():  # 方便匹配
-            _ids.append(value['_id'])
+            _ids.append([value['_id'], len(os.listdir(f"{_lib_path}\\{key}\\"))])
             for keys in value['key']:
                 _match_dict[keys] = key
+        _ids.sort(key=lambda s: s[1], reverse=True)  # 按图片数量降序排序
 
 
 async def reply_pick_one(message: RobotMessage, what: str, add: bool = False):
@@ -44,13 +48,13 @@ async def pick_one(message: RobotMessage, what: str):
         matches = difflib.get_close_matches(what.lower(), _match_dict.keys())
         if len(matches) == 0:
             img_help = "目前可以来只:\n\n"
-            img_help += ", ".join(_ids)
+            img_help += ", ".join([_id for _id, _len in _ids])
             await message.reply(img_help, modal_words=False)
             return
         current_key = _match_dict[matches[0]]
 
     current_config = _lib_config[current_key]
-    dir_path = _lib_path + f"\\{current_key}\\"
+    dir_path = f"{_lib_path}\\{current_key}\\"
     img_len = len(os.listdir(dir_path))
 
     if img_len == 0:
@@ -71,7 +75,7 @@ async def save_one(message: RobotMessage, what: str):
     if what.lower() in _match_dict.keys():
         current_key = _match_dict[what.lower()]
         current_config = _lib_config[current_key]
-        dir_path = _lib_path + f"\\{current_key}\\"
+        dir_path = f"{_lib_path}\\{current_key}\\"
         img_len = len(os.listdir(dir_path))
         cnt, ok = len(message.attachments), 0
 
