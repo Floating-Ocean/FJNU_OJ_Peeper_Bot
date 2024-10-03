@@ -1,8 +1,11 @@
+import hashlib
 import os
 import re
 import ssl
+import string
 import subprocess
 import time
+import random
 from asyncio import AbstractEventLoop
 
 import requests
@@ -120,9 +123,14 @@ async def save_img(url: str, file_path: str) -> bool:
     response = sess.get(url, headers=headers, verify=False)  # 阻止ssl验证
 
     if response.status_code == 200:
+        parent_path = os.path.dirname(file_path)
+        if not os.path.exists(parent_path):
+            os.makedirs(parent_path)
+
         with open(file_path, "wb") as f:
             f.write(response.content)
             f.close()
+
         return True
 
     return False
@@ -133,6 +141,18 @@ def png2jpg(path: str) -> str:
     new_path = os.path.splitext(path)[0] + '.jpg'
     img.convert('RGB').save(new_path)
     return new_path
+
+
+def get_md5(path: str) -> str:
+    md5 = hashlib.md5()
+    file = open(path, 'rb')
+    md5.update(file.read())
+    file.close()
+    return md5.hexdigest()
+
+
+def rand_str_len32() -> str:
+    return ''.join([random.choice(string.ascii_letters + string.digits) for _ in range(32)])
 
 
 class SSLAdapter(HTTPAdapter):

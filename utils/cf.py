@@ -8,7 +8,7 @@ from typing import Tuple
 from utils.interact import RobotMessage
 from utils.tools import report_exception, fetch_json, format_timestamp, format_timestamp_diff, check_is_int
 
-__cf_version__ = "v2.0.6"
+__cf_version__ = "v2.0.7"
 
 __cf_help_content__ = """/cf info [handle]: 获取用户名为 handle 的 Codeforces 基础用户信息.
 /cf recent [handle] (count): 获取用户名为 handle 的 Codeforces 最近 count 发提交，count 默认为 5.
@@ -111,8 +111,15 @@ def get_user_info(handle: str) -> Tuple[str | None, str | None]:
 
 
 def format_verdict(verdict: str, passed_count: int) -> str:
-    if verdict == "OK":
-        return "ACCEPTED"
+    verdict = verdict.replace("_", " ").capitalize()
+    if verdict == "Ok":
+        return "Accepted"
+    elif verdict == "Skipped" or verdict == "Compilation error":
+        return verdict
+    elif verdict == "Challenged":
+        return "Hacked"
+    elif verdict == "Testing":
+        return f"Running on test {passed_count + 1}"
     else:
         return f"{verdict} on test {passed_count + 1}"
 
@@ -154,11 +161,11 @@ def get_user_last_submit(handle: str, count: int = 5) -> str:
 
     info = f"最近{count}发提交:"
     for submit in result:
-        verdict = format_verdict(submit['verdict'], submit['passedTestCount']) if 'verdict' in submit else "IN_QUEUE"
+        verdict = format_verdict(submit['verdict'], submit['passedTestCount']) if 'verdict' in submit else "In queue"
         points = f" *{int(submit['problem']['rating'])}" if 'rating' in submit['problem'] else ""
         time = f" {submit['timeConsumedMillis']}ms" if 'timeConsumedMillis' in submit else ""
         info += (f"\n[{submit['id']}] {verdict} "
-                 f"P{submit['problem']['contestId']}{submit['problem']['index']}{points}{time} at "
+                 f"P{submit['problem']['contestId']}{submit['problem']['index']}{points}{time} "
                  f"{format_timestamp(submit['creationTimeSeconds'])}")
 
     return info

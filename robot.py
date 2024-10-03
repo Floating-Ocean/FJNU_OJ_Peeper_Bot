@@ -126,7 +126,10 @@ async def call_handle_message(message: RobotMessage, is_public: bool):
             what = func[5::].strip() if func != "/添加来只" else ""  # 支持不加空格的形式
             if len(content) >= 2:
                 what = content[1]
-            await reply_pick_one(message, what, add=True)
+            await reply_pick_one(message, what, msg_type="add")
+
+        elif func == "/审核来只" or func == "/同意来只" or func == "/accept" or func == "/audit":
+            await reply_pick_one(message, msg_type="audit")
 
         elif func == "/随机来只" or func == "/随便来只":
             await reply_pick_one(message, "rand")
