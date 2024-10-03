@@ -43,10 +43,11 @@ def run_async(loop: AbstractEventLoop, func: any):
 
 async def report_exception(message: RobotMessage, name: str, trace: str, info: str):
     _log.error(trace)
+    info = info.replace(".", ". ")
     await message.reply(f"[Operation failed] in module {name}.\n\n{info}", modal_words=False)
 
 
-def fetch_json(url: str, payload: dict = None) -> dict:
+def fetch_json(url: str, payload: dict = None, throw: bool = True) -> dict:
     headers = {
         'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
                       "Chrome/91.0.4472.77 Safari/537.36",
@@ -54,10 +55,10 @@ def fetch_json(url: str, payload: dict = None) -> dict:
     }
     response = requests.post(url, headers=headers, json=payload)
 
-    if response.status_code == 200:
-        return response.json()
-    else:
+    if response.status_code != 200 and throw:
         raise ConnectionError(f"Filed to connect {url}, code {response.status_code}.")
+
+    return response.json()
 
 
 def format_timestamp_diff(diff: int) -> str:
@@ -89,7 +90,7 @@ def format_timestamp_diff(diff: int) -> str:
 
 
 def format_timestamp(timestamp: int) -> str:
-    return time.strftime('%Y/%m/%d %H:%M:%S', time.localtime(timestamp))
+    return time.strftime('%y/%m/%d %H:%M:%S', time.localtime(timestamp))
 
 
 def escape_mail_url(content: str) -> str:

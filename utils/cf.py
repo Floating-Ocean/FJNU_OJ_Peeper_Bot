@@ -6,11 +6,12 @@ import traceback
 from typing import Tuple
 
 from utils.interact import RobotMessage
-from utils.tools import report_exception, fetch_json, format_timestamp, format_timestamp_diff
+from utils.tools import report_exception, fetch_json, format_timestamp, format_timestamp_diff, check_is_int
 
-__cf_version__ = "v2.0.3"
+__cf_version__ = "v2.0.6"
 
 __cf_help_content__ = """/cf info [handle]: 获取用户名为 handle 的 Codeforces 基础用户信息.
+/cf recent [handle] (count): 获取用户名为 handle 的 Codeforces 最近 count 发提交，count 默认为 5.
 /cf pick [标签|all] (难度) (New): 从 Codeforces 上随机选题. 标签中间不能有空格，支持模糊匹配. 难度为整数或一个区间，格式为xxx-xxx. 末尾加上 New 参数则会忽视 P1000A 以前的题.
 /cf contest: 列出最近的 Codeforces 比赛.
 /cf tags: 列出 Codeforces 上的所有题目标签."""
@@ -67,12 +68,12 @@ async def get_prob_filter_tag(message: RobotMessage, tag_needed: str,
     return random.choice(filtered_data)
 
 
-def get_user_info(handle: str) -> Tuple[str, str | None]:
+def get_user_info(handle: str) -> Tuple[str | None, str | None]:
     url = f"https://codeforces.com/api/user.info?handles={handle}"
-    json_data = fetch_json(url)
+    json_data = fetch_json(url, throw=False)
 
-    if json_data['status'] != "OK":
-        return "用户不存在", None
+    if json_data['status'] != "OK" or len(json_data['result']) == 0:
+        return None, None
 
     result = json_data['result'][-1]
     sections = []
@@ -139,8 +140,8 @@ def get_user_last_contest(handle: str) -> str:
     return info
 
 
-def get_user_last_submit(handle: str) -> str:
-    url = f"https://codeforces.com/api/user.status?handle={handle}&from=1&count=5"
+def get_user_last_submit(handle: str, count: int = 5) -> str:
+    url = f"https://codeforces.com/api/user.status?handle={handle}&from=1&count={count}"
     json_data = fetch_json(url)
 
     if json_data['status'] != "OK":
@@ -151,11 +152,13 @@ def get_user_last_submit(handle: str) -> str:
     if submit_len == 0:
         return "还未提交过题目"
 
-    info = "最近几次提交:"
+    info = f"最近{count}发提交:"
     for submit in result:
         verdict = format_verdict(submit['verdict'], submit['passedTestCount']) if 'verdict' in submit else "IN_QUEUE"
+        points = f" *{int(submit['problem']['rating'])}" if 'rating' in submit['problem'] else ""
+        time = f" {submit['timeConsumedMillis']}ms" if 'timeConsumedMillis' in submit else ""
         info += (f"\n[{submit['id']}] {verdict} "
-                 f"P{submit['problem']['contestId']}{submit['problem']['index']} at "
+                 f"P{submit['problem']['contestId']}{submit['problem']['index']}{points}{time} at "
                  f"{format_timestamp(submit['creationTimeSeconds'])}")
 
     return info
@@ -167,6 +170,9 @@ def get_recent_contests() -> str:
 
     if json_data['status'] != "OK":
         return "查询异常"
+
+    if len(json_data['result']) == 0:
+        return "最近没有比赛"
 
     result = list(json_data['result'])
 
@@ -200,15 +206,35 @@ async def send_user_info(message: RobotMessage, handle: str):
     await message.reply(f"正在查询 {handle} 的 Codeforces 平台信息，请稍等")
 
     info, avatar = get_user_info(handle)
-    last_contest = get_user_last_contest(handle)
-    last_submit = get_user_last_submit(handle)
 
-    content = (f"[Codeforces] {handle}\n\n"
-               f"{info}\n\n"
-               f"{last_contest}\n\n"
-               f"{last_submit}")
+    if info is None:
+        content = (f"[Codeforces] {handle}\n\n"
+                   f"用户不存在")
+    else:
+        last_contest = get_user_last_contest(handle)
+        last_submit = get_user_last_submit(handle)
+        content = (f"[Codeforces] {handle}\n\n"
+                   f"{info}\n\n"
+                   f"{last_contest}\n\n"
+                   f"{last_submit}")
 
     await message.reply(content, img_url=avatar, modal_words=False)
+
+
+async def send_user_last_submit(message: RobotMessage, handle: str, count: int):
+    await message.reply(f"正在查询 {handle} 的 Codeforces 提交记录，请稍等")
+
+    info, _ = get_user_info(handle)
+
+    if info is None:
+        content = (f"[Codeforces] {handle}\n\n"
+                   f"用户不存在")
+    else:
+        last_submit = get_user_last_submit(handle, count)
+        content = (f"[Codeforces] {handle}\n\n"
+                   f"{last_submit}")
+
+    await message.reply(content, modal_words=False)
 
 
 async def send_prob_tags(message: RobotMessage):
@@ -279,6 +305,17 @@ async def reply_cf_request(message: RobotMessage):
                 return
 
             await send_user_info(message, content[2])
+
+        if func == "recent":
+            if len(content) != 3 and len(content) != 4:
+                await message.reply("请输入正确的指令格式，如\"/cf recent jiangly 5\"")
+                return
+
+            if len(content) == 4 and (len(content[3]) >= 3 or not check_is_int(content[3]) or int(content[3]) <= 0):
+                await message.reply("参数错误，请输入 [1, 99] 内的整数")
+                return
+
+            await send_user_last_submit(message, content[2], int(content[3]) if len(content) > 3 else 5)
 
         elif func == "pick":
             if not await send_prob_filter_tag(
