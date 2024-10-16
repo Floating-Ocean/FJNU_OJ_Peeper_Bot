@@ -8,7 +8,7 @@ from typing import Tuple
 from utils.interact import RobotMessage
 from utils.tools import report_exception, fetch_json, format_timestamp, format_timestamp_diff, check_is_int
 
-__cf_version__ = "v2.0.7"
+__cf_version__ = "v2.0.8"
 
 __cf_help_content__ = """/cf info [handle]: 获取用户名为 handle 的 Codeforces 基础用户信息.
 /cf recent [handle] (count): 获取用户名为 handle 的 Codeforces 最近 count 发提交，count 默认为 5.
@@ -313,7 +313,7 @@ async def reply_cf_request(message: RobotMessage):
 
             await send_user_info(message, content[2])
 
-        if func == "recent":
+        elif func == "recent":
             if len(content) != 3 and len(content) != 4:
                 await message.reply("请输入正确的指令格式，如\"/cf recent jiangly 5\"")
                 return

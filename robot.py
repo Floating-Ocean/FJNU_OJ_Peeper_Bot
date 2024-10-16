@@ -72,6 +72,13 @@ def noon_sched_thread(loop: AbstractEventLoop, api: BotAPI):
     noon_sched.start()
 
 
+async def check_exclude(message: RobotMessage) -> bool:
+    if message.group_message.group_openid in _config['exclude_group_id']:
+        await message.reply('榜单功能被禁用，请联系bot管理员')
+        return False
+    return True
+
+
 async def call_handle_message(message: RobotMessage, is_public: bool):
     try:
         content = re.sub(r'<@!\d+>', '', message.content).strip().split()
@@ -86,29 +93,33 @@ async def call_handle_message(message: RobotMessage, is_public: bool):
             await message.reply(help_content, modal_words=False)
 
         elif func == "/今日题数" or func == "/today":
-            await send_now_board(message, (content[1] == "single") if len(content) == 2 else False)
+            if await check_exclude(message):
+                await send_now_board(message, (content[1] == "single") if len(content) == 2 else False)
 
         elif func == "/昨日总榜" or func == "/yesterday" or func == "/full":
-            await send_yesterday_full_board(message, (content[1] == "single") if len(content) == 2 else False)
+            if await check_exclude(message):
+                await send_yesterday_full_board(message, (content[1] == "single") if len(content) == 2 else False)
 
         elif func == "/评测榜单" or func == "/verdict":
-            await send_now_board_with_verdict(message, content[1] if len(content) == 2 else "",
-                                              (content[2] == "single") if len(content) == 3 else False)
+            if await check_exclude(message):
+                await send_now_board_with_verdict(message, content[1] if len(content) == 2 else "",
+                                                  (content[2] == "single") if len(content) == 3 else False)
 
         elif func == "/user":
-            if len(content) < 3:
-                await message.reply("请输入三个参数，第三个参数前要加空格，比如说\"/user id 1\"，\"/user name Hydro\"")
-                return
-            if len(content) > 3:
-                await message.reply("请输入三个参数，第三个参数不要加上空格")
-                return
-            if content[1] == "id" and (len(content[2]) > 9 or not check_is_int(content[2])):
-                await message.reply("参数错误，id必须为整数")
-                return
-            if content[1] == "id" or content[1] == "name":
-                await send_user_info(message, content[2], by_name=(content[1] == "name"))
-            else:
-                await message.reply("请输入正确的参数，如\"/user id ...\", \"/user name ...\"")
+            if await check_exclude(message):
+                if len(content) < 3:
+                    await message.reply("请输入三个参数，第三个参数前要加空格，比如说\"/user id 1\"，\"/user name Hydro\"")
+                    return
+                if len(content) > 3:
+                    await message.reply("请输入三个参数，第三个参数不要加上空格")
+                    return
+                if content[1] == "id" and (len(content[2]) > 9 or not check_is_int(content[2])):
+                    await message.reply("参数错误，id必须为整数")
+                    return
+                if content[1] == "id" or content[1] == "name":
+                    await send_user_info(message, content[2], by_name=(content[1] == "name"))
+                else:
+                    await message.reply("请输入正确的参数，如\"/user id ...\", \"/user name ...\"")
 
         elif func == "/alive":
             await send_is_alive(message)
@@ -189,13 +200,15 @@ class MyClient(Client):
         _log.info(f"robot 「{self.robot.name}」 on_ready!")
 
     async def on_at_message_create(self, message: Message):
-        _log.info(f"{self.robot.name} receive public message {message.content} {message.attachments}")
+        _log.info(
+            f"{self.robot.name} receive public message {message.content} {message.attachments} from {message.channel_id}")
         packed_message = RobotMessage(self.api)
         packed_message.setup_guild_message(message)
         await call_handle_message(packed_message, True)
 
     async def on_message_create(self, message: Message):
-        _log.info(f"{self.robot.name} receive global message {message.content} {message.attachments}")
+        _log.info(
+            f"{self.robot.name} receive global message {message.content} {message.attachments} from {message.channel_id}")
         content = message.content
 
         packed_message = RobotMessage(self.api)
@@ -205,7 +218,8 @@ class MyClient(Client):
             await call_handle_message(packed_message, False)
 
     async def on_group_at_message_create(self, message: GroupMessage):
-        _log.info(f"{self.robot.name} receive group message {message.content} {message.attachments}")
+        _log.info(
+            f"{self.robot.name} receive group message {message.content} {message.attachments} from {message.group_openid}")
         packed_message = RobotMessage(self.api)
         packed_message.setup_group_message(message)
         await call_handle_message(packed_message, True)
