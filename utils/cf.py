@@ -192,19 +192,23 @@ def get_recent_contests() -> str:
     before_contests = result[limit::-1]  # 按日期升序排列
     info = ""
     for contest in before_contests:
-        duration = "{:.1f}".format(contest['durationSeconds'] / 3600.0)
+        duration = str(contest['durationSeconds'] // 3600) + " 小时"
+        if contest['durationSeconds'] % 3600 > 0:
+            duration += " " + str(contest['durationSeconds'] % 3600 // 60) + " 分钟"
         info += (f"[{contest['id']}] {contest['name']}\n"
                  f"{format_timestamp_diff(contest['relativeTimeSeconds'])}, "
                  f"{format_timestamp(contest['startTimeSeconds'])}\n"
-                 f"持续 {duration} 小时, {contest['type']}赛制\n\n")
+                 f"持续 {duration}, {contest['type']}赛制\n\n")
 
     last_finished_contest = result[limit + 1]
-    duration = "{:.1f}".format(last_finished_contest['durationSeconds'] / 3600.0)
+    duration = str(last_finished_contest['durationSeconds'] // 3600) + " 小时"
+    if last_finished_contest['durationSeconds'] % 3600 > 0:
+        duration += " " + str(last_finished_contest['durationSeconds'] % 3600 // 60) + " 分钟"
     info += (f"上一场已结束的比赛:\n"
              f"[{last_finished_contest['id']}] {last_finished_contest['name']}\n"
              f"{format_timestamp_diff(last_finished_contest['relativeTimeSeconds'])}, "
              f"{format_timestamp(last_finished_contest['startTimeSeconds'])}\n"
-             f"持续 {duration} 小时, {last_finished_contest['type']}赛制")
+             f"持续 {duration}, {last_finished_contest['type']}赛制")
 
     return info
 
