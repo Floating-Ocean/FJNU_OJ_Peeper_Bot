@@ -1,4 +1,5 @@
 import difflib
+import json
 import random
 
 import re
@@ -6,9 +7,9 @@ import traceback
 from typing import Tuple
 
 from utils.interact import RobotMessage
-from utils.tools import report_exception, fetch_json, format_timestamp, format_timestamp_diff, check_is_int
+from utils.tools import report_exception, fetch_json, format_timestamp, format_timestamp_diff, check_is_int, get_today_start_timestamp, get_week_start_timestamp
 
-__cf_version__ = "v2.0.8"
+__cf_version__ = "v2.1.1"
 
 __cf_help_content__ = """/cf info [handle]: 获取用户名为 handle 的 Codeforces 基础用户信息.
 /cf recent [handle] (count): 获取用户名为 handle 的 Codeforces 最近 count 发提交，count 默认为 5.
@@ -124,6 +125,11 @@ def format_verdict(verdict: str, passed_count: int) -> str:
         return f"{verdict} on test {passed_count + 1}"
 
 
+def format_contest_name(name: str) -> str:
+    # aaa.bbb -> aaaBbb
+    return re.sub(r'(\w+)\.(\w+)', lambda m: m.group(1) + m.group(2).capitalize(), name)
+
+
 def get_user_last_contest(handle: str) -> str:
     url = f"https://codeforces.com/api/user.rating?handle={handle}"
     json_data = fetch_json(url)
@@ -139,7 +145,7 @@ def get_user_last_contest(handle: str) -> str:
     last = result[-1]
     symbol = "" if (last['newRating'] - last['oldRating'] <= 0) else "+"
     info = (f"Rated 比赛数: {contest_count}\n"
-            f"最近一次比赛: {last['contestName']}\n"
+            f"最近一次比赛: {format_contest_name(last['contestName'])}\n"
             f"比赛id: {last['contestId']}\n"
             f"位次: {last['rank']}\n"
             f"Rating变化: {symbol}{last['newRating'] - last['oldRating']}")
@@ -171,6 +177,50 @@ def get_user_last_submit(handle: str, count: int = 5) -> str:
     return info
 
 
+def get_user_submit_sums(handle: str) -> tuple[int, int, int]:
+    url = f"https://codeforces.com/api/user.status?handle={handle}"
+    json_data = fetch_json(url)
+
+    if json_data['status'] != "OK":
+        return -1, -1, -1
+
+    result = list(json_data['result'])
+    submit_len = len(result)
+    if submit_len == 0:
+        return 0, 0, 0
+
+    total_set, weekly_set, daily_set = set(), set(), set()
+    week_start_time, today_start_time = get_week_start_timestamp(), get_today_start_timestamp()
+    for submit in result:
+        if submit['verdict'] != "OK":
+            continue
+        current_prob = f"{submit['problem'].get('contestId')}-{submit['problem'].get('index')}"
+        total_set.add(current_prob)
+        if submit['creationTimeSeconds'] >= week_start_time:
+            weekly_set.add(current_prob)
+        if submit['creationTimeSeconds'] >= today_start_time:
+            daily_set.add(current_prob)
+
+    return len(total_set), len(weekly_set), len(daily_set)
+
+
+def format_contest(contest: dict) -> str:
+    duration = str(contest['durationSeconds'] // 3600) + " 小时"
+    if contest['durationSeconds'] % 3600 > 0:
+        duration += " " + str(contest['durationSeconds'] % 3600 // 60) + " 分钟"
+    phase = format_timestamp_diff(contest['relativeTimeSeconds'])
+    if contest['phase'] == 'CODING':
+        phase = "正在比赛中"
+    elif contest['phase'] == 'PENDING_SYSTEM_TEST':
+        phase = "正在等待重测"
+    elif contest['phase'] == 'SYSTEM_TEST':
+        phase = "正在重测中"
+    return (f"[{contest['id']}] {format_contest_name(contest['name'])}\n"
+            f"{phase}, "
+            f"{format_timestamp(contest['startTimeSeconds'])}\n"
+            f"持续 {duration}, {contest['type']}赛制")
+
+
 def get_recent_contests() -> str:
     url = "https://codeforces.com/api/contest.list"
     json_data = fetch_json(url)
@@ -189,26 +239,13 @@ def get_recent_contests() -> str:
             limit = i - 1
             break
 
-    before_contests = result[limit::-1]  # 按日期升序排列
+    unfinished_contests = result[limit::-1]  # 按日期升序排列
     info = ""
-    for contest in before_contests:
-        duration = str(contest['durationSeconds'] // 3600) + " 小时"
-        if contest['durationSeconds'] % 3600 > 0:
-            duration += " " + str(contest['durationSeconds'] % 3600 // 60) + " 分钟"
-        info += (f"[{contest['id']}] {contest['name']}\n"
-                 f"{format_timestamp_diff(contest['relativeTimeSeconds'])}, "
-                 f"{format_timestamp(contest['startTimeSeconds'])}\n"
-                 f"持续 {duration}, {contest['type']}赛制\n\n")
+    for contest in unfinished_contests:
+        info += format_contest(contest) + "\n\n"
 
     last_finished_contest = result[limit + 1]
-    duration = str(last_finished_contest['durationSeconds'] // 3600) + " 小时"
-    if last_finished_contest['durationSeconds'] % 3600 > 0:
-        duration += " " + str(last_finished_contest['durationSeconds'] % 3600 // 60) + " 分钟"
-    info += (f"上一场已结束的比赛:\n"
-             f"[{last_finished_contest['id']}] {last_finished_contest['name']}\n"
-             f"{format_timestamp_diff(last_finished_contest['relativeTimeSeconds'])}, "
-             f"{format_timestamp(last_finished_contest['startTimeSeconds'])}\n"
-             f"持续 {duration}, {last_finished_contest['type']}赛制")
+    info += "上一场已结束的比赛:\n" + format_contest(last_finished_contest)
 
     return info
 
@@ -224,9 +261,14 @@ async def send_user_info(message: RobotMessage, handle: str):
     else:
         last_contest = get_user_last_contest(handle)
         last_submit = get_user_last_submit(handle)
+        total_sums, weekly_sums, daily_sums = get_user_submit_sums(handle)
+        daily = "今日暂无过题" if daily_sums == 0 else f"今日通过 {daily_sums} 题"
+        weekly = "" if weekly_sums == 0 else f"，本周共通过 {weekly_sums} 题"
         content = (f"[Codeforces] {handle}\n\n"
-                   f"{info}\n\n"
+                   f"{info}\n"
+                   f"通过题数: {total_sums}\n\n"
                    f"{last_contest}\n\n"
+                   f"{daily}{weekly}\n"
                    f"{last_submit}")
 
     await message.reply(content, img_url=avatar, modal_words=False)

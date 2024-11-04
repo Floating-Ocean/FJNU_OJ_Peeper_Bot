@@ -73,7 +73,8 @@ def noon_sched_thread(loop: AbstractEventLoop, api: BotAPI):
 
 
 async def check_exclude(message: RobotMessage) -> bool:
-    if message.group_message.group_openid in _config['exclude_group_id']:
+    if (message.group_message is not None and
+            message.group_message.group_openid in _config['exclude_group_id']):
         await message.reply('榜单功能被禁用，请联系bot管理员')
         return False
     return True
@@ -135,6 +136,12 @@ async def call_handle_message(message: RobotMessage, is_public: bool):
 
         elif func.startswith("/添加来只"):
             what = func[5::].strip() if func != "/添加来只" else ""  # 支持不加空格的形式
+            if len(content) >= 2:
+                what = content[1]
+            await reply_pick_one(message, what, msg_type="add")
+
+        elif func.startswith("/添加"):
+            what = func[3::].strip() if func != "/添加" else ""  # 支持不加空格的形式
             if len(content) >= 2:
                 what = content[1]
             await reply_pick_one(message, what, msg_type="add")

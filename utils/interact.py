@@ -4,7 +4,7 @@ import random
 from botpy import BotAPI
 from botpy.message import Message, GroupMessage
 
-__interact_version__ = "v2.1.2"
+__interact_version__ = "v2.1.3"
 
 _key_words = {
     "傻逼": ["谢谢夸奖", "反弹", "可能还真被你说对了", "嗯", "好的", "哼，你才是"],

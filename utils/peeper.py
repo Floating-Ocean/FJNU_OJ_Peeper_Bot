@@ -16,11 +16,12 @@ _output_path = _config["output_path"]
 
 def classify_verdicts(content: str) -> str:
     alias_to_full = {
-        "ac": ["accepted", "accept", "ac"],
-        "wa": ["wrong answer", "rejected", "reject", "wa", "rj"],
-        "tle": ["time exceeded", "time limit exceeded", "time exceed", "time limit exceed", "tle", "te"],
-        "mle": ["memory exceeded", "memory limit exceeded", "memory exceed", "memory limit exceed", "mle", "me"],
-        "ole": ["output exceeded", "output limit exceeded", "output exceed", "output limit exceed", "ole", "oe"],
+        "ac": ["accepted", "ac"],
+        "wa": ["wrong answer", "rejected", "wa", "rj"],
+        "tle": ["time exceeded", "time limit exceeded", "tle", "te"],
+        "mle": ["memory exceeded", "memory limit exceeded", "mle", "me"],
+        "ole": ["output exceeded", "output limit exceeded", "ole", "oe"],
+        "hc": ["hacked", "hc"],
         "re": ["runtime error", "re"],
         "ce": ["compile error", "ce"],
         "se": ["system error", "se"],

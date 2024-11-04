@@ -1,3 +1,4 @@
+import datetime
 import hashlib
 import os
 import re
@@ -153,6 +154,21 @@ def get_md5(path: str) -> str:
 
 def rand_str_len32() -> str:
     return ''.join([random.choice(string.ascii_letters + string.digits) for _ in range(32)])
+
+
+def get_today_start_timestamp() -> int:
+    today = datetime.datetime.now().date()
+    today_start = datetime.datetime.combine(today, datetime.time.min)
+    timestamp = int(today_start.timestamp())
+    return timestamp
+
+
+def get_week_start_timestamp() -> int:
+    today = datetime.datetime.now()
+    start_of_week = today - datetime.timedelta(days=today.weekday())
+    week_start = datetime.datetime.combine(start_of_week.date(), datetime.time.min)
+    timestamp = int(week_start.timestamp())
+    return timestamp
 
 
 class SSLAdapter(HTTPAdapter):
