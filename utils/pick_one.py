@@ -35,10 +35,10 @@ _what_dict = {
 }
 
 
-@command(aliases=["来只"] + list(_what_dict.keys()))
+@command(aliases=["来只*"] + list(_what_dict.keys()))
 async def pick_one(message: RobotMessage):
-    what = message.pure_content[1].lower()
-    what = _what_dict[what] if what in _what_dict else what
+    func = message.pure_content[0][1:]
+    what = _what_dict[func] if func in _what_dict else message.pure_content[1].lower()
     if what == "rand":
         current_key = random.choice(list(_lib_config.keys()))
     elif what in _match_dict.keys():
@@ -66,7 +66,7 @@ async def pick_one(message: RobotMessage):
                             img_path=f"{dir_path}{img_list[rnd_idx]}")
 
 
-@command(aliases=["添加来只", "添加"])
+@command(aliases=["添加来只*", "添加*"])
 async def save_one(message: RobotMessage):
     audit = message.user_permission_level >= 1
     what = message.pure_content[1].lower()
