@@ -2,7 +2,7 @@ from utils.command import command
 from utils.interact import RobotMessage
 from utils.tools import fetch_json
 
-__hitokoto_version__ = "v1.0.1"
+__hitokoto_version__ = "v1.0.2"
 
 __hitokoto_help_content__ = """/hitokoto: 获取一条一言。指令别名：/一言，/来(一)句(话)"""
 

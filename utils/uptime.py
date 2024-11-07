@@ -22,6 +22,8 @@ def fetch_status(check_url: str) -> int:
 
 @command()
 async def alive(message: RobotMessage):
+    await message.reply("正在查询服务状态，请稍等")
+
     status = [
         fetch_status("https://fjnuacm.top"),
         fetch_status("https://codeforces.com"),

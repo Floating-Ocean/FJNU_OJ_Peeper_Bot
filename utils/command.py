@@ -1,4 +1,4 @@
-_commands = {}
+__commands__ = {}
 
 
 def command(aliases=None, permission_level: int = 0, is_command: bool = True,
@@ -18,10 +18,10 @@ def command(aliases=None, permission_level: int = 0, is_command: bool = True,
     def decorator(func):
         command_name = func.__name__
 
-        _commands[f'/{command_name}' if is_command else f'{command_name}'] = (
+        __commands__[f'/{command_name}' if is_command else f'{command_name}'] = (
             func, permission_level, is_command, need_check_exclude)
         for alias in aliases:
-            _commands[f'/{alias}' if is_command else f'{alias}'] = (
+            __commands__[f'/{alias}' if is_command else f'{alias}'] = (
                 func, permission_level, is_command, need_check_exclude)
         return func
 

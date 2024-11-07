@@ -8,7 +8,7 @@ from utils.command import command
 from utils.interact import RobotMessage
 from utils.tools import _log, check_is_int, report_exception
 
-__rand_version__ = "v1.0.1"
+__rand_version__ = "v1.0.2"
 
 __rand_help_content__ = """/rand [num/int] [min] [max]: 在 [min, max] 中选择一个随机数，值域 [-1e9, 1e9].
 /rand seq [max]: 获取一个 1, 2, ..., max 的随机排列，值域 [1, 500]."""
