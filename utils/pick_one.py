@@ -2,11 +2,10 @@ import difflib
 import json
 import os
 import random
-import traceback
 
-from robot import command
+from utils.command import command
 from utils.interact import RobotMessage
-from utils.tools import _config, report_exception, save_img, _log, rand_str_len32, get_md5
+from utils.tools import _config, save_img, rand_str_len32, get_md5
 
 _lib_path = _config["lib_path"] + "\\Pick-One"
 __pick_one_version__ = "v2.3.0"

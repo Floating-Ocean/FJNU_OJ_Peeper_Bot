@@ -1,14 +1,13 @@
 import difflib
-import json
 import random
-
 import re
 import traceback
 from typing import Tuple
 
-from robot import command
+from utils.command import command
 from utils.interact import RobotMessage
-from utils.tools import report_exception, fetch_json, format_timestamp, format_timestamp_diff, check_is_int, get_today_start_timestamp, get_week_start_timestamp
+from utils.tools import report_exception, fetch_json, format_timestamp, format_timestamp_diff, check_is_int, \
+    get_today_start_timestamp, get_week_start_timestamp
 
 __cf_version__ = "v2.1.1"
 

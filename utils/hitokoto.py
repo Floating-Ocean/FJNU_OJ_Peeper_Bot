@@ -1,4 +1,4 @@
-from robot import command
+from utils.command import command
 from utils.interact import RobotMessage
 from utils.tools import fetch_json
 

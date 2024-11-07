@@ -4,8 +4,8 @@ from asyncio import AbstractEventLoop
 
 from botpy import BotAPI
 
-from robot import command
 from utils.cf import __cf_version__
+from utils.command import command
 from utils.interact import RobotMessage, __interact_version__
 from utils.pick_one import __pick_one_version__
 from utils.rand import __rand_version__

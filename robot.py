@@ -14,10 +14,10 @@ from botpy import logging, BotAPI, Client
 from botpy.ext.cog_yaml import read
 from botpy.message import Message, GroupMessage
 
-from utils.interact import RobotMessage, match_key_words
-from utils.command import command, _commands
 from utils.cf import __cf_help_content__
+from utils.command import command, _commands
 from utils.hitokoto import __hitokoto_help_content__
+from utils.interact import RobotMessage, match_key_words
 from utils.peeper import send_user_info, \
     daily_update_job, noon_report_job
 from utils.pick_one import __pick_one_help_content__, load_pick_one_config
@@ -88,14 +88,11 @@ async def reply_fixed(message: RobotMessage):
 async def user(message: RobotMessage):
     content = message.pure_content
     if len(content) < 3:
-        await message.reply("请输入三个参数，第三个参数前要加空格，比如说\"/user id 1\"，\"/user name Hydro\"")
-        return
+        return await message.reply("请输入三个参数，第三个参数前要加空格，比如说\"/user id 1\"，\"/user name Hydro\"")
     if len(content) > 3:
-        await message.reply("请输入三个参数，第三个参数不要加上空格")
-        return
+        return await message.reply("请输入三个参数，第三个参数不要加上空格")
     if content[1] == "id" and (len(content[2]) > 9 or not check_is_int(content[2])):
-        await message.reply("参数错误，id必须为整数")
-        return
+        return await message.reply("参数错误，id必须为整数")
     if content[1] == "id" or content[1] == "name":
         await send_user_info(message, content[2], by_name=(content[1] == "name"))
     else:
@@ -114,8 +111,7 @@ async def call_handle_message(message: RobotMessage, is_public: bool):
         content = message.pure_content
 
         if len(content) == 0:
-            await message.reply(f"{match_key_words('')}")
-            return
+            return await message.reply(f"{match_key_words('')}")
 
         func = content[0]
         if func in _commands:
@@ -129,8 +125,7 @@ async def call_handle_message(message: RobotMessage, is_public: bool):
             if need_check_exclude:
                 if (message.group_message is not None and
                         message.group_message.group_openid in _config['exclude_group_id']):
-                    await message.reply('榜单功能被禁用，请联系bot管理员')
-                    return
+                    return await message.reply('榜单功能被禁用，请联系bot管理员')
             try:
                 await original_command(message)
             except Exception as e:
