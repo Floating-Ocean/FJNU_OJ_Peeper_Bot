@@ -136,7 +136,7 @@ async def call_handle_message(message: RobotMessage):
                 except Exception as e:
                     await report_exception(message, f'Command-{original_command.__name__}', traceback.format_exc(),
                                            repr(e))
-            return
+                return
 
         if '/' in func:
             await message.reply(f"其他指令还在开发中")
