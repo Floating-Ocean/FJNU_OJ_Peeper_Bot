@@ -81,7 +81,7 @@ _fixed_reply = {
 
 @command(aliases=_fixed_reply.keys())
 async def reply_fixed(message: RobotMessage):
-    await message.reply(_fixed_reply.get(message.pure_content[0][1:], ""))
+    await message.reply(_fixed_reply.get(message.pure_content[0][1:], ""), modal_words=False)
 
 
 @command(need_check_exclude=True)
