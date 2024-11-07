@@ -14,15 +14,15 @@ from botpy import logging, BotAPI, Client
 from botpy.ext.cog_yaml import read
 from botpy.message import Message, GroupMessage
 
-from utils.cf import reply_cf_request, __cf_help_content__
-from utils.hitokoto import reply_hitokoto, __hitokoto_help_content__
 from utils.interact import RobotMessage, match_key_words
-from utils.peeper import send_now_board, send_yesterday_full_board, send_now_board_with_verdict, send_user_info, \
-    send_version_info, daily_update_job, noon_report_job
-from utils.pick_one import reply_pick_one, __pick_one_help_content__
-from utils.rand import reply_rand_request, __rand_help_content__
+from utils.command import command, _commands
+from utils.cf import __cf_help_content__
+from utils.hitokoto import __hitokoto_help_content__
+from utils.peeper import send_user_info, \
+    daily_update_job, noon_report_job
+from utils.pick_one import __pick_one_help_content__, load_pick_one_config
+from utils.rand import __rand_help_content__
 from utils.tools import report_exception, check_is_int
-from utils.uptime import send_is_alive
 
 nest_asyncio.apply()
 urllib3.disable_warnings()
@@ -72,134 +72,76 @@ def noon_sched_thread(loop: AbstractEventLoop, api: BotAPI):
     noon_sched.start()
 
 
-async def check_exclude(message: RobotMessage) -> bool:
-    if (message.group_message is not None and
-            message.group_message.group_openid in _config['exclude_group_id']):
-        await message.reply('榜单功能被禁用，请联系bot管理员')
-        return False
-    return True
+_fixed_reply = {
+    "ping": "pong",
+    "活着吗": "你猜",
+    "help": help_content
+}
+
+
+@command(aliases=_fixed_reply.keys())
+async def reply_fixed(message: RobotMessage):
+    await message.reply(_fixed_reply.get(message.pure_content[0][1:], ""))
+
+
+@command(need_check_exclude=True)
+async def user(message: RobotMessage):
+    content = message.pure_content
+    if len(content) < 3:
+        await message.reply("请输入三个参数，第三个参数前要加空格，比如说\"/user id 1\"，\"/user name Hydro\"")
+        return
+    if len(content) > 3:
+        await message.reply("请输入三个参数，第三个参数不要加上空格")
+        return
+    if content[1] == "id" and (len(content[2]) > 9 or not check_is_int(content[2])):
+        await message.reply("参数错误，id必须为整数")
+        return
+    if content[1] == "id" or content[1] == "name":
+        await send_user_info(message, content[2], by_name=(content[1] == "name"))
+    else:
+        await message.reply("请输入正确的参数，如\"/user id ...\", \"/user name ...\"")
+
+
+@command(aliases=["去死", "重启", "restart", "reboot"], permission_level=2)
+async def reply_restart_bot(message: RobotMessage):
+    await message.reply("好的捏，正在原地去世" if message.pure_content[0] == '/去死' else "好的捏，正在重启bot")
+    _log.info(f"Restarting bot...")
+    os.execl(sys.executable, sys.executable, *sys.argv)
 
 
 async def call_handle_message(message: RobotMessage, is_public: bool):
     try:
-        content = re.sub(r'<@!\d+>', '', message.content).strip().split()
+        content = message.pure_content
 
         if len(content) == 0:
             await message.reply(f"{match_key_words('')}")
             return
 
         func = content[0]
+        if func in _commands:
+            original_command, execute_level, is_command, need_check_exclude = _commands[func]
 
-        if func == "/help":
-            await message.reply(help_content, modal_words=False)
+            if execute_level > 0:
+                print(f'{message.author_id} attempted {original_command.__name__}.')
+                if execute_level > message.user_permission_level:
+                    raise PermissionError("权限不足，操作被拒绝")
 
-        elif func == "/今日题数" or func == "/today":
-            if await check_exclude(message):
-                await send_now_board(message, (content[1] == "single") if len(content) == 2 else False)
-
-        elif func == "/昨日总榜" or func == "/yesterday" or func == "/full":
-            if await check_exclude(message):
-                await send_yesterday_full_board(message, (content[1] == "single") if len(content) == 2 else False)
-
-        elif func == "/评测榜单" or func == "/verdict":
-            if await check_exclude(message):
-                await send_now_board_with_verdict(message, content[1] if len(content) == 2 else "",
-                                                  (content[2] == "single") if len(content) == 3 else False)
-
-        elif func == "/user":
-            if await check_exclude(message):
-                if len(content) < 3:
-                    await message.reply("请输入三个参数，第三个参数前要加空格，比如说\"/user id 1\"，\"/user name Hydro\"")
+            if need_check_exclude:
+                if (message.group_message is not None and
+                        message.group_message.group_openid in _config['exclude_group_id']):
+                    await message.reply('榜单功能被禁用，请联系bot管理员')
                     return
-                if len(content) > 3:
-                    await message.reply("请输入三个参数，第三个参数不要加上空格")
-                    return
-                if content[1] == "id" and (len(content[2]) > 9 or not check_is_int(content[2])):
-                    await message.reply("参数错误，id必须为整数")
-                    return
-                if content[1] == "id" or content[1] == "name":
-                    await send_user_info(message, content[2], by_name=(content[1] == "name"))
-                else:
-                    await message.reply("请输入正确的参数，如\"/user id ...\", \"/user name ...\"")
-
-        elif func == "/alive":
-            await send_is_alive(message)
-
-        elif func == "/api":
-            await send_version_info(message)
-
-        elif func.startswith("/来只"):
-            what = func[3::].strip() if func != "/来只" else ""  # 支持不加空格的形式
-            if len(content) >= 2:
-                what = content[1]
-            await reply_pick_one(message, what)
-
-        elif func.startswith("/添加来只"):
-            what = func[5::].strip() if func != "/添加来只" else ""  # 支持不加空格的形式
-            if len(content) >= 2:
-                what = content[1]
-            await reply_pick_one(message, what, msg_type="add")
-
-        elif func.startswith("/添加"):
-            what = func[3::].strip() if func != "/添加" else ""  # 支持不加空格的形式
-            if len(content) >= 2:
-                what = content[1]
-            await reply_pick_one(message, what, msg_type="add")
-
-        elif func == "/审核来只" or func == "/同意来只" or func == "/accept" or func == "/audit":
-            await reply_pick_one(message, msg_type="audit")
-
-        elif func == "/随机来只" or func == "/随便来只":
-            await reply_pick_one(message, "rand")
-
-        elif func == "/capoo" or func == "/咖波":
-            await reply_pick_one(message, "capoo")
-
-        elif func == "/cf":
-            await reply_cf_request(message)
-
-        elif (func.startswith("/选择") or func == "/rand" or
-              func == "/shuffle" or func == "/打乱"):
-            await reply_rand_request(message)
-
-        elif (func == "/hitokoto" or func == "/来句" or
-              func == "/来一句" or func == "/来句话" or func == "/来一句话"):
-            await reply_hitokoto(message)
-
-        elif is_public:  # 是否被at
-            if func == "/活着吗":
-                await message.reply(f"你猜")
-
-            elif func == "/ping":
-                await message.reply(f"pong", modal_words=False)
-
-            elif func == "/去死" or func == "/重启" or func == "/restart" or func == "/reboot":
-                await reply_restart_bot(func, message)
-
-            elif "/" in func:
-                await message.reply(f"其他指令还在开发中")
-
-            else:
-                await message.reply(f"{match_key_words(func)}")
+            try:
+                await original_command(message)
+            except Exception as e:
+                await report_exception(message, f'Command-{original_command.__name__}', traceback.format_exc(), repr(e))
+        elif '/' in func:
+            await message.reply(f"其他指令还在开发中")
+        else:
+            await message.reply(f"{match_key_words(func)}")
 
     except Exception as e:
         await report_exception(message, 'Robot-Interact', traceback.format_exc(), repr(e))
-
-
-async def reply_restart_bot(func, message):
-    _log.info(f"{message.author_id} attempted to restart bot.")
-    if message.author_id in _config['admin_qq_id']:
-        if func == "/去死":
-            await message.reply(f"好的捏，正在原地去世")
-        else:
-            await message.reply(f"好的捏，正在重启bot")
-        _log.info(f"Restarting bot...")
-        os.execl(sys.executable, sys.executable, *sys.argv)
-    else:
-        if func == "/去死":
-            raise PermissionError("阿米诺斯")
-        else:
-            raise PermissionError("非bot管理员，操作被拒绝")
 
 
 class MyClient(Client):
@@ -244,5 +186,8 @@ if __name__ == "__main__":
     # 午间推送机制
     noon_thread = threading.Thread(target=noon_sched_thread, args=[asyncio.get_event_loop(), client.api])
     noon_thread.start()
+
+    # 加载pick_one
+    load_pick_one_config()
 
     client.run(appid=_config["appid"], secret=_config["secret"])

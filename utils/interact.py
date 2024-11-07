@@ -1,9 +1,13 @@
 import base64
+import os
 import random
+import re
 
 from botpy import BotAPI
+from botpy.ext.cog_yaml import read
 from botpy.message import Message, GroupMessage
 
+_config = read(os.path.join(os.path.join(os.path.dirname(__file__), ".."), "config.yaml"))
 __interact_version__ = "v2.1.3"
 
 _key_words = {
@@ -27,14 +31,17 @@ class RobotMessage:
         self.guild_message = None
         self.group_message = None
         self.content = ""
+        self.pure_content = ""
         self.author_id = ""
         self.attachments = []
         self.msg_seq = 0
+        self.user_permission_level = 0
 
     def setup_guild_message(self, message: Message):
         self.guild = True
         self.guild_message = message
         self.content = message.content
+        self.pure_content = self.content
         self.author_id = message.author.__dict__['id']
         self.attachments = message.attachments
         self.msg_seq = 0
@@ -43,9 +50,13 @@ class RobotMessage:
         self.guild = False
         self.group_message = message
         self.content = message.content
+        self.pure_content = re.sub(r'<@!\d+>', '', message.content).strip().split()
         self.author_id = message.author.__dict__['member_openid']
         self.attachments = message.attachments
         self.msg_seq = 0
+        self.user_permission_level = 2 if self.author_id in _config['admin_qq_id'] else 1 if self.author_id in \
+                                                                                             _config[
+                                                                                           'mod_qq_id'] else 0
 
     async def reply(self, content: str, img_path: str = None, img_url: str = None, modal_words: bool = True):
         if modal_words:  # 加点语气词

@@ -6,6 +6,7 @@ import re
 import traceback
 from typing import Tuple
 
+from robot import command
 from utils.interact import RobotMessage
 from utils.tools import report_exception, fetch_json, format_timestamp, format_timestamp_diff, check_is_int, get_today_start_timestamp, get_week_start_timestamp
 
@@ -343,6 +344,7 @@ async def send_logo(message: RobotMessage):
                         img_url="https://codeforces.org/s/24321/images/codeforces-sponsored-by-ton.png")
 
 
+@command(aliases=['cf'])
 async def reply_cf_request(message: RobotMessage):
     try:
         content = re.sub(r'<@!\d+>', '', message.content).strip().split()

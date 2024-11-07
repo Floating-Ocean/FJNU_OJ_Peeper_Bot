@@ -1,11 +1,10 @@
-import datetime
 import difflib
 import json
 import os
 import random
-
 import traceback
 
+from robot import command
 from utils.interact import RobotMessage
 from utils.tools import _config, report_exception, save_img, _log, rand_str_len32, get_md5
 
@@ -29,26 +28,24 @@ def load_pick_one_config():
         _ids.sort(key=lambda s: s[1], reverse=True)  # 按图片数量降序排序
 
 
-async def reply_pick_one(message: RobotMessage, what: str = None, msg_type: str = "reply"):
-    load_pick_one_config()
-    try:
-        if msg_type == "add":
-            await save_one(message, what)
-        elif msg_type == "audit":
-            await audit_accept(message)
-        else:
-            await pick_one(message, what)
-    except Exception as e:
-        await report_exception(message, 'Pick-One', traceback.format_exc(), repr(e))
+_what_dict = {
+    '随机来只': 'rand',
+    '随便来只': 'rand',
+    'capoo': 'capoo',
+    '咖波': 'capoo',
+}
 
 
-async def pick_one(message: RobotMessage, what: str):
-    if what.lower() == "random" or what.lower() == "rand" or what.lower() == "随机" or what.lower() == "随便":
+@command(aliases=["来只"] + list(_what_dict.keys()))
+async def pick_one(message: RobotMessage):
+    what = message.pure_content[1].lower()
+    what = _what_dict[what] if what in _what_dict else what
+    if what == "rand":
         current_key = random.choice(list(_lib_config.keys()))
-    elif what.lower() in _match_dict.keys():
-        current_key = _match_dict[what.lower()]
+    elif what in _match_dict.keys():
+        current_key = _match_dict[what]
     else:  # 支持一下模糊匹配
-        matches = difflib.get_close_matches(what.lower(), _match_dict.keys())
+        matches = difflib.get_close_matches(what, _match_dict.keys())
         if len(matches) == 0:
             img_help = "目前可以来只:\n\n"
             img_help += ", ".join([_id for _id, _len in _ids])
@@ -70,14 +67,13 @@ async def pick_one(message: RobotMessage, what: str):
                             img_path=f"{dir_path}{img_list[rnd_idx]}")
 
 
-async def save_one(message: RobotMessage, what: str):
-    _log.info(f"{message.author_id} attempted to add new img.")
-    audit = False
-    if message.author_id not in _config['admin_qq_id'] and message.author_id not in _config['mod_qq_id']:
-        audit = True
+@command(aliases=["添加来只", "添加"])
+async def save_one(message: RobotMessage):
+    audit = message.user_permission_level >= 1
+    what = message.pure_content[1].lower()
 
-    if what.lower() in _match_dict.keys():
-        current_key = _match_dict[what.lower()]
+    if what in _match_dict.keys():
+        current_key = _match_dict[what]
         audit_prefix = "\\__AUDIT__" if audit else ""
         dir_path = f"{_lib_path}{audit_prefix}\\{current_key}\\"
         real_dir_path = f"{_lib_path}\\{current_key}\\"
@@ -120,12 +116,8 @@ async def save_one(message: RobotMessage, what: str):
         await message.reply(img_help)
 
 
+@command(aliases=["审核来只", "同意来只", "accept", "audit"], permission_level=1)
 async def audit_accept(message: RobotMessage):
-    _log.info(f"{message.author_id} attempted to accept all auditions.")
-    if message.author_id not in _config['admin_qq_id'] and message.author_id not in _config['mod_qq_id']:
-        await message.reply("操作被拒绝，只有Bot管理员才能审核图片")
-        return
-
     dir_path = f"{_lib_path}\\"
     audit_dir_path = f"{dir_path}__AUDIT__\\"
     tags = [tag for tag in os.listdir(audit_dir_path)
