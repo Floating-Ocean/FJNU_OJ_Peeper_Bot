@@ -1,3 +1,4 @@
+from utils.command import command
 from utils.interact import RobotMessage
 from utils.tools import _config, fetch_json
 
@@ -19,7 +20,8 @@ def fetch_status(check_url: str) -> int:
     return -1
 
 
-async def send_is_alive(message: RobotMessage):
+@command()
+async def alive(message: RobotMessage):
     status = [
         fetch_status("https://fjnuacm.top"),
         fetch_status("https://codeforces.com"),

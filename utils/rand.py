@@ -4,6 +4,7 @@ import traceback
 
 import requests
 
+from utils.command import command
 from utils.interact import RobotMessage
 from utils.tools import _log, check_is_int, report_exception
 
@@ -40,6 +41,7 @@ def get_rand_seq(range_max: int) -> str:
     return data
 
 
+@command(aliases=["选择", "rand", "shuffle", "打乱"])
 async def reply_rand_request(message: RobotMessage):
     try:
         content = re.sub(r'<@!\d+>', '', message.content).strip().split()

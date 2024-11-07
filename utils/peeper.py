@@ -5,6 +5,7 @@ from asyncio import AbstractEventLoop
 from botpy import BotAPI
 
 from utils.cf import __cf_version__
+from utils.command import command
 from utils.interact import RobotMessage, __interact_version__
 from utils.pick_one import __pick_one_version__
 from utils.rand import __rand_version__
@@ -102,7 +103,11 @@ async def send_user_info(message: RobotMessage, content: str, by_name: bool = Fa
     await message.reply(f"[{type_id.capitalize()} {content}]\n\n{result}", modal_words=False)
 
 
-async def send_now_board_with_verdict(message: RobotMessage, content: str, single_col: bool):
+@command(aliases=['评测榜单', 'verdict'], need_check_exclude=True)
+async def send_now_board_with_verdict(message: RobotMessage):
+    content = message.pure_content[1] if len(message.pure_content) == 2 else ""
+    single_col = (message.pure_content[2] == "single") if len(
+        message.pure_content) == 3 else False
     verdict = classify_verdicts(content)
     if verdict == "":
         await message.reply(f"请在 /评测榜单 后面添加正确的参数，如 ac, Accepted, TimeExceeded, WrongAnswer")
@@ -119,7 +124,9 @@ async def send_now_board_with_verdict(message: RobotMessage, content: str, singl
     await message.reply(f"今日 {verdict} 榜单", png2jpg(f"{_output_path}/verdict_{verdict}.png"))
 
 
-async def send_now_board(message: RobotMessage, single_col: bool):
+@command(aliases=['今日题数', 'today'], need_check_exclude=True)
+async def send_today_board(message: RobotMessage):
+    single_col = (message.pure_content[1] == "single") if len(message.pure_content) == 2 else False
     await message.reply(f"正在查询今日题数，请稍等")
 
     single_arg = "" if single_col else " --separate_cols"
@@ -130,7 +137,10 @@ async def send_now_board(message: RobotMessage, single_col: bool):
     await message.reply("今日题数", png2jpg(f"{_output_path}/now.png"))
 
 
-async def send_yesterday_full_board(message: RobotMessage, single_col: bool):
+@command(aliases=['昨日总榜', 'yesterday', 'full'], need_check_exclude=True)
+async def send_yesterday_board(message: RobotMessage):
+    single_col = (message.pure_content[1] == "single") if len(
+        message.pure_content) == 2 else False
     await message.reply(f"正在查询昨日总榜，请稍等")
 
     single_arg = "" if single_col else " --separate_cols"
@@ -141,6 +151,7 @@ async def send_yesterday_full_board(message: RobotMessage, single_col: bool):
     await message.reply("昨日卷王天梯榜", png2jpg(f"{_output_path}/full.png"))
 
 
+@command(aliases=['api'])
 async def send_version_info(message: RobotMessage):
     await message.reply(f"正在查询各模块版本，请稍等")
 
