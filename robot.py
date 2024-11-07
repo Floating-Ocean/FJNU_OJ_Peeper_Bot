@@ -131,7 +131,7 @@ async def call_handle_message(message: RobotMessage):
                         return await message.reply('榜单功能被禁用，请联系bot管理员')
                 try:
                     if starts_with:
-                        message.pure_content = [cmd[:-1], func[0].replace(cmd[:-1], '')] + message.pure_content[1:]
+                        message.pure_content = [cmd[:-1], func.replace(cmd[:-1], '')] + message.pure_content[1:]
                     await original_command(message)
                 except Exception as e:
                     await report_exception(message, f'Command-{original_command.__name__}', traceback.format_exc(),
