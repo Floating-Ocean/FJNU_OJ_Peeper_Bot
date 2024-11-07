@@ -23,6 +23,7 @@ from utils.peeper import send_user_info, \
 from utils.pick_one import __pick_one_help_content__, load_pick_one_config
 from utils.rand import __rand_help_content__
 from utils.tools import report_exception, check_is_int
+from utils.uptime import fetch_status
 
 nest_asyncio.apply()
 urllib3.disable_warnings()
@@ -106,31 +107,38 @@ async def reply_restart_bot(message: RobotMessage):
     os.execl(sys.executable, sys.executable, *sys.argv)
 
 
-async def call_handle_message(message: RobotMessage, is_public: bool):
+async def call_handle_message(message: RobotMessage):
     try:
         content = message.pure_content
 
         if len(content) == 0:
             return await message.reply(f"{match_key_words('')}")
 
-        func = content[0]
-        if func in _commands:
-            original_command, execute_level, is_command, need_check_exclude = _commands[func]
+        func = content[0].lower()
+        for cmd in _commands.keys():
+            starts_with = cmd[-1] == '*' and func.startswith(cmd[:-1])
+            if starts_with or cmd == func:
+                original_command, execute_level, is_command, need_check_exclude = _commands[cmd]
 
-            if execute_level > 0:
-                print(f'{message.author_id} attempted {original_command.__name__}.')
-                if execute_level > message.user_permission_level:
-                    raise PermissionError("权限不足，操作被拒绝")
+                if execute_level > 0:
+                    print(f'{message.author_id} attempted {original_command.__name__}.')
+                    if execute_level > message.user_permission_level:
+                        raise PermissionError("权限不足，操作被拒绝")
 
-            if need_check_exclude:
-                if (message.group_message is not None and
-                        message.group_message.group_openid in _config['exclude_group_id']):
-                    return await message.reply('榜单功能被禁用，请联系bot管理员')
-            try:
-                await original_command(message)
-            except Exception as e:
-                await report_exception(message, f'Command-{original_command.__name__}', traceback.format_exc(), repr(e))
-        elif '/' in func:
+                if need_check_exclude:
+                    if (message.group_message is not None and
+                            message.group_message.group_openid in _config['exclude_group_id']):
+                        return await message.reply('榜单功能被禁用，请联系bot管理员')
+                try:
+                    if starts_with:
+                        message.pure_content = [cmd[:-1], func[0].replace(cmd[:-1], '')] + message.pure_content[1:]
+                    await original_command(message)
+                except Exception as e:
+                    await report_exception(message, f'Command-{original_command.__name__}', traceback.format_exc(),
+                                           repr(e))
+            return
+
+        if '/' in func:
             await message.reply(f"其他指令还在开发中")
         else:
             await message.reply(f"{match_key_words(func)}")
@@ -148,7 +156,7 @@ class MyClient(Client):
             f"{self.robot.name} receive public message {message.content} {message.attachments} from {message.channel_id}")
         packed_message = RobotMessage(self.api)
         packed_message.setup_guild_message(message)
-        await call_handle_message(packed_message, True)
+        await call_handle_message(packed_message)
 
     async def on_message_create(self, message: Message):
         _log.info(
@@ -159,14 +167,14 @@ class MyClient(Client):
         packed_message.setup_guild_message(message)
 
         if not re.search(r'<@!\d+>', content):
-            await call_handle_message(packed_message, False)
+            await call_handle_message(packed_message)
 
     async def on_group_at_message_create(self, message: GroupMessage):
         _log.info(
             f"{self.robot.name} receive group message {message.content} {message.attachments} from {message.group_openid}")
         packed_message = RobotMessage(self.api)
         packed_message.setup_group_message(message)
-        await call_handle_message(packed_message, True)
+        await call_handle_message(packed_message)
 
 
 if __name__ == "__main__":
@@ -182,7 +190,8 @@ if __name__ == "__main__":
     noon_thread = threading.Thread(target=noon_sched_thread, args=[asyncio.get_event_loop(), client.api])
     noon_thread.start()
 
-    # 加载pick_one
+    # 加载 pick_one 和 uptime
     load_pick_one_config()
+    fetch_status("fjnuacm.top")
 
     client.run(appid=_config["appid"], secret=_config["secret"])
