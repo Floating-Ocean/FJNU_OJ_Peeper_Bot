@@ -68,7 +68,7 @@ async def pick_one(message: RobotMessage):
 
 @command(aliases=["添加来只*", "添加*"])
 async def save_one(message: RobotMessage):
-    audit = message.user_permission_level >= 1
+    audit = message.user_permission_level == 0
     what = message.pure_content[1].lower()
 
     if what in _match_dict.keys():
