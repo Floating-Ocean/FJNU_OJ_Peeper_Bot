@@ -126,7 +126,8 @@ async def send_now_board_with_verdict(message: RobotMessage):
 
 @command(aliases=['今日题数', 'today'], need_check_exclude=True)
 async def send_today_board(message: RobotMessage):
-    single_col = (message.pure_content[1] == "single") if len(message.pure_content) == 2 else False
+    single_col = (message.pure_content[1] == "single") \
+        if len(message.pure_content) == 2 else False
     await message.reply(f"正在查询今日题数，请稍等")
 
     single_arg = "" if single_col else " --separate_cols"
@@ -139,8 +140,8 @@ async def send_today_board(message: RobotMessage):
 
 @command(aliases=['昨日总榜', 'yesterday', 'full'], need_check_exclude=True)
 async def send_yesterday_board(message: RobotMessage):
-    single_col = (message.pure_content[1] == "single") if len(
-        message.pure_content) == 2 else False
+    single_col = (message.pure_content[1] == "single") \
+        if len(message.pure_content) == 2 else False
     await message.reply(f"正在查询昨日总榜，请稍等")
 
     single_arg = "" if single_col else " --separate_cols"

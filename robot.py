@@ -15,7 +15,7 @@ from botpy.ext.cog_yaml import read
 from botpy.message import Message, GroupMessage
 
 from utils.cf import __cf_help_content__
-from utils.command import command, _commands
+from utils.command import command, __commands__
 from utils.hitokoto import __hitokoto_help_content__
 from utils.interact import RobotMessage, match_key_words
 from utils.peeper import send_user_info, \
@@ -115,10 +115,10 @@ async def call_handle_message(message: RobotMessage):
             return await message.reply(f"{match_key_words('')}")
 
         func = content[0].lower()
-        for cmd in _commands.keys():
+        for cmd in __commands__.keys():
             starts_with = cmd[-1] == '*' and func.startswith(cmd[:-1])
             if starts_with or cmd == func:
-                original_command, execute_level, is_command, need_check_exclude = _commands[cmd]
+                original_command, execute_level, is_command, need_check_exclude = __commands__[cmd]
 
                 if execute_level > 0:
                     print(f'{message.author_id} attempted {original_command.__name__}.')
@@ -155,14 +155,16 @@ class MyClient(Client):
 
     async def on_at_message_create(self, message: Message):
         _log.info(
-            f"{self.robot.name} receive public message {message.content} {message.attachments} from {message.channel_id}")
+            f"{self.robot.name} receive public message {message.content} {message.attachments} "
+            f"from {message.channel_id}")
         packed_message = RobotMessage(self.api)
         packed_message.setup_guild_message(message)
         await call_handle_message(packed_message)
 
     async def on_message_create(self, message: Message):
         _log.info(
-            f"{self.robot.name} receive global message {message.content} {message.attachments} from {message.channel_id}")
+            f"{self.robot.name} receive global message {message.content} {message.attachments} "
+            f"from {message.channel_id}")
         content = message.content
 
         packed_message = RobotMessage(self.api)
@@ -173,7 +175,8 @@ class MyClient(Client):
 
     async def on_group_at_message_create(self, message: GroupMessage):
         _log.info(
-            f"{self.robot.name} receive group message {message.content} {message.attachments} from {message.group_openid}")
+            f"{self.robot.name} receive group message {message.content} {message.attachments} "
+            f"from {message.group_openid}")
         packed_message = RobotMessage(self.api)
         packed_message.setup_group_message(message)
         await call_handle_message(packed_message)

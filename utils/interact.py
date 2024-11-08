@@ -8,7 +8,7 @@ from botpy.ext.cog_yaml import read
 from botpy.message import Message, GroupMessage
 
 _config = read(os.path.join(os.path.join(os.path.dirname(__file__), ".."), "config.yaml"))
-__interact_version__ = "v2.1.3"
+__interact_version__ = "v2.2.0"
 
 _key_words = {
     "傻逼": ["谢谢夸奖", "反弹", "可能还真被你说对了", "嗯", "好的", "哼，你才是"],
@@ -54,9 +54,8 @@ class RobotMessage:
         self.author_id = message.author.__dict__['member_openid']
         self.attachments = message.attachments
         self.msg_seq = 0
-        self.user_permission_level = 2 if self.author_id in _config['admin_qq_id'] else 1 if self.author_id in \
-                                                                                             _config[
-                                                                                           'mod_qq_id'] else 0
+        self.user_permission_level = 2 if self.author_id in _config['admin_qq_id'] else \
+            1 if self.author_id in _config['mod_qq_id'] else 0
 
     async def reply(self, content: str, img_path: str = None, img_url: str = None, modal_words: bool = True):
         if modal_words:  # 加点语气词
