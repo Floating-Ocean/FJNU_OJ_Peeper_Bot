@@ -37,9 +37,9 @@ _what_dict = {
 
 @command(aliases=["来只*"] + list(_what_dict.keys()))
 async def pick_one(message: RobotMessage):
-    func = message.pure_content[0][1:]
+    func = message.tokens[0][1:]
     what = _what_dict[func] if func in _what_dict else (
-        message.pure_content[1].lower() if len(message.pure_content) > 2 else "")
+        message.tokens[1].lower() if len(message.tokens) >= 2 else "")
     if what == "rand" or what == "随便" or what == "随机":
         current_key = random.choice(list(_lib_config.keys()))
     elif what in _match_dict.keys():
@@ -69,12 +69,12 @@ async def pick_one(message: RobotMessage):
 
 @command(aliases=["添加来只*", "添加*"])
 async def save_one(message: RobotMessage):
-    if len(message.pure_content) < 2:
+    if len(message.tokens) < 2:
         await message.reply("请指定需要添加的图片的关键词")
         return
 
     audit = message.user_permission_level == 0
-    what = message.pure_content[1].lower()
+    what = message.tokens[1].lower()
 
     if what in _match_dict.keys():
         current_key = _match_dict[what]

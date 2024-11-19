@@ -5,8 +5,8 @@ import traceback
 import requests
 
 from utils.command import command
-from utils.interact import RobotMessage
-from utils.tools import _log, check_is_int, report_exception
+from utils.interact import RobotMessage, report_exception
+from utils.tools import _log, check_is_int
 
 __rand_version__ = "v1.0.2"
 
@@ -44,7 +44,7 @@ def get_rand_seq(range_max: int) -> str:
 @command(aliases=["选择", "rand", "shuffle", "打乱"])
 async def reply_rand_request(message: RobotMessage):
     try:
-        content = message.pure_content
+        content = message.tokens
         if len(content) < 2 and not content[0].startswith("/选择"):
             return await message.reply(f"[Random]\n\n{__rand_help_content__}", modal_words=False)
 

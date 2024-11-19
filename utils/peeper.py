@@ -6,10 +6,10 @@ from botpy import BotAPI
 
 from utils.cf import __cf_version__
 from utils.command import command
-from utils.interact import RobotMessage, __interact_version__
+from utils.interact import RobotMessage, __interact_version__, report_exception
 from utils.pick_one import __pick_one_version__
 from utils.rand import __rand_version__
-from utils.tools import run_shell, run_async, report_exception, escape_mail_url, _config, png2jpg
+from utils.tools import run_shell, run_async, escape_mail_url, _config, png2jpg
 
 _lib_path = _config["lib_path"] + "\\Peeper-Board-Generator"
 _output_path = _config["output_path"]
@@ -105,9 +105,9 @@ async def send_user_info(message: RobotMessage, content: str, by_name: bool = Fa
 
 @command(aliases=['评测榜单', 'verdict'], need_check_exclude=True)
 async def send_now_board_with_verdict(message: RobotMessage):
-    content = message.pure_content[1] if len(message.pure_content) == 2 else ""
-    single_col = (message.pure_content[2] == "single") if len(
-        message.pure_content) == 3 else False
+    content = message.tokens[1] if len(message.tokens) == 2 else ""
+    single_col = (message.tokens[2] == "single") if len(
+        message.tokens) == 3 else False
     verdict = classify_verdicts(content)
     if verdict == "":
         await message.reply(f"请在 /评测榜单 后面添加正确的参数，如 ac, Accepted, TimeExceeded, WrongAnswer")
@@ -126,8 +126,8 @@ async def send_now_board_with_verdict(message: RobotMessage):
 
 @command(aliases=['今日题数', 'today'], need_check_exclude=True)
 async def send_today_board(message: RobotMessage):
-    single_col = (message.pure_content[1] == "single") \
-        if len(message.pure_content) == 2 else False
+    single_col = (message.tokens[1] == "single") \
+        if len(message.tokens) == 2 else False
     await message.reply(f"正在查询今日题数，请稍等")
 
     single_arg = "" if single_col else " --separate_cols"
@@ -140,8 +140,8 @@ async def send_today_board(message: RobotMessage):
 
 @command(aliases=['昨日总榜', 'yesterday', 'full'], need_check_exclude=True)
 async def send_yesterday_board(message: RobotMessage):
-    single_col = (message.pure_content[1] == "single") \
-        if len(message.pure_content) == 2 else False
+    single_col = (message.tokens[1] == "single") \
+        if len(message.tokens) == 2 else False
     await message.reply(f"正在查询昨日总榜，请稍等")
 
     single_arg = "" if single_col else " --separate_cols"

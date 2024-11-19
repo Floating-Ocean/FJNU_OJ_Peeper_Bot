@@ -1,3 +1,4 @@
+import asyncio
 import datetime
 import hashlib
 import os
@@ -14,8 +15,6 @@ from botpy import logging
 from botpy.ext.cog_yaml import read
 from PIL import Image
 from requests.adapters import HTTPAdapter
-
-from utils.interact import RobotMessage
 
 _log = logging.get_logger()
 _config = read(os.path.join(os.path.join(os.path.dirname(__file__), ".."), "config.yaml"))
@@ -39,16 +38,10 @@ def run_shell(shell: str) -> str:
 
 
 def run_async(loop: AbstractEventLoop, func: any):
+    asyncio.set_event_loop(loop)
     task = loop.create_task(func)
     loop.run_until_complete(task)
-    loop.close()
     return task.result()
-
-
-async def report_exception(message: RobotMessage, name: str, trace: str, info: str):
-    _log.error(trace)
-    info = info.replace(".", ". ")
-    await message.reply(f"[Operation failed] in module {name}.\n\n{info}", modal_words=False)
 
 
 def fetch_json(url: str, payload: dict = None, throw: bool = True) -> dict:
