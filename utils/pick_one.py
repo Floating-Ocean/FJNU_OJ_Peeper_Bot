@@ -8,7 +8,7 @@ from utils.interact import RobotMessage
 from utils.tools import _config, save_img, rand_str_len32, get_md5
 
 _lib_path = _config["lib_path"] + "\\Pick-One"
-__pick_one_version__ = "v2.3.0"
+__pick_one_version__ = "v2.3.1"
 
 __pick_one_help_content__ = """/来只 [what]: 获取一个类别为 what 的随机表情包.
 /随便来只: 获取一个随机类别的随机表情包."""
@@ -38,8 +38,9 @@ _what_dict = {
 @command(aliases=["来只*"] + list(_what_dict.keys()))
 async def pick_one(message: RobotMessage):
     func = message.pure_content[0][1:]
-    what = _what_dict[func] if func in _what_dict else message.pure_content[1].lower()
-    if what == "rand":
+    what = _what_dict[func] if func in _what_dict else (
+        message.pure_content[1].lower() if len(message.pure_content) > 2 else "")
+    if what == "rand" or what == "随便" or what == "随机":
         current_key = random.choice(list(_lib_config.keys()))
     elif what in _match_dict.keys():
         current_key = _match_dict[what]
@@ -68,6 +69,10 @@ async def pick_one(message: RobotMessage):
 
 @command(aliases=["添加来只*", "添加*"])
 async def save_one(message: RobotMessage):
+    if len(message.pure_content) < 2:
+        await message.reply("请指定需要添加的图片的关键词")
+        return
+
     audit = message.user_permission_level == 0
     what = message.pure_content[1].lower()
 

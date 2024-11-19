@@ -8,10 +8,10 @@ from botpy.ext.cog_yaml import read
 from botpy.message import Message, GroupMessage
 
 _config = read(os.path.join(os.path.join(os.path.dirname(__file__), ".."), "config.yaml"))
-__interact_version__ = "v2.2.0"
+__interact_version__ = "v2.2.1"
 
 _key_words = {
-    "傻逼": ["谢谢夸奖", "反弹", "可能还真被你说对了", "嗯", "好的", "哼，你才是"],
+    "傻逼": ["谢谢夸奖", "反弹", "可能还真被你说对了", "嗯", "好的", "哼，你才是", "哈哈"],
     "性别": ["盲猜我的性别是武装直升机", "我也不知道我的性别是啥"],
     "干嘛": ["how", "what", "which", "why", "whether", "when"],
     "谢谢": ["qaq", "不用谢qaq", "qwq"],
@@ -59,7 +59,8 @@ class RobotMessage:
 
     async def reply(self, content: str, img_path: str = None, img_url: str = None, modal_words: bool = True):
         if modal_words:  # 加点语气词
-            content += random.choice(_modal_words)
+            chosen_modal_word = random.choice(_modal_words)
+            content += chosen_modal_word
 
         self.msg_seq += 1
         if self.guild:  # 频道消息
