@@ -2,33 +2,32 @@ import asyncio
 import datetime
 import hashlib
 import os
+import random
 import re
 import ssl
 import string
 import subprocess
 import time
-import random
 from asyncio import AbstractEventLoop
 
 import requests
-from botpy import logging
-from botpy.ext.cog_yaml import read
 from PIL import Image
+from lxml import etree
+from lxml.etree import Element
 from requests.adapters import HTTPAdapter
 
-_log = logging.get_logger()
-_config = read(os.path.join(os.path.join(os.path.dirname(__file__), ".."), "config.yaml"))
+from src.core.constants import Constants
 
 
 def run_shell(shell: str) -> str:
-    _log.info(shell)
+    Constants.log.info(shell)
     cmd = subprocess.Popen(shell, stdin=subprocess.PIPE, stderr=subprocess.PIPE, stdout=subprocess.PIPE,
                            universal_newlines=True, shell=True, bufsize=1)
     info = ""
     # 实时输出
     while True:
         line = cmd.stderr.readline().strip()
-        _log.info(line)
+        Constants.log.info(line)
         info += line
 
         if line == "" or subprocess.Popen.poll(cmd) == 0:  # 判断子进程是否结束
@@ -42,6 +41,20 @@ def run_async(loop: AbstractEventLoop, func: any):
     task = loop.create_task(func)
     loop.run_until_complete(task)
     return task.result()
+
+
+def fetch_html(url: str, payload: dict = None) -> Element:
+    headers = {
+        'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
+                      "Chrome/91.0.4472.77 Safari/537.36",
+        'Connection': 'close'
+    }
+    response = requests.get(url, headers=headers, json=payload)
+
+    if response.status_code != 200:
+        raise ConnectionError(f"Filed to connect {url}, code {response.status_code}.")
+
+    return etree.HTML(response.text)
 
 
 def fetch_json(url: str, payload: dict = None, throw: bool = True) -> dict:
@@ -90,6 +103,17 @@ def format_timestamp(timestamp: int) -> str:
     return time.strftime('%y/%m/%d %H:%M:%S', time.localtime(timestamp))
 
 
+def format_seconds(seconds: int) -> str:
+    units_in_seconds = [
+        ['天', 365 * 24 * 3600, 24 * 3600],
+        ['小时', 24 * 3600, 3600],
+        ['分钟', 3600, 60],
+        ['秒', 60, 1]
+    ]
+    return ''.join([f" {seconds % u_mod // u_div} {name}"
+                    for name, u_mod, u_div in units_in_seconds if seconds % u_mod // u_div > 0]).strip()
+
+
 def escape_mail_url(content: str) -> str:
     email_pattern = r'([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{1,})'
     return re.sub(email_pattern, lambda x: x.group().replace('.', ' . '), content)
@@ -112,7 +136,7 @@ async def save_img(url: str, file_path: str) -> bool:
         url = f'https://{url}'
 
     sess = requests.session()
-    sess.mount("https://", SSLAdapter())   # 将上面定义的SSLAdapter 应用起来
+    sess.mount("https://", SSLAdapter())  # 将上面定义的SSLAdapter 应用起来
 
     response = sess.get(url, headers=headers, verify=False)  # 阻止ssl验证
 

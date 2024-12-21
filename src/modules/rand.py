@@ -4,14 +4,12 @@ import traceback
 
 import requests
 
-from utils.command import command
-from utils.interact import RobotMessage, report_exception
-from utils.tools import _log, check_is_int
+from src.core.command import command
+from src.core.constants import Constants
+from src.core.tools import check_is_int
+from src.modules.message import report_exception, RobotMessage
 
 __rand_version__ = "v1.0.2"
-
-__rand_help_content__ = """/rand [num/int] [min] [max]: 在 [min, max] 中选择一个随机数，值域 [-1e9, 1e9].
-/rand seq [max]: 获取一个 1, 2, ..., max 的随机排列，值域 [1, 500]."""
 
 
 def get_rand_num(range_min: int, range_max: int) -> int:
@@ -20,7 +18,7 @@ def get_rand_num(range_min: int, range_max: int) -> int:
     response = requests.get(url)
 
     if response.status_code != 200:
-        _log.info(f"failed to get random number, code {response.status_code}.")
+        Constants.log.info(f"failed to get random number, code {response.status_code}.")
         return random.randint(range_min, range_max)
 
     data = response.text
@@ -34,19 +32,19 @@ def get_rand_seq(range_max: int) -> str:
     response = requests.get(url)
 
     if response.status_code != 200:
-        _log.info(f"failed to get random sequence, code {response.status_code}.")
+        Constants.log.info(f"failed to get random sequence, code {response.status_code}.")
         return ", ".join([str(x) for x in random.sample(range(1, range_max + 1), range_max)])
 
     data = response.text
     return data
 
 
-@command(aliases=["选择", "rand", "shuffle", "打乱"])
+@command(tokens=["选择", "rand", "shuffle", "打乱"])
 async def reply_rand_request(message: RobotMessage):
     try:
         content = message.tokens
         if len(content) < 2 and not content[0].startswith("/选择"):
-            return await message.reply(f"[Random]\n\n{__rand_help_content__}", modal_words=False)
+            return await message.reply(f"[Random]\n\n{Constants.rand_help_content}", modal_words=False)
 
         if content[0] == "/shuffle" or content[0] == "/打乱":
             if len(content) != 2:
@@ -96,7 +94,7 @@ async def reply_rand_request(message: RobotMessage):
             await message.reply("参数错误，请输入 [1, 500] 内的数字")
 
         else:
-            await message.reply(f"[Random]\n\n{__rand_help_content__}", modal_words=False)
+            await message.reply(f"[Random]\n\n{Constants.rand_help_content}", modal_words=False)
 
     except Exception as e:
         await report_exception(message, 'Random', traceback.format_exc(), repr(e))

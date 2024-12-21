@@ -3,15 +3,13 @@ import json
 import os
 import random
 
-from utils.command import command
-from utils.interact import RobotMessage
-from utils.tools import _config, save_img, rand_str_len32, get_md5
+from src.core.command import command
+from src.core.constants import Constants
+from src.core.tools import save_img, rand_str_len32, get_md5
+from src.modules.message import RobotMessage
 
-_lib_path = _config["lib_path"] + "\\Pick-One"
+_lib_path = Constants.config["lib_path"] + "\\Pick-One"
 __pick_one_version__ = "v2.3.1"
-
-__pick_one_help_content__ = """/来只 [what]: 获取一个类别为 what 的随机表情包.
-/随便来只: 获取一个随机类别的随机表情包."""
 
 _lib_config, _match_dict, _ids = {}, {}, []
 
@@ -35,7 +33,7 @@ _what_dict = {
 }
 
 
-@command(aliases=["来只*"] + list(_what_dict.keys()))
+@command(tokens=["来只*"] + list(_what_dict.keys()))
 async def pick_one(message: RobotMessage):
     func = message.tokens[0][1:]
     what = _what_dict[func] if func in _what_dict else (
@@ -67,7 +65,7 @@ async def pick_one(message: RobotMessage):
                             img_path=f"{dir_path}{img_list[rnd_idx]}")
 
 
-@command(aliases=["添加来只*", "添加*"])
+@command(tokens=["添加来只*", "添加*"])
 async def save_one(message: RobotMessage):
     if len(message.tokens) < 2:
         await message.reply("请指定需要添加的图片的关键词")
@@ -120,7 +118,7 @@ async def save_one(message: RobotMessage):
         await message.reply(img_help)
 
 
-@command(aliases=["审核来只", "同意来只", "accept", "audit"], permission_level=1)
+@command(tokens=["审核来只", "同意来只", "accept", "audit"], permission_level=1)
 async def audit_accept(message: RobotMessage):
     dir_path = f"{_lib_path}\\"
     audit_dir_path = f"{dir_path}__AUDIT__\\"

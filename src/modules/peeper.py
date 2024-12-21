@@ -4,15 +4,16 @@ from asyncio import AbstractEventLoop
 
 from botpy import BotAPI
 
-from utils.cf import __cf_version__
-from utils.command import command
-from utils.interact import RobotMessage, __interact_version__, report_exception
-from utils.pick_one import __pick_one_version__
-from utils.rand import __rand_version__
-from utils.tools import run_shell, run_async, escape_mail_url, _config, png2jpg
+from src.core.constants import Constants
+from src.core.command import command
+from src.core.tools import run_shell, run_async, escape_mail_url, png2jpg, check_is_int
+from src.modules.cf import __cf_version__
+from src.modules.message import report_exception, RobotMessage
+from src.modules.pick_one import __pick_one_version__
+from src.modules.rand import __rand_version__
 
-_lib_path = _config["lib_path"] + "\\Peeper-Board-Generator"
-_output_path = _config["output_path"]
+_lib_path = Constants.config["lib_path"] + "\\Peeper-Board-Generator"
+_output_path = Constants.config["output_path"]
 
 
 def classify_verdicts(content: str) -> str:
@@ -76,16 +77,16 @@ async def call_noon_report(api: BotAPI):
 
     run = await call_lib_method_directly(f"--full --output {_output_path}/full.png")
     if run is None:
-        await api.post_message(channel_id=_config['push_channel'], content="推送昨日卷王天梯榜失败")
+        await api.post_message(channel_id=Constants.config['push_channel'], content="推送昨日卷王天梯榜失败")
     else:
-        await api.post_message(channel_id=_config['push_channel'], content=f"{yesterday} 卷王天梯榜",
+        await api.post_message(channel_id=Constants.config['push_channel'], content=f"{yesterday} 卷王天梯榜",
                                file_image=png2jpg(f"{_output_path}/full.png"))
 
     run = await call_lib_method_directly(f"--now --output {_output_path}/now.png")
     if run is None:
-        await api.post_message(channel_id=_config['push_channel'], content="推送今日题数失败")
+        await api.post_message(channel_id=Constants.config['push_channel'], content="推送今日题数失败")
     else:
-        await api.post_message(channel_id=_config['push_channel'], content=f"{today} 半天做题总榜",
+        await api.post_message(channel_id=Constants.config['push_channel'], content=f"{today} 半天做题总榜",
                                file_image=png2jpg(f"{_output_path}/now.png"))
 
 
@@ -103,7 +104,7 @@ async def send_user_info(message: RobotMessage, content: str, by_name: bool = Fa
     await message.reply(f"[{type_id.capitalize()} {content}]\n\n{result}", modal_words=False)
 
 
-@command(aliases=['评测榜单', 'verdict'], need_check_exclude=True)
+@command(tokens=['评测榜单', 'verdict'], need_check_exclude=True)
 async def send_now_board_with_verdict(message: RobotMessage):
     content = message.tokens[1] if len(message.tokens) == 2 else ""
     single_col = (message.tokens[2] == "single") if len(
@@ -124,7 +125,7 @@ async def send_now_board_with_verdict(message: RobotMessage):
     await message.reply(f"今日 {verdict} 榜单", png2jpg(f"{_output_path}/verdict_{verdict}.png"))
 
 
-@command(aliases=['今日题数', 'today'], need_check_exclude=True)
+@command(tokens=['今日题数', 'today'], need_check_exclude=True)
 async def send_today_board(message: RobotMessage):
     single_col = (message.tokens[1] == "single") \
         if len(message.tokens) == 2 else False
@@ -138,7 +139,7 @@ async def send_today_board(message: RobotMessage):
     await message.reply("今日题数", png2jpg(f"{_output_path}/now.png"))
 
 
-@command(aliases=['昨日总榜', 'yesterday', 'full'], need_check_exclude=True)
+@command(tokens=['昨日总榜', 'yesterday', 'full'], need_check_exclude=True)
 async def send_yesterday_board(message: RobotMessage):
     single_col = (message.tokens[1] == "single") \
         if len(message.tokens) == 2 else False
@@ -152,7 +153,7 @@ async def send_yesterday_board(message: RobotMessage):
     await message.reply("昨日卷王天梯榜", png2jpg(f"{_output_path}/full.png"))
 
 
-@command(aliases=['api'])
+@command(tokens=['api'])
 async def send_version_info(message: RobotMessage):
     await message.reply(f"正在查询各模块版本，请稍等")
 
@@ -162,8 +163,23 @@ async def send_version_info(message: RobotMessage):
 
     result = open(f"{_output_path}/version.txt", encoding="utf-8").read()
     await message.reply(f"[API Version]\n\n"
-                        f"Robot-Interact {__interact_version__}\n"
+                        f"Core {Constants.core_version}\n"
                         f"{result}\n"
                         f"Pick-One {__pick_one_version__}\n"
                         f"Codeforces {__cf_version__}\n"
                         f"Random {__rand_version__}", modal_words=False)
+
+
+@command(tokens=['user'], need_check_exclude=True)
+async def oj_user(message: RobotMessage):
+    content = message.tokens
+    if len(content) < 3:
+        return await message.reply("请输入三个参数，第三个参数前要加空格，比如说\"/user id 1\"，\"/user name Hydro\"")
+    if len(content) > 3:
+        return await message.reply("请输入三个参数，第三个参数不要加上空格")
+    if content[1] == "id" and (len(content[2]) > 9 or not check_is_int(content[2])):
+        return await message.reply("参数错误，id必须为整数")
+    if content[1] == "id" or content[1] == "name":
+        await send_user_info(message, content[2], by_name=(content[1] == "name"))
+    else:
+        await message.reply("请输入正确的参数，如\"/user id ...\", \"/user name ...\"")

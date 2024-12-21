@@ -1,8 +1,9 @@
-from utils.command import command
-from utils.interact import RobotMessage
-from utils.tools import _config, fetch_json
+from src.core.command import command
+from src.core.constants import Constants
+from src.core.tools import fetch_json
+from src.modules.message import RobotMessage
 
-_api_key = _config["uptime_apikey"]
+_api_key = Constants.config["uptime_apikey"]
 
 
 def fetch_status(check_url: str) -> int:
@@ -20,7 +21,7 @@ def fetch_status(check_url: str) -> int:
     return -1
 
 
-@command()
+@command(tokens=['alive'])
 async def alive(message: RobotMessage):
     await message.reply("正在查询服务状态，请稍等")
 
