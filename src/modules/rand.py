@@ -12,6 +12,10 @@ from src.modules.message import report_exception, RobotMessage
 __rand_version__ = "v1.0.2"
 
 
+def register_module():
+    pass
+
+
 def get_rand_num(range_min: int, range_max: int) -> int:
     url = (f"https://www.random.org/integers/?num=1&"
            f"min={range_min}&max={range_max}&col=1&base=10&format=plain&rnd=new")

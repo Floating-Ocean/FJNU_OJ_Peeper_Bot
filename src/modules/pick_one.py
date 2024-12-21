@@ -14,6 +14,10 @@ __pick_one_version__ = "v2.3.1"
 _lib_config, _match_dict, _ids = {}, {}, []
 
 
+def register_module():
+    pass
+
+
 def load_pick_one_config():
     with open(_lib_path + "\\config.json", 'r', encoding="utf-8") as f:
         _lib_config.clear(), _ids.clear(), _match_dict.clear()
@@ -35,6 +39,8 @@ _what_dict = {
 
 @command(tokens=["来只*"] + list(_what_dict.keys()))
 async def pick_one(message: RobotMessage):
+    load_pick_one_config()
+
     func = message.tokens[0][1:]
     what = _what_dict[func] if func in _what_dict else (
         message.tokens[1].lower() if len(message.tokens) >= 2 else "")
@@ -67,6 +73,8 @@ async def pick_one(message: RobotMessage):
 
 @command(tokens=["添加来只*", "添加*"])
 async def save_one(message: RobotMessage):
+    load_pick_one_config()
+
     if len(message.tokens) < 2:
         await message.reply("请指定需要添加的图片的关键词")
         return
@@ -120,6 +128,8 @@ async def save_one(message: RobotMessage):
 
 @command(tokens=["审核来只", "同意来只", "accept", "audit"], permission_level=1)
 async def audit_accept(message: RobotMessage):
+    load_pick_one_config()
+
     dir_path = f"{_lib_path}\\"
     audit_dir_path = f"{dir_path}__AUDIT__\\"
     tags = [tag for tag in os.listdir(audit_dir_path)

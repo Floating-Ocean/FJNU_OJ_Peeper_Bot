@@ -16,6 +16,10 @@ _lib_path = Constants.config["lib_path"] + "\\Peeper-Board-Generator"
 _output_path = Constants.config["output_path"]
 
 
+def register_module():
+    pass
+
+
 def classify_verdicts(content: str) -> str:
     alias_to_full = {
         "ac": ["accepted", "ac"],

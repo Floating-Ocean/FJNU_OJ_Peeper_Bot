@@ -10,6 +10,10 @@ from src.platforms.codeforces import Codeforces
 __cf_version__ = "v2.1.3"
 
 
+def register_module():
+    pass
+
+
 async def send_user_info(message: RobotMessage, handle: str):
     await message.reply(f"正在查询 {handle} 的 Codeforces 平台信息，请稍等")
 

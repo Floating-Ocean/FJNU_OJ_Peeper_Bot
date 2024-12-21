@@ -1,4 +1,5 @@
 ﻿import asyncio
+import importlib
 import os
 import queue
 import re
@@ -19,8 +20,6 @@ from src.core.constants import Constants
 from src.core.interact import RobotMessage, call_handle_message
 from src.core.tools import run_async
 from src.modules.peeper import daily_update_job, noon_report_job
-from src.modules.pick_one import load_pick_one_config
-from src.modules.uptime import fetch_status
 
 nest_asyncio.apply()
 urllib3.disable_warnings()
@@ -129,11 +128,8 @@ if __name__ == "__main__":
     daily_thread = threading.Thread(target=daily_sched_thread, args=[asyncio.get_event_loop()])
     daily_thread.start()
 
-    # 加载 pick_one
-    load_pick_one_config()
-
-    # 加载 uptime
-    fetch_status("")
+    # 加载模块
+    importlib.import_module("src.modules")
 
     # 任务线程
     task_thread = threading.Thread(target=run_queue, args=[])

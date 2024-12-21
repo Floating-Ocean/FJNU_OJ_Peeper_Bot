@@ -6,6 +6,10 @@ from src.modules.message import RobotMessage
 _api_key = Constants.config["uptime_apikey"]
 
 
+def register_module():
+    pass
+
+
 def fetch_status(check_url: str) -> int:
     data = fetch_json("https://api.uptimerobot.com/v2/getMonitors",
                       {"api_key": _api_key})
