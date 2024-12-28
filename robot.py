@@ -21,9 +21,6 @@ from src.core.interact import RobotMessage, call_handle_message
 from src.core.tools import run_async
 from src.modules.peeper import daily_update_job, noon_report_job
 
-nest_asyncio.apply()
-urllib3.disable_warnings()
-
 _query_queue = queue.Queue()
 
 daily_sched = BlockingScheduler()
@@ -123,13 +120,10 @@ def run_msg():
     run_async(loop, start_client(loop))
 
 
-if __name__ == "__main__":
+def open_robot_session():
     # 更新每日排行榜
     daily_thread = threading.Thread(target=daily_sched_thread, args=[asyncio.get_event_loop()])
     daily_thread.start()
-
-    # 加载模块
-    importlib.import_module("src.modules")
 
     # 任务线程
     task_thread = threading.Thread(target=run_queue, args=[])

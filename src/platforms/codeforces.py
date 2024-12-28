@@ -67,7 +67,7 @@ class Codeforces(Platform):
         url = f"https://codeforces.com/api/user.info?handles={handle}"
         json_data = fetch_json(url, throw=False)
 
-        if json_data['status'] != "OK" or len(json_data['result']) == 0:
+        if json_data is None or json_data['status'] != "OK" or len(json_data['result']) == 0:
             return None, None
 
         result = json_data['result'][-1]
@@ -88,6 +88,8 @@ class Codeforces(Platform):
         if len(home) > 0:
             belong.append(', '.join(home))
         if 'organization' in result:
+            if len(result['organization']) == 0:  # meme
+                result['organization'] = '地球'
             belong.append(f"来自 {result['organization']}")
         if len(belong) > 0:
             sections.append('\n'.join(belong))
