@@ -1,5 +1,4 @@
 ﻿import asyncio
-import importlib
 import os
 import queue
 import re
@@ -9,8 +8,6 @@ from asyncio import AbstractEventLoop
 from typing import Union, List
 
 import botpy
-import nest_asyncio
-import urllib3
 from apscheduler.schedulers.blocking import BlockingScheduler
 from botpy import BotAPI, Client, Intents
 from botpy.message import Message, GroupMessage
@@ -45,10 +42,10 @@ async def reply_restart_bot(message: RobotMessage):
 
 
 async def queue_up_handler():
-    while _query_queue.qsize() == 0:  # 忙等待
-        pass
-    await call_handle_message(_query_queue.get())
-    await queue_up_handler()
+    while True:
+        while _query_queue.qsize() == 0:  # 忙等待
+            pass
+        await call_handle_message(_query_queue.get())
 
 
 async def join_in_message(message: RobotMessage):
@@ -99,7 +96,7 @@ class MyClient(Client):
 def start_client(loop: AbstractEventLoop):
     # 通过kwargs，设置需要监听的事件通道
     intents = botpy.Intents(public_messages=True, public_guild_messages=True, guild_messages=True)
-    client = MyClient(loop, intents=intents, timeout=20)
+    client = MyClient(loop, intents=intents, timeout=60)
 
     # 午间推送机制
     noon_thread = threading.Thread(target=noon_sched_thread, args=[asyncio.get_event_loop(), client.api])

@@ -3,6 +3,7 @@ import os
 import subprocess
 
 from apscheduler.schedulers.blocking import BlockingScheduler
+from botpy import logging
 
 from src.core.constants import Constants
 
@@ -28,17 +29,19 @@ def check_process_job():
             if check_process_with_pid(pid):
                 return
 
-    Constants.daemon_log.info("[Daemon] 进程不存在，正在创建")
+    Constants.log.info("[daemon] 进程不存在，正在创建")
     open_entry()
-    Constants.daemon_log.info("[Daemon] 进程创建完成")
+    Constants.log.info("[daemon] 进程创建完成")
 
 
 if __name__ == '__main__':
     try:
-        daemon_scheduler.add_job(check_process_job, "interval", minutes=2)
+        logging.configure_logging(ext_handlers=True)
+        check_process_job()  # scheduler开始运行前也会等待interval，所以先运行一下
+        daemon_scheduler.add_job(check_process_job, "interval", minutes=1)
         daemon_scheduler.start()
 
-        Constants.daemon_log.info("[Daemon] 守护进程开始运行")
+        Constants.log.info("[daemon] 守护进程开始运行")
     except (KeyboardInterrupt, SystemExit):
-        Constants.daemon_log.info("[Daemon] 守护进程开始终止")
+        Constants.log.info("[daemon] 守护进程开始终止")
         pass

@@ -7,7 +7,6 @@ import nest_asyncio
 import urllib3
 
 from robot import open_robot_session
-from src.core.constants import Constants
 
 nest_asyncio.apply()
 urllib3.disable_warnings()
@@ -19,7 +18,6 @@ importlib.import_module("src.modules")
 def terminate_process(pid: int):
     try:
         os.kill(pid, signal.SIGTERM)
-        Constants.daemon_log.info(f"[Entry] 旧进程({pid})仍在运行，已停止.")
     except OSError:
         pass
 

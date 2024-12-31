@@ -6,7 +6,6 @@ from botpy.ext.cog_yaml import read
 
 class Constants:
     log = logging.get_logger()
-    daemon_log = logging.get_logger("daemon")
     config = read(os.path.join(os.path.dirname(__file__), "..", "..", "config.yaml"))
 
     core_version = "v3.0.0"
