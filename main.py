@@ -36,7 +36,6 @@ def check_process_job():
 
 if __name__ == '__main__':
     try:
-        logging.configure_logging(ext_handlers=True)
         check_process_job()  # scheduler开始运行前也会等待interval，所以先运行一下
         daemon_scheduler.add_job(check_process_job, "interval", minutes=1)
         daemon_scheduler.start()

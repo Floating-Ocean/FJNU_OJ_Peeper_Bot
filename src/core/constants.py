@@ -39,6 +39,8 @@ class Constants:
 
     hitokoto_help_content = f"""/hitokoto: 获取一条一言。指令别名：/一言，/来(一)句(话)"""
 
+    color_rand_help_content = f"""/color: 获取一个色卡。"""
+
     help_content = f"""[Functions]
 
 [Main]
@@ -61,9 +63,12 @@ class Constants:
 
 [codeforces]
 {cf_help_content}
- 
+
 [random]
 {rand_help_content}
-    
+
 [hitokoto]
-{hitokoto_help_content}"""
+{hitokoto_help_content}
+
+[color-rand]
+{color_rand_help_content}"""

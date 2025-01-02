@@ -8,6 +8,7 @@ from src.core.constants import Constants
 from src.core.command import command
 from src.core.tools import run_shell, run_async, escape_mail_url, png2jpg, check_is_int
 from src.modules.cf import __cf_version__
+from src.modules.color_rand import __color_rand_version__
 from src.modules.message import report_exception, RobotMessage
 from src.modules.pick_one import __pick_one_version__
 from src.modules.rand import __rand_version__
@@ -168,9 +169,10 @@ async def send_version_info(message: RobotMessage):
     result = open(f"{_output_path}/version.txt", encoding="utf-8").read()
     await message.reply(f"[API Version]\n\n"
                         f"Core {Constants.core_version}\n"
+                        f"Codeforces {__cf_version__}\n"
+                        f"Color-Rand {__color_rand_version__}"
                         f"{result}\n"
                         f"Pick-One {__pick_one_version__}\n"
-                        f"Codeforces {__cf_version__}\n"
                         f"Random {__rand_version__}", modal_words=False)
 
 

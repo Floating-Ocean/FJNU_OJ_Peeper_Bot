@@ -6,10 +6,11 @@ import requests
 
 from src.core.command import command
 from src.core.constants import Constants
-from src.core.tools import check_is_int
+from src.core.tools import check_is_int, fetch_json
+from src.modules.color_rand import reply_color_rand
 from src.modules.message import report_exception, RobotMessage
 
-__rand_version__ = "v1.0.2"
+__rand_version__ = "v2.0.1"
 
 
 def register_module():
@@ -97,8 +98,23 @@ async def reply_rand_request(message: RobotMessage):
 
             await message.reply("参数错误，请输入 [1, 500] 内的数字")
 
+        elif func == "word" or func == "hitokoto" or func == "sentence":
+            await reply_hitokoto(message)
+
+        elif func == "color":
+            await reply_color_rand(message)
+
         else:
             await message.reply(f"[Random]\n\n{Constants.rand_help_content}", modal_words=False)
 
     except Exception as e:
         await report_exception(message, 'Random', traceback.format_exc(), repr(e))
+
+
+@command(tokens=["hitokoto", "来句", "来一句", "来句话", "来一句话"])
+async def reply_hitokoto(message: RobotMessage):
+    json = fetch_json("https://v1.hitokoto.cn/")
+    content = json['hitokoto']
+    where = json['from']
+    author = json['from_who'] if json['from_who'] else ""
+    await message.reply(f"[Hitokoto]\n{content}\nBy {author}「{where}」", modal_words=False)
