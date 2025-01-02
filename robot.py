@@ -79,7 +79,7 @@ class MyClient(Client):
         content = message.content
 
         packed_message = RobotMessage(self.api)
-        packed_message.setup_guild_message(self._main_event_loop, message)
+        packed_message.setup_guild_message(self._main_event_loop, message, is_public=True)
 
         if not re.search(r'<@!\d+>', content):
             await join_in_message(packed_message)

@@ -13,6 +13,7 @@ class RobotMessage:
     def __init__(self, api: BotAPI):
         self.api = api
         self.guild = False
+        self.guild_public = False
         self.guild_message = None
         self.group_message = None
         self.content = ""
@@ -23,9 +24,10 @@ class RobotMessage:
         self.user_permission_level = 0
         self.main_event_loop = None
 
-    def setup_guild_message(self, main_event_loop, message: Message):
+    def setup_guild_message(self, main_event_loop, message: Message, is_public: bool = False):
         self.main_event_loop = main_event_loop
         self.guild = True
+        self.guild_public = is_public
         self.guild_message = message
         self.content = message.content
         self.tokens = re.sub(r'<@!\d+>', '', message.content).strip().split()

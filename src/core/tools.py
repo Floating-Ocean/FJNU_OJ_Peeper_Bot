@@ -132,6 +132,14 @@ def check_is_int(value: str) -> bool:
         return False
 
 
+def check_is_float(value: str) -> bool:
+    try:
+        float(value)
+        return True
+    except ValueError:
+        return False
+
+
 async def save_img(url: str, file_path: str) -> bool:
     headers = {
         'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -159,10 +167,12 @@ async def save_img(url: str, file_path: str) -> bool:
     return False
 
 
-def png2jpg(path: str) -> str:
+def png2jpg(path: str, remove_origin: bool = True) -> str:
     img = Image.open(path)
     new_path = os.path.splitext(path)[0] + '.jpg'
     img.convert('RGB').save(new_path)
+    if remove_origin:
+        os.remove(path)
     return new_path
 
 

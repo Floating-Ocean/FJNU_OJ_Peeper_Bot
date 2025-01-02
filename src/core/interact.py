@@ -29,7 +29,7 @@ async def call_handle_message(message: RobotMessage):
     try:
         content = message.tokens
 
-        if len(content) == 0:
+        if len(content) == 0 and not message.guild_public:
             return await message.reply(f"{match_key_words('')}")
 
         func = content[0].lower()
@@ -37,6 +37,9 @@ async def call_handle_message(message: RobotMessage):
             starts_with = cmd[-1] == '*' and func.startswith(cmd[:-1])
             if starts_with or cmd == func:
                 original_command, execute_level, is_command, need_check_exclude = __commands__[cmd]
+
+                if not is_command and message.guild_public:
+                    continue
 
                 if execute_level > 0:
                     Constants.log.info(f'{message.author_id} attempted {original_command.__name__}.')
@@ -57,6 +60,9 @@ async def call_handle_message(message: RobotMessage):
                     await report_exception(message, f'Command<{original_command.__name__}>', traceback.format_exc(),
                                            repr(e))
                 return
+
+        if message.guild_public:
+            return
 
         if '/' in func:
             await message.reply(f"其他指令还在开发中")
