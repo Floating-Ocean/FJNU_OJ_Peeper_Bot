@@ -24,19 +24,19 @@ class Codeforces(Platform):
 
     @staticmethod
     async def get_prob_filter_tag(message: RobotMessage, tag_needed: str,
-                                  limit: str = None, newer: bool = False) -> dict | None:
+                                  limit: str = None, newer: bool = False) -> dict | int:
         if tag_needed == "all":
             url = f"https://codeforces.com/api/problemset.problems"
         else:
             all_tags = Codeforces.get_prob_tags_all()
             if all_tags is None:
-                return None
+                return -1
 
             # 模糊匹配
             if tag_needed not in all_tags:
                 closet_tag = difflib.get_close_matches(tag_needed, all_tags)
                 if len(closet_tag) == 0:
-                    return None
+                    return -2
                 tag_needed = closet_tag[0]
                 await message.reply(f"最佳匹配 Tag: {tag_needed}")
 
@@ -60,7 +60,7 @@ class Codeforces(Platform):
         if newer:
             filtered_data = [prob for prob in filtered_data if prob['contestId'] >= 1000]
 
-        return random.choice(filtered_data)
+        return random.choice(filtered_data) if len(filtered_data) > 0 else 0
 
     @staticmethod
     def get_user_info(handle: str) -> tuple[str | None, str | None]:

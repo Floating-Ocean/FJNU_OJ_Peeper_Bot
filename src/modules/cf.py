@@ -75,8 +75,12 @@ async def send_prob_filter_tag(message: RobotMessage, tag: str, limit: str = Non
 
     chosen_prob = await Codeforces.get_prob_filter_tag(message, tag, limit, newer)
 
-    if chosen_prob is None:
+    if isinstance(chosen_prob, int) and chosen_prob < 0:
         return False
+
+    if isinstance(chosen_prob, int):
+        await message.reply("条件不合理或过于苛刻，无法找到满足条件的题目")
+        return True
 
     tags = ', '.join(chosen_prob['tags'])
     content = (f"[Codeforces] 随机选题\n\n"
