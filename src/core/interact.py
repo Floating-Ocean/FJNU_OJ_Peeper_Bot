@@ -3,14 +3,10 @@ import re
 import time
 import traceback
 
-from qrcode.image.styledpil import StyledPilImage
-from qrcode.image.styles.moduledrawers import RoundedModuleDrawer
-from qrcode.main import QRCode
-
 from src.core.command import command, __commands__
 from src.core.constants import Constants
 from src.core.output_cached import get_cached_prefix
-from src.core.tools import format_timestamp_diff, format_timestamp, format_seconds, png2jpg
+from src.core.tools import format_timestamp_diff, format_timestamp, format_seconds, png2jpg, get_simple_qrcode
 from src.modules.message import RobotMessage, report_exception
 from src.platforms.atcoder import AtCoder
 from src.platforms.codeforces import Codeforces
@@ -116,11 +112,8 @@ async def reply_qrcode(message: RobotMessage):
         await message.reply("请输入要转化为二维码的内容")
         return
 
-    qr = QRCode()
-    qr.add_data(content)
-
     cached_prefix = get_cached_prefix('QRCode-Generator')
-    qr_img = qr.make_image(image_factory=StyledPilImage, module_drawer=RoundedModuleDrawer())
+    qr_img = get_simple_qrcode(content)
     qr_img.save(f"{cached_prefix}.png")
 
     await message.reply("生成了一个二维码", png2jpg(f"{cached_prefix}.png"))

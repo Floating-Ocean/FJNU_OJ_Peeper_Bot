@@ -14,6 +14,9 @@ import requests
 from PIL import Image
 from lxml import etree
 from lxml.etree import Element
+from qrcode.image.styledpil import StyledPilImage
+from qrcode.image.styles.moduledrawers import RoundedModuleDrawer
+from qrcode.main import QRCode
 from requests.adapters import HTTPAdapter
 
 from src.core.constants import Constants
@@ -201,6 +204,12 @@ def get_week_start_timestamp() -> int:
     week_start = datetime.datetime.combine(start_of_week.date(), datetime.time.min)
     timestamp = int(week_start.timestamp())
     return timestamp
+
+
+def get_simple_qrcode(content: str) -> Image:
+    qr = QRCode()
+    qr.add_data(content)
+    return qr.make_image(image_factory=StyledPilImage, module_drawer=RoundedModuleDrawer())
 
 
 class SSLAdapter(HTTPAdapter):

@@ -3,7 +3,8 @@ import traceback
 
 from src.core.command import command
 from src.core.constants import Constants
-from src.core.tools import check_is_int
+from src.core.output_cached import get_cached_prefix
+from src.core.tools import check_is_int, get_simple_qrcode, png2jpg
 from src.modules.message import report_exception, RobotMessage
 from src.platforms.codeforces import Codeforces
 
@@ -86,7 +87,12 @@ async def send_prob_filter_tag(message: RobotMessage, tag: str, limit: str = Non
     if 'rating' in chosen_prob:
         content += f"\n难度: *{chosen_prob['rating']}"
 
-    await message.reply(content, modal_words=False)
+    cached_prefix = get_cached_prefix('QRCode-Generator')
+    qr_img = get_simple_qrcode(
+        f"https://codeforces.com/contest/{chosen_prob['contestId']}/problem/{chosen_prob['index']}")
+    qr_img.save(f"{cached_prefix}.png")
+
+    await message.reply(content, png2jpg(f"{cached_prefix}.png"), modal_words=False)
 
     return True
 
@@ -124,7 +130,7 @@ async def reply_cf_request(message: RobotMessage):
             await send_user_info(message, content[2])
 
         elif func == "recent":
-            if len(content) != 3 and len(content) != 4:
+            if len(content) not in [3, 4]:
                 await message.reply("请输入正确的指令格式，如\"/cf recent jiangly 5\"")
                 return
 
@@ -132,11 +138,11 @@ async def reply_cf_request(message: RobotMessage):
                 await message.reply("参数错误，请输入 [1, 99] 内的整数")
                 return
 
-            await send_user_last_submit(message, content[2], int(content[3]) if len(content) > 3 else 5)
+            await send_user_last_submit(message, content[2], int(content[3]) if len(content) == 4 else 5)
 
         elif func == "pick" or func == "prob" or func == "problem" or (
-                content[0] == "rand" and func == "cf"):  # 让此处能被 /rand 模块调用
-            if not await send_prob_filter_tag(
+                content[0] == "/rand" and func == "cf"):  # 让此处能被 /rand 模块调用
+            if len(content) < 3 or not await send_prob_filter_tag(
                     message=message,
                     tag=content[2],
                     limit=content[3] if len(content) >= 4 and content[3] != "new" else None,
