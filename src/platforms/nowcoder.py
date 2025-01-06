@@ -1,7 +1,6 @@
 import re
 from datetime import datetime
 
-from lxml import etree
 from lxml.etree import Element
 
 from src.core.tools import fetch_html

@@ -14,7 +14,6 @@ urllib3.disable_warnings()
 # 加载模块
 importlib.import_module("src.modules")
 
-
 if __name__ == '__main__':
     # a lock containing pid
     if os.path.exists('robot.py.lock'):

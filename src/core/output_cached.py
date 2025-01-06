@@ -2,7 +2,7 @@ import os
 from datetime import datetime, timedelta
 
 from src.core.constants import Constants
-from src.core.tools import check_is_float, png2jpg
+from src.core.tools import check_is_float
 
 _output_path = Constants.config["output_path"]
 

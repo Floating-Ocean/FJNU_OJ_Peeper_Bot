@@ -14,7 +14,7 @@ from qrcode.main import QRCode
 from src.core.command import command
 from src.core.constants import Constants
 from src.core.output_cached import get_cached_prefix
-from src.core.tools import check_is_float, png2jpg
+from src.core.tools import png2jpg
 from src.modules.message import RobotMessage
 
 _lib_path = os.path.join(Constants.config["lib_path"], "Color-Rand")
