@@ -2,17 +2,23 @@ import json
 import os
 import random
 from colorsys import rgb_to_hsv
-from datetime import datetime, timedelta
 
 import pixie
+import qrcode
+from PIL import Image
+from qrcode.image.styledpil import StyledPilImage
+from qrcode.image.styles.colormasks import SolidFillColorMask
+from qrcode.image.styles.moduledrawers import RoundedModuleDrawer
+from qrcode.main import QRCode
 
 from src.core.command import command
 from src.core.constants import Constants
+from src.core.output_cached import get_cached_prefix
 from src.core.tools import check_is_float, png2jpg
 from src.modules.message import RobotMessage
 
 _lib_path = os.path.join(Constants.config["lib_path"], "Color-Rand")
-__color_rand_version__ = "v1.0.2"
+__color_rand_version__ = "v1.1.0"
 
 _colors = []
 
@@ -25,18 +31,6 @@ def load_colors():
     with open(os.path.join(_lib_path, "chinese_traditional.json"), 'r', encoding="utf-8") as f:
         _colors.clear()
         _colors.extend(json.load(f))
-
-
-def clean_tmp_hours_ago():
-    one_hour_ago = datetime.now() - timedelta(hours=1)
-    output_path = os.path.join(_lib_path, "output")
-    for filename in os.listdir(output_path):
-        for suffix in [".png", ".jpg"]:
-            prefix = filename.replace(suffix, "")
-            if filename.endswith(suffix) and check_is_float(prefix):
-                file_mtime = datetime.fromtimestamp(float(prefix))
-                if file_mtime < one_hour_ago:  # 清理一小时前的缓存图片
-                    os.remove(os.path.join(_lib_path, "output", filename))
 
 
 def choose_text_color(color: dict) -> tuple[int, int, int]:
@@ -68,33 +62,51 @@ def transform_color(color: dict) -> tuple[str, str, str]:
     return hex_text, rgb_text, hsv_text
 
 
-def generate_color_card(color) -> pixie.Image:
+def generate_color_card(color: dict) -> pixie.Image:
     hex_text, rgb_text, hsv_text = transform_color(color)
-    img = pixie.Image(832, 520)
+    img = pixie.Image(1664, 1040)
     img.fill(pixie.Color(0, 0, 0, 1))
     paint_bg = pixie.Paint(pixie.SOLID_PAINT)
     paint_bg.color = pixie.Color(color["RGB"][0] / 255, color["RGB"][1] / 255, color["RGB"][2] / 255, 1.0)
-    draw_round_rect(img, paint_bg, 16, 16, 800, 488, 48)
-    draw_text(img, f"Color Collect - {color['pinyin']}", 72 + 16, 60 + 16, 'H', 24, color)
-    draw_text(img, color['name'], 72 + 16, 116 + 16, 'H', 72, color)
-    hex_width = draw_text(img, hex_text, 72 + 16, 236 + 16, 'M', 36, color)
-    rgb_width = draw_text(img, rgb_text, 72 + 16, 308 + 16, 'M', 36, color)
-    hsv_width = draw_text(img, hsv_text, 72 + 16, 380 + 16, 'M', 36, color)
-    draw_text(img, "HEX", 72 + hex_width + 16 + 16, 236 + 16 + 12, 'R', 24, color)
-    draw_text(img, "RGB", 72 + rgb_width + 16 + 16, 308 + 16 + 12, 'R', 24, color)
-    draw_text(img, "HSV", 72 + hsv_width + 16 + 16, 380 + 16 + 12, 'R', 24, color)
+    draw_round_rect(img, paint_bg, 32, 32, 1600, 976, 96)
+    draw_text(img, f"Color Collect - {color['pinyin']}", 144 + 32, 120 + 32, 'H', 48, color)
+    draw_text(img, color['name'], 144 + 32, 232 + 32, 'H', 144, color)
+    hex_width = draw_text(img, hex_text, 144 + 32, 472 + 32, 'M', 72, color)
+    rgb_width = draw_text(img, rgb_text, 144 + 32, 616 + 32, 'M', 72, color)
+    hsv_width = draw_text(img, hsv_text, 144 + 32, 760 + 32, 'M', 72, color)
+    draw_text(img, "HEX", 144 + hex_width + 32 + 32, 472 + 32 + 24, 'R', 48, color)
+    draw_text(img, "RGB", 144 + rgb_width + 32 + 32, 616 + 32 + 24, 'R', 48, color)
+    draw_text(img, "HSV", 144 + hsv_width + 32 + 32, 760 + 32 + 24, 'R', 48, color)
     return img
+
+
+def add_qrcode(target_path: str, color: dict):
+    qr = QRCode(error_correction=qrcode.constants.ERROR_CORRECT_L)
+
+    hex_clean = color["hex"][1:].lower()
+    qr.add_data(f"https://gradients.app/zh/color/{hex_clean}")
+
+    font_color = choose_text_color(color)
+    qrcode_img = qr.make_image(image_factory=StyledPilImage, module_drawer=RoundedModuleDrawer(),
+                               color_mask=SolidFillColorMask((0, 0, 0, 0),
+                                                             (font_color[0], font_color[1], font_color[2], 255)))
+
+    target_img = Image.open(target_path)
+    target_img.paste(qrcode_img, (1155, 545), qrcode_img)
+    target_img.save(target_path)
 
 
 @command(tokens=["color", "颜色", "色", "来个颜色", "来个色卡", "色卡"])
 async def reply_color_rand(message: RobotMessage):
+    cached_prefix = get_cached_prefix('Color-Rand')
+    img_path = f"{cached_prefix}.png"
+
     load_colors()
-    clean_tmp_hours_ago()
     picked_color = random.choice(_colors)
 
     color_card = generate_color_card(picked_color)
-    img_path = os.path.join(_lib_path, "output", f"{datetime.now().timestamp()}.png")
     color_card.write_file(img_path)
+    add_qrcode(img_path, picked_color)
 
     name = picked_color["name"]
     pinyin = picked_color["pinyin"]

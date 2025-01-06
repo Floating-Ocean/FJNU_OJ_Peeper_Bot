@@ -8,7 +8,7 @@ class Constants:
     log = logging.get_logger()
     config = read(os.path.join(os.path.dirname(__file__), "..", "..", "config.yaml"))
 
-    core_version = "v3.0.0"
+    core_version = "v3.0.1"
 
     key_words = {
         "傻逼": ["谢谢夸奖", "反弹", "可能还真被你说对了", "嗯", "好的", "哼，你才是", "哈哈",
@@ -71,4 +71,7 @@ class Constants:
 {hitokoto_help_content}
 
 [color-rand]
-{color_rand_help_content}"""
+{color_rand_help_content}
+
+[misc]
+/qrcode [content]：生成一个内容为 content 的二维码."""

@@ -7,10 +7,11 @@ import requests
 from src.core.command import command
 from src.core.constants import Constants
 from src.core.tools import check_is_int, fetch_json
+from src.modules.cf import reply_cf_request
 from src.modules.color_rand import reply_color_rand
 from src.modules.message import report_exception, RobotMessage
 
-__rand_version__ = "v2.0.1"
+__rand_version__ = "v2.1.0"
 
 
 def register_module():
@@ -103,6 +104,9 @@ async def reply_rand_request(message: RobotMessage):
 
         elif func == "color":
             await reply_color_rand(message)
+
+        elif func == "cf":
+            await reply_cf_request(message)
 
         else:
             await message.reply(f"[Random]\n\n{Constants.rand_help_content}", modal_words=False)

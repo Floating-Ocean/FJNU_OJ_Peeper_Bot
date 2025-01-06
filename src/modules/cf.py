@@ -134,7 +134,8 @@ async def reply_cf_request(message: RobotMessage):
 
             await send_user_last_submit(message, content[2], int(content[3]) if len(content) > 3 else 5)
 
-        elif func == "pick" or func == "prob" or func == "problem":
+        elif func == "pick" or func == "prob" or func == "problem" or (
+                content[0] == "rand" and func == "cf"):  # 让此处能被 /rand 模块调用
             if not await send_prob_filter_tag(
                     message=message,
                     tag=content[2],
@@ -142,10 +143,13 @@ async def reply_cf_request(message: RobotMessage):
                     newer=content[3] == "new" if len(content) == 4 else (
                             content[4] == "new" if len(content) == 5 else False)
             ):
+                func_prefix = f"/cf {func}"
+                if func == "cf":
+                    func_prefix = "/rand cf"
                 await message.reply("请输入正确的指令格式，如:\n\n"
-                                    "/cf pick dp 1700-1900 new\n"
-                                    "/cf pick dfs-and-similar\n"
-                                    "/cf pick all 1800", modal_words=False)
+                                    f"{func_prefix} dp 1700-1900 new\n"
+                                    f"{func_prefix} dfs-and-similar\n"
+                                    f"{func_prefix} all 1800", modal_words=False)
 
         elif func == "contest" or func == "contests":
             await send_contest(message)

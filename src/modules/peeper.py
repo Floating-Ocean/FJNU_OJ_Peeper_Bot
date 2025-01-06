@@ -6,6 +6,7 @@ from botpy import BotAPI
 
 from src.core.constants import Constants
 from src.core.command import command
+from src.core.output_cached import get_cached_prefix
 from src.core.tools import run_shell, run_async, escape_mail_url, png2jpg, check_is_int
 from src.modules.cf import __cf_version__
 from src.modules.color_rand import __color_rand_version__
@@ -14,7 +15,6 @@ from src.modules.pick_one import __pick_one_version__
 from src.modules.rand import __rand_version__
 
 _lib_path = Constants.config["lib_path"] + "\\Peeper-Board-Generator"
-_output_path = Constants.config["output_path"]
 
 
 def register_module():
@@ -68,7 +68,8 @@ async def call_lib_method_directly(prop: str) -> str | None:
 
 
 def daily_update_job(loop: AbstractEventLoop):
-    run_async(loop, call_lib_method_directly(f"--full --output {_output_path}/full.png"))
+    cached_prefix = get_cached_prefix('Peeper-Board-Generator')
+    run_async(loop, call_lib_method_directly(f"--full --output {cached_prefix}.png"))
 
 
 def noon_report_job(loop: AbstractEventLoop, api: BotAPI):
@@ -80,19 +81,21 @@ async def call_noon_report(api: BotAPI):
     oneday = datetime.timedelta(days=1)
     yesterday = (datetime.datetime.now() - oneday).strftime("%Y/%m/%d")
 
-    run = await call_lib_method_directly(f"--full --output {_output_path}/full.png")
+    cached_prefix = get_cached_prefix('Peeper-Board-Generator')
+    run = await call_lib_method_directly(f"--full --output {cached_prefix}.png")
     if run is None:
         await api.post_message(channel_id=Constants.config['push_channel'], content="推送昨日卷王天梯榜失败")
     else:
         await api.post_message(channel_id=Constants.config['push_channel'], content=f"{yesterday} 卷王天梯榜",
-                               file_image=png2jpg(f"{_output_path}/full.png"))
+                               file_image=png2jpg(f"{cached_prefix}.png"))
 
-    run = await call_lib_method_directly(f"--now --output {_output_path}/now.png")
+    cached_prefix = get_cached_prefix('Peeper-Board-Generator')
+    run = await call_lib_method_directly(f"--now --output {cached_prefix}.png")
     if run is None:
         await api.post_message(channel_id=Constants.config['push_channel'], content="推送今日题数失败")
     else:
         await api.post_message(channel_id=Constants.config['push_channel'], content=f"{today} 半天做题总榜",
-                               file_image=png2jpg(f"{_output_path}/now.png"))
+                               file_image=png2jpg(f"{cached_prefix}.png"))
 
 
 async def send_user_info(message: RobotMessage, content: str, by_name: bool = False):
@@ -100,11 +103,12 @@ async def send_user_info(message: RobotMessage, content: str, by_name: bool = Fa
     type_id = "name" if by_name else "uid"
     await message.reply(f"正在查询{type_name}为 {content} 的用户数据，请稍等")
 
-    run = await call_lib_method(message, f"--query_{type_id} {content} --output {_output_path}/user.txt")
+    cached_prefix = get_cached_prefix('Peeper-Board-Generator')
+    run = await call_lib_method(message, f"--query_{type_id} {content} --output {cached_prefix}.txt")
     if run is None:
         return
 
-    result = open(f"{_output_path}/user.txt", encoding="utf-8").read()
+    result = open(f"{cached_prefix}.txt", encoding="utf-8").read()
     result = escape_mail_url(result)
     await message.reply(f"[{type_id.capitalize()} {content}]\n\n{result}", modal_words=False)
 
@@ -122,12 +126,13 @@ async def send_now_board_with_verdict(message: RobotMessage):
     await message.reply(f"正在查询今日 {verdict} 榜单，请稍等")
 
     single_arg = "" if single_col else " --separate_cols"
+    cached_prefix = get_cached_prefix('Peeper-Board-Generator')
     run = await call_lib_method(message,
-                                f"--now {single_arg} --verdict {verdict} --output {_output_path}/verdict_{verdict}.png")
+                                f"--now {single_arg} --verdict {verdict} --output {cached_prefix}.png")
     if run is None:
         return
 
-    await message.reply(f"今日 {verdict} 榜单", png2jpg(f"{_output_path}/verdict_{verdict}.png"))
+    await message.reply(f"今日 {verdict} 榜单", png2jpg(f"{cached_prefix}.png"))
 
 
 @command(tokens=['今日题数', 'today'], need_check_exclude=True)
@@ -137,11 +142,12 @@ async def send_today_board(message: RobotMessage):
     await message.reply(f"正在查询今日题数，请稍等")
 
     single_arg = "" if single_col else " --separate_cols"
-    run = await call_lib_method(message, f"--now {single_arg} --output {_output_path}/now.png")
+    cached_prefix = get_cached_prefix('Peeper-Board-Generator')
+    run = await call_lib_method(message, f"--now {single_arg} --output {cached_prefix}.png")
     if run is None:
         return
 
-    await message.reply("今日题数", png2jpg(f"{_output_path}/now.png"))
+    await message.reply("今日题数", png2jpg(f"{cached_prefix}.png"))
 
 
 @command(tokens=['昨日总榜', 'yesterday', 'full'], need_check_exclude=True)
@@ -151,22 +157,24 @@ async def send_yesterday_board(message: RobotMessage):
     await message.reply(f"正在查询昨日总榜，请稍等")
 
     single_arg = "" if single_col else " --separate_cols"
-    run = await call_lib_method(message, f"--full {single_arg} --output {_output_path}/full.png")
+    cached_prefix = get_cached_prefix('Peeper-Board-Generator')
+    run = await call_lib_method(message, f"--full {single_arg} --output {cached_prefix}.png")
     if run is None:
         return
 
-    await message.reply("昨日卷王天梯榜", png2jpg(f"{_output_path}/full.png"))
+    await message.reply("昨日卷王天梯榜", png2jpg(f"{cached_prefix}.png"))
 
 
 @command(tokens=['api'])
 async def send_version_info(message: RobotMessage):
     await message.reply(f"正在查询各模块版本，请稍等")
 
-    run = await call_lib_method(message, f"--version --output {_output_path}/version.txt", no_id=True)
+    cached_prefix = get_cached_prefix('Peeper-Board-Generator')
+    run = await call_lib_method(message, f"--version --output {cached_prefix}.txt", no_id=True)
     if run is None:
         return
 
-    result = open(f"{_output_path}/version.txt", encoding="utf-8").read()
+    result = open(f"{cached_prefix}.txt", encoding="utf-8").read()
     await message.reply(f"[API Version]\n\n"
                         f"Core {Constants.core_version}\n"
                         f"Codeforces {__cf_version__}\n"

@@ -1,10 +1,16 @@
 import random
+import re
 import time
 import traceback
 
+from qrcode.image.styledpil import StyledPilImage
+from qrcode.image.styles.moduledrawers import RoundedModuleDrawer
+from qrcode.main import QRCode
+
 from src.core.command import command, __commands__
 from src.core.constants import Constants
-from src.core.tools import format_timestamp_diff, format_timestamp, format_seconds
+from src.core.output_cached import get_cached_prefix
+from src.core.tools import format_timestamp_diff, format_timestamp, format_seconds, png2jpg
 from src.modules.message import RobotMessage, report_exception
 from src.platforms.atcoder import AtCoder
 from src.platforms.codeforces import Codeforces
@@ -100,3 +106,21 @@ async def recent_contests(message: RobotMessage):
                f"{info}")
 
     await message.reply(content, modal_words=False)
+
+
+@command(tokens=["qr", "qrcode", "二维码", "码"])
+async def reply_qrcode(message: RobotMessage):
+    content = re.sub(r'<@!\d+>', '', message.content).strip()
+    content = re.sub(rf'{message.tokens[0]}', '', content, count=1).strip()
+    if len(content) == 0:
+        await message.reply("请输入要转化为二维码的内容")
+        return
+
+    qr = QRCode()
+    qr.add_data(content)
+
+    cached_prefix = get_cached_prefix('QRCode-Generator')
+    qr_img = qr.make_image(image_factory=StyledPilImage, module_drawer=RoundedModuleDrawer())
+    qr_img.save(f"{cached_prefix}.png")
+
+    await message.reply("生成了一个二维码", png2jpg(f"{cached_prefix}.png"))
