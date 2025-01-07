@@ -10,12 +10,14 @@ import subprocess
 import time
 from asyncio import AbstractEventLoop
 
+import numpy as np
 import requests
 from PIL import Image
+from PIL.Image import Resampling
 from lxml import etree
 from lxml.etree import Element
 from qrcode.image.styledpil import StyledPilImage
-from qrcode.image.styles.moduledrawers import RoundedModuleDrawer
+from qrcode.image.styles.moduledrawers.pil import RoundedModuleDrawer
 from qrcode.main import QRCode
 from requests.adapters import HTTPAdapter
 
@@ -174,6 +176,7 @@ def png2jpg(path: str, remove_origin: bool = True) -> str:
     img = Image.open(path)
     new_path = os.path.splitext(path)[0] + '.jpg'
     img.convert('RGB').save(new_path)
+    resampling_img(new_path)
     if remove_origin:
         os.remove(path)
     return new_path
@@ -209,7 +212,20 @@ def get_week_start_timestamp() -> int:
 def get_simple_qrcode(content: str) -> Image:
     qr = QRCode()
     qr.add_data(content)
-    return qr.make_image(image_factory=StyledPilImage, module_drawer=RoundedModuleDrawer())
+    return qr.make_image(image_factory=StyledPilImage,
+                         module_drawer=RoundedModuleDrawer(), eye_drawer=RoundedModuleDrawer())
+
+
+def resampling_img(img_path: str):
+    image = Image.open(img_path)
+    image = np.array(image)
+    scaled_image = np.zeros((image.shape[0] * 4, image.shape[1] * 4, 3), dtype=np.uint8)
+    for i in range(4):
+        for j in range(4):
+            scaled_image[i::4, j::4] = image
+    final_image = Image.fromarray(scaled_image)
+    final_image = final_image.resize((image.shape[1], image.shape[0]), resample=Resampling.LANCZOS, reducing_gap=3.0)
+    final_image.save(img_path)
 
 
 class SSLAdapter(HTTPAdapter):

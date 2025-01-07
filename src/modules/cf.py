@@ -8,7 +8,7 @@ from src.core.tools import check_is_int, get_simple_qrcode, png2jpg
 from src.modules.message import report_exception, RobotMessage
 from src.platforms.codeforces import Codeforces
 
-__cf_version__ = "v2.1.3"
+__cf_version__ = "v2.2.0"
 
 
 def register_module():
@@ -156,7 +156,7 @@ async def reply_cf_request(message: RobotMessage):
                 func_prefix = f"/cf {func}"
                 if func == "cf":
                     func_prefix = "/rand cf"
-                await message.reply("请输入正确的指令格式，如:\n\n"
+                await message.reply("请输入正确的指令格式，题目标签不要带有空格，如:\n\n"
                                     f"{func_prefix} dp 1700-1900 new\n"
                                     f"{func_prefix} dfs-and-similar\n"
                                     f"{func_prefix} all 1800", modal_words=False)

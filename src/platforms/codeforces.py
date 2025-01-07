@@ -25,34 +25,38 @@ class Codeforces(Platform):
     @staticmethod
     async def get_prob_filter_tag(message: RobotMessage, tag_needed: str,
                                   limit: str = None, newer: bool = False) -> dict | int:
+        min_point, max_point = 0, 0
+        if limit is not None:
+            # 检查格式是否为 dddd-dddd 或 dddd
+            if not re.match("^[0-9]+-[0-9]+$", limit) or not re.match("^[0-9]+$", limit):
+                return -3
+            # 检查范围数值是否合法
+            field_validate = True
+            if "-" in limit:
+                field_validate &= 7 <= len(limit) <= 9
+                [min_point, max_point] = list(map(int, limit.split("-")))
+            else:
+                field_validate &= 3 <= len(limit) <= 4
+                min_point = max_point = int(limit)
+            if not field_validate:
+                return 0
+
         if tag_needed == "all":
             url = f"https://codeforces.com/api/problemset.problems"
         else:
             all_tags = Codeforces.get_prob_tags_all()
             if all_tags is None:
                 return -1
-
-            # 模糊匹配
-            if tag_needed not in all_tags:
+            if tag_needed not in all_tags:  # 模糊匹配
                 closet_tag = difflib.get_close_matches(tag_needed, all_tags)
                 if len(closet_tag) == 0:
                     return -2
                 tag_needed = closet_tag[0]
-                await message.reply(f"最佳匹配 Tag: {tag_needed}")
-
+                await message.reply(f"标签最佳匹配: {tag_needed}")
             now_tag = tag_needed.replace("-", " ")
             url = f"https://codeforces.com/api/problemset.problems?tags={now_tag}"
 
         json_data = fetch_json(url)
-
-        min_point = 0
-        max_point = 0
-        if limit is not None:
-            if "-" in limit:
-                [min_point, max_point] = list(map(int, limit.split("-")))
-            else:
-                min_point = max_point = int(limit)
-
         filtered_data = json_data['result']['problems']
         if limit is not None:
             filtered_data = [prob for prob in json_data['result']['problems']
@@ -142,9 +146,9 @@ class Codeforces(Platform):
         symbol = "" if (last['newRating'] - last['oldRating'] <= 0) else "+"
         info = (f"Rated 比赛数: {contest_count}\n"
                 f"最近一次比赛: {Codeforces.format_contest_name(last['contestName'])}\n"
-                f"比赛id: {last['contestId']}\n"
+                f"比赛编号: {last['contestId']}\n"
                 f"位次: {last['rank']}\n"
-                f"Rating变化: {symbol}{last['newRating'] - last['oldRating']}")
+                f"Rating 变化: {symbol}{last['newRating'] - last['oldRating']}")
 
         return info
 

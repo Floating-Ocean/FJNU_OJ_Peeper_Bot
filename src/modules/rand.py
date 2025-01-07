@@ -11,7 +11,7 @@ from src.modules.cf import reply_cf_request
 from src.modules.color_rand import reply_color_rand
 from src.modules.message import report_exception, RobotMessage
 
-__rand_version__ = "v2.1.0"
+__rand_version__ = "v2.1.1"
 
 
 def register_module():
@@ -69,7 +69,7 @@ async def reply_rand_request(message: RobotMessage):
             select_from = re.split("还是|,|，", func)
             select_len = len(select_from)
             selected_idx = get_rand_num(0, select_len - 1)
-            await message.reply(f"我觉得 \"{select_from[selected_idx]}\" 更好")
+            await message.reply(f"我觉得第{selected_idx}个更好")
 
         elif func == "num" or func == "int":
             if (len(content) != 4 or
@@ -85,7 +85,7 @@ async def reply_rand_request(message: RobotMessage):
                     split_str = "\n\n" if result >= 10_000 else " "
                     return await message.reply(f"[Rand Number]{split_str}{result}", modal_words=False)
 
-            await message.reply("参数过大，请输入 [-1e9, 1e9] 内的数字")
+            await message.reply("参数过大，请输入 [-1e9, 1e9] 内的整数")
 
         elif func == "seq":
             if len(content) != 3 or not check_is_int(content[2]):

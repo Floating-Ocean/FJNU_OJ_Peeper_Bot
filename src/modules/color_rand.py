@@ -18,7 +18,7 @@ from src.core.tools import png2jpg
 from src.modules.message import RobotMessage
 
 _lib_path = os.path.join(Constants.config["lib_path"], "Color-Rand")
-__color_rand_version__ = "v1.1.0"
+__color_rand_version__ = "v1.1.1"
 
 _colors = []
 
@@ -81,18 +81,19 @@ def generate_color_card(color: dict) -> pixie.Image:
 
 
 def add_qrcode(target_path: str, color: dict):
-    qr = QRCode(error_correction=qrcode.constants.ERROR_CORRECT_L)
+    qr = QRCode(error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=8)
 
     hex_clean = color["hex"][1:].lower()
     qr.add_data(f"https://gradients.app/zh/color/{hex_clean}")
 
     font_color = choose_text_color(color)
-    qrcode_img = qr.make_image(image_factory=StyledPilImage, module_drawer=RoundedModuleDrawer(),
-                               color_mask=SolidFillColorMask((0, 0, 0, 0),
+    qrcode_img = qr.make_image(image_factory=StyledPilImage,
+                               module_drawer=RoundedModuleDrawer(), eye_drawer=RoundedModuleDrawer(),
+                               color_mask=SolidFillColorMask((font_color[0], font_color[1], font_color[2], 0),
                                                              (font_color[0], font_color[1], font_color[2], 255)))
 
     target_img = Image.open(target_path)
-    target_img.paste(qrcode_img, (1155, 545), qrcode_img)
+    target_img.paste(qrcode_img, (1215, 618), qrcode_img)
     target_img.save(target_path)
 
 

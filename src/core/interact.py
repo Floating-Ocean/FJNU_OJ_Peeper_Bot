@@ -21,10 +21,12 @@ _fixed_reply = {
 
 
 def match_key_words(content: str) -> str:
-    for each in Constants.key_words:
-        if each in content:
-            return random.choice(Constants.key_words[each])
-    return random.choice(["你干嘛", "咋了", "how", "what"])
+    random.shuffle(Constants.key_words)  # 多个关键词时的处理
+    for asks, answers in Constants.key_words:
+        for each in asks:
+            if each in content.lower():
+                return random.choice(answers)
+    return random.choice(["你干嘛", "干什么", "咋了", "how", "what"])
 
 
 async def call_handle_message(message: RobotMessage):

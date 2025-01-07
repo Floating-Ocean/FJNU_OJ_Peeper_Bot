@@ -1,6 +1,7 @@
 import random
 import unittest
 
+from src.core.tools import png2jpg
 from src.modules.color_rand import load_colors, _colors, generate_color_card, add_qrcode
 
 
@@ -17,6 +18,7 @@ class Module(unittest.TestCase):
         color_card = generate_color_card(picked_color)
         color_card.write_file("test.png")
         add_qrcode("test.png", picked_color)
+        png2jpg("test.png")
 
 
 if __name__ == '__main__':
