@@ -1,7 +1,9 @@
-from typing import TypedDict
+import abc
+from dataclasses import dataclass
 
 
-class ContestDict(TypedDict):
+@dataclass
+class Contest:
     start_time: int
     duration: int
     platform: str
@@ -9,7 +11,7 @@ class ContestDict(TypedDict):
     supplement: str
 
 
-class Platform:
+class Platform(abc.ABC):
     @staticmethod
-    def get_contest_list() -> list[ContestDict] | None:
+    def get_contest_list() -> list[Contest] | None:
         pass

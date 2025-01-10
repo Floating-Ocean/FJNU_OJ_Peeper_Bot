@@ -62,7 +62,8 @@ def fetch_html(url: str, payload: dict = None) -> Element:
     return etree.HTML(response.text)
 
 
-def fetch_json(url: str, payload: dict = None, throw: bool = True) -> dict | None:
+def fetch_json(url: str, payload: dict = None, throw: bool = True) -> dict | int:
+    code = 200
     try:
         headers = {
             'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
@@ -70,15 +71,16 @@ def fetch_json(url: str, payload: dict = None, throw: bool = True) -> dict | Non
             'Connection': 'close'
         }
         response = requests.post(url, headers=headers, json=payload)
+        code = response.status_code
 
-        if response.status_code != 200 and throw:
-            raise ConnectionError(f"Filed to connect {url}, code {response.status_code}.")
+        if code != 200 and throw:
+            raise ConnectionError(f"Filed to connect {url}, code {code}.")
 
         return response.json()
     except Exception as e:
         if throw:
             raise e
-        return None
+        return code
 
 
 def format_timestamp_diff(diff: int) -> str:

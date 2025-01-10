@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from src.core.tools import fetch_html
-from src.platforms.platform import Platform, ContestDict
+from src.platforms.platform import Platform, Contest
 
 
 class AtCoder(Platform):
@@ -27,14 +27,14 @@ class AtCoder(Platform):
         return f"为 {rating_str} 计分"
 
     @staticmethod
-    def get_contest_list() -> list[ContestDict] | None:
+    def get_contest_list() -> list[Contest] | None:
         html = fetch_html("https://atcoder.jp/contests/")
         contest_table_upcoming = html.xpath("//div[@id='contest-table-upcoming']//tbody/tr")
 
-        return [{
-            'start_time': AtCoder.extract_timestamp(contest.xpath(".//td[1]/a/time/text()")[0]),
-            'duration': AtCoder.extract_duration(contest.xpath(".//td[3]/text()")[0]),
-            'platform': 'AtCoder',
-            'name': contest.xpath(".//td[2]/a/text()")[0],
-            'supplement': AtCoder.format_rated_range(contest.xpath(".//td[4]/text()")[0])
-        } for contest in contest_table_upcoming]
+        return [Contest(
+            start_time=AtCoder.extract_timestamp(contest.xpath(".//td[1]/a/time/text()")[0]),
+            duration=AtCoder.extract_duration(contest.xpath(".//td[3]/text()")[0]),
+            platform='AtCoder',
+            name=contest.xpath(".//td[2]/a/text()")[0],
+            supplement=AtCoder.format_rated_range(contest.xpath(".//td[4]/text()")[0])
+        ) for contest in contest_table_upcoming]

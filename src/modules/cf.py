@@ -8,7 +8,7 @@ from src.core.tools import check_is_int, get_simple_qrcode, png2jpg
 from src.modules.message import report_exception, RobotMessage
 from src.platforms.codeforces import Codeforces
 
-__cf_version__ = "v2.2.0"
+__cf_version__ = "v3.0.0"
 
 
 def register_module():
@@ -20,13 +20,13 @@ async def send_user_info(message: RobotMessage, handle: str):
 
     info, avatar = Codeforces.get_user_info(handle)
 
-    if info is None:
+    if avatar is None:
         content = (f"[Codeforces] {handle}\n\n"
-                   f"用户不存在")
+                   f"{info}")
     else:
         last_contest = Codeforces.get_user_last_contest(handle)
         last_submit = Codeforces.get_user_last_submit(handle)
-        total_sums, weekly_sums, daily_sums = Codeforces.get_user_submit_sums(handle)
+        total_sums, weekly_sums, daily_sums = Codeforces.get_user_submit_counts(handle)
         daily = "今日暂无过题" if daily_sums == 0 else f"今日通过 {daily_sums} 题"
         weekly = "" if weekly_sums == 0 else f"，本周共通过 {weekly_sums} 题"
         content = (f"[Codeforces] {handle}\n\n"
@@ -73,7 +73,8 @@ async def send_prob_tags(message: RobotMessage):
 async def send_prob_filter_tag(message: RobotMessage, tag: str, limit: str = None, newer: bool = False) -> bool:
     await message.reply("正在随机选题，请稍等")
 
-    chosen_prob = await Codeforces.get_prob_filter_tag(message, tag, limit, newer)
+    chosen_prob = await Codeforces.get_prob_filtered_by_tag(tag, limit, newer,
+                                                            on_tag_chosen=lambda x: message.reply(x))
 
     if isinstance(chosen_prob, int) and chosen_prob < 0:
         return False
@@ -108,6 +109,24 @@ async def send_contest(message: RobotMessage):
 
     content = (f"[Codeforces] 近期比赛\n\n"
                f"{info}")
+
+    await message.reply(content, modal_words=False)
+
+
+async def send_user_contest_standings(message: RobotMessage, handle: str, contest_id: str):
+    await message.reply(f"正在查询编号为 {contest_id} 的比赛中 {handle} 的榜单信息，请稍等。\n"
+                        f"查询对象为参赛者时将会给出 Rating 变化预估，但可能需要更久的时间")
+
+    contest_info, standings_info = Codeforces.get_user_contest_standings(handle, contest_id)
+
+    content = (f"[Codeforces] {handle} 比赛榜单查询\n\n"
+               f"{contest_info}")
+    if standings_info is not None:
+        if len(standings_info) > 0:
+            content += '\n\n'
+            content += '\n\n'.join(standings_info)
+        else:
+            content += '\n\n暂无榜单信息'
 
     await message.reply(content, modal_words=False)
 
@@ -163,6 +182,13 @@ async def reply_cf_request(message: RobotMessage):
 
         elif func == "contest" or func == "contests":
             await send_contest(message)
+
+        elif func == "status" or func == "stand" or func == "standing" or func == "standings":
+            if len(content) != 4:
+                await message.reply("请输入正确的指令格式，如:\n\n"
+                                    f"/cf {func} jiangly 2057", modal_words=False)
+            else:
+                await send_user_contest_standings(message, content[2], content[3])
 
         elif func == "tag" or func == "tags":
             await send_prob_tags(message)

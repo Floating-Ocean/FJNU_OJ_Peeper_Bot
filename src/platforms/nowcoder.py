@@ -4,7 +4,7 @@ from datetime import datetime
 from lxml.etree import Element
 
 from src.core.tools import fetch_html
-from src.platforms.platform import Platform, ContestDict
+from src.platforms.platform import Platform, Contest
 
 
 class NowCoder(Platform):
@@ -46,18 +46,18 @@ class NowCoder(Platform):
         return f"为 0-{unrated_range} 计分"
 
     @staticmethod
-    def get_contest_list() -> list[ContestDict] | None:
-        contests: list[ContestDict] = []
+    def get_contest_list() -> list[Contest] | None:
+        contests: list[Contest] = []
         for category_id in [13, 14]:
             html = fetch_html(f"https://ac.nowcoder.com/acm/contest/vip-index?topCategoryFilter={category_id}")
             js_current = html.xpath("//div[@class='platform-mod js-current']//div[@class='platform-item-cont']")
-            contests.extend([{
-                'start_time': NowCoder.extract_timestamp(NowCoder.decode_contest_time_set(contest)[1]),
-                'duration': NowCoder.extract_duration(NowCoder.decode_contest_time_set(contest)[4]),
-                'platform': 'NowCoder',
-                'name': contest.xpath(".//a/text()")[0],
-                'supplement': NowCoder.decode_rated(contest)
-            } for contest in js_current
+            contests.extend([Contest(
+                start_time=NowCoder.extract_timestamp(NowCoder.decode_contest_time_set(contest)[1]),
+                duration=NowCoder.extract_duration(NowCoder.decode_contest_time_set(contest)[4]),
+                platform='NowCoder',
+                name=contest.xpath(".//a/text()")[0],
+                supplement=NowCoder.decode_rated(contest)
+            ) for contest in js_current
                 if contest.xpath(".//span[contains(@class, 'match-status')]/text()")[0].strip() == '报名中'])
 
         return contests
