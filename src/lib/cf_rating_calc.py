@@ -37,14 +37,10 @@ class PredictResult:
 MAX_RATING_LIMIT: int = 6000
 MIN_RATING_LIMIT: int = -500
 RATING_RANGE_LEN: int = MAX_RATING_LIMIT - MIN_RATING_LIMIT
-ELO_OFFSET = RATING_RANGE_LEN
-RATING_OFFSET = -MIN_RATING_LIMIT
 
 # The probability of contestant with rating x winning versus contestant with rating y
 # is given by ELO_WIN_PROB[y - x].
-ELO_WIN_PROB = np.zeros(2 * RATING_RANGE_LEN + 1)
-RATING_A_RANGE = np.arange(-RATING_RANGE_LEN, RATING_RANGE_LEN)
-ELO_WIN_PROB[RATING_A_RANGE + ELO_OFFSET] = 1 / (1 + np.power(10, RATING_A_RANGE / 400))
+ELO_WIN_PROB = np.roll(1 / (1 + np.power(10, np.arange(-RATING_RANGE_LEN, RATING_RANGE_LEN) / 400)), -RATING_RANGE_LEN)
 
 
 def binary_search(low, high, condition):
@@ -78,11 +74,11 @@ class RatingCalculator:
         seed[r] is the expected rank of a contestant with rating r, who did not participate in the
         contest, if he had participated.
         """
-        count = np.zeros(RATING_RANGE_LEN)
+        count = np.zeros(2 * RATING_RANGE_LEN)
         for c in self.contestants:
-            count[c.rating + RATING_OFFSET] += 1
+            count[c.rating] += 1
 
-        self.seed = 1 + np.convolve(ELO_WIN_PROB, count).real
+        self.seed = 1 + np.fft.ifft(np.fft.fft(count) * np.fft.fft(ELO_WIN_PROB)).real
 
     def get_seed(self, r: int, exclude: int) -> float:
         """
@@ -91,7 +87,7 @@ class RatingCalculator:
         Equivalently this is the expected rank of a contestant with true rating exclude, who did
         participate in the contest, assuming his rating had been r.
         """
-        return self.seed[r + RATING_OFFSET + ELO_OFFSET] - ELO_WIN_PROB[r - exclude + ELO_OFFSET]
+        return self.seed[r] - ELO_WIN_PROB[r - exclude]
 
     def reassign_ranks(self):
         self.contestants.sort(key=lambda x: (-x.points, x.penalty))

@@ -8,7 +8,7 @@ class Constants:
     log = logging.get_logger()
     config = read(os.path.join(os.path.dirname(__file__), "..", "..", "config.yaml"))
 
-    core_version = "v3.0.2"
+    core_version = "v3.0.3"
 
     key_words = [
         [["傻逼"], ["谢谢夸奖", "反弹", "可能还真被你说对了", "嗯", "好的", "哼，你才是",
