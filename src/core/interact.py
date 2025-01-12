@@ -94,7 +94,7 @@ async def recent_contests(message: RobotMessage):
     for platform in [AtCoder, Codeforces, NowCoder]:
         contests.extend(platform.get_contest_list())
 
-    contests.sort(key=lambda c: c['start_time'])
+    contests.sort(key=lambda c: c.start_time)
 
     infos = []
     for contest in contests:

@@ -24,6 +24,8 @@ class AtCoder(Platform):
             return f"为 0{rating_str} 计分"
         if rating_str[-1] == '-':
             return f"为 {rating_str}∞ 计分"
+        if rating_str == 'All':
+            return "为所有人计分"
         return f"为 {rating_str} 计分"
 
     @staticmethod
