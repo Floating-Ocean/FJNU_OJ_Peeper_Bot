@@ -28,7 +28,7 @@ class Contestant:
 
 @dataclass
 class PredictResult:
-    handle: str
+    rank: int
     rating: int
     delta: int
     performance: int
@@ -148,7 +148,7 @@ class RatingCalculator:
 def predict(contestants: list[Contestant], calc_perfs: bool = False) -> dict[str, PredictResult]:
     calculator = RatingCalculator(contestants)
     calculator.calculate_deltas(calc_perfs)
-    return {c.handle: PredictResult(c.handle,
+    return {c.handle: PredictResult(c.rank,
                                     c.real_change[0] if c.real_change is not None else c.rating,
                                     c.real_change[1] - c.real_change[0] if c.real_change is not None else c.delta,
                                     c.performance)

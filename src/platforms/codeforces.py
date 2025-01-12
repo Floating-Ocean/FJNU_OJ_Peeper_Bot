@@ -12,7 +12,7 @@ from src.platforms.platform import Platform, Contest
 
 class Codeforces(Platform):
     logo_url = "https://codeforces.org/s/24321/images/codeforces-sponsored-by-ton.png"
-    rated_ranks = {
+    rated_rks = {
         (-float('inf'), 1200): 'N',  # Newbie
         (1200, 1400): 'P',           # Pupil
         (1400, 1600): 'S',           # Specialist
@@ -63,12 +63,12 @@ class Codeforces(Platform):
 
     @staticmethod
     def _format_rank_delta(old_rating: int, delta: int) -> str:
-        old_rank = next((rank for (l, r), rank in Codeforces.rated_ranks.items() if l <= old_rating < r), 'N')
-        new_rank = next((rank for (l, r), rank in Codeforces.rated_ranks.items() if l <= old_rating + delta < r), 'N')
-        if old_rank == new_rank:
+        old_rk = next((rk for (l, r), rk in Codeforces.rated_rks.items() if l <= old_rating < r), 'N')
+        new_rk = next((rk for (l, r), rk in Codeforces.rated_rks.items() if l <= old_rating + delta < r), 'N')
+        if old_rk == new_rk:
             return "段位无变化"
         else:
-            return f"段位变化 {old_rank}->{new_rank}"
+            return f"段位变化 {old_rk}->{new_rk}"
 
     @staticmethod
     def _format_standing(standing: dict, contest_id: str) -> str:
@@ -91,7 +91,19 @@ class Codeforces(Platform):
         submission_info = f"通过 {accepted_prob_count} 题" if accepted_prob_count > 0 else "暂无题目通过"
         submission_info += f"，包含 {rejected_attempt_count} 次失败尝试" if rejected_attempt_count > 0 else "，无失败尝试"
 
-        contestant_info = f"位次 {standing['rank']}，总分 {standing['points']}，总罚时 {standing['penalty']}"
+        real_rank = standing['rank']
+        contestant_predictions = ""
+        if standing['party']['participantType'] == 'CONTESTANT':
+            all_predictions = Codeforces.get_contest_predict(contest_id)
+            if not isinstance(all_predictions, int) and (standing['party']['members'][0]['handle'] in all_predictions):
+                prediction = all_predictions[standing['party']['members'][0]['handle']]
+                real_rank = prediction.rank
+                contestant_predictions = (f'\n表现分 {prediction.performance}，'
+                                          f'预测变化 {Codeforces._format_int_delta(prediction.delta)}，'
+                                          f'{Codeforces._format_rank_delta(prediction.rating, prediction.delta)}')
+
+        striped_points = f"{standing['points']}".rstrip('0').rstrip('.')
+        contestant_info = f"位次 {real_rank}，总分 {striped_points}，总罚时 {standing['penalty']}"
         hack_info = "Hack "
         hack_prop = []
         if standing['successfulHackCount'] > 0:
@@ -101,17 +113,10 @@ class Codeforces(Platform):
         if len(hack_prop) > 0:
             hack_info += ':'.join(hack_prop)
             contestant_info += f"，{hack_info}"
+        contestant_info += contestant_predictions
 
         if standing['party']['participantType'] == 'PRACTICE':
             contestant_info = None
-
-        if standing['party']['participantType'] == 'CONTESTANT':
-            all_predictions = Codeforces.get_contest_predict(contest_id)
-            if not isinstance(all_predictions, int) and standing['party']['members'][0]['handle'] in all_predictions:
-                prediction = all_predictions[standing['party']['members'][0]['handle']]
-                contestant_info += (f'\n表现分 {prediction.performance}，'
-                                    f'预测变化 {Codeforces._format_int_delta(prediction.delta)}，'
-                                    f'{Codeforces._format_rank_delta(prediction.rating, prediction.delta)}')
 
         return '\n'.join([section for section in [member_info, submission_info, contestant_info]
                           if section is not None])
@@ -161,12 +166,12 @@ class Codeforces(Platform):
                     for change in rating_changes}
 
     @staticmethod
-    def _is_old_contest(standings: dict) -> bool:
+    def _is_old_contest(contest: dict) -> bool:
         """
         Adapted from carrot at
         https://github.com/meooow25/carrot/blob/master/carrot/src/background/cache/contests-complete.js
         """
-        days_since_contest_end = ((time.time() - standings['startTimeSeconds'] - standings['durationSeconds'])
+        days_since_contest_end = ((time.time() - contest['startTimeSeconds'] - contest['durationSeconds'])
                                   / (60 * 60 * 24))
         return days_since_contest_end > 3  # RATING_PENDING_MAX_DAYS
 
@@ -176,7 +181,7 @@ class Codeforces(Platform):
         Adapted from carrot at
         https://github.com/meooow25/carrot/blob/master/carrot/src/background/cache/contests-complete.js
         """
-        ratings = Codeforces._api('user.ratedList', activeOnly=True, contestId=standings['contest']['id'])
+        ratings = Codeforces._api('user.ratedList', activeOnly=False, contestId=standings['contest']['id'])
         if isinstance(ratings, int):
             return None
         ratings = {user['handle']: user['rating'] for user in ratings}
@@ -193,7 +198,8 @@ class Codeforces(Platform):
             handle=row['party']['members'][0]['handle'],
             points=row['points'],
             penalty=row['penalty'],
-            rating=ratings[row['party']['members'][0]['handle']]
+            rating=(1400 if row['party']['members'][0]['handle'] not in ratings
+                    else ratings[row['party']['members'][0]['handle']])
         ) for row in rows]
 
         return predict(contestants, True)
@@ -471,7 +477,7 @@ class Codeforces(Platform):
         and
         https://github.com/meooow25/carrot/blob/master/carrot/src/background/background.js
         """
-        standings = Codeforces._api('contest.standings', contestId=contest_id)
+        standings = Codeforces._api('contest.standings', contestId=contest_id, showUnofficial=False)
 
         if standings == -1:
             return -1
@@ -493,7 +499,7 @@ class Codeforces(Platform):
                 rated = True
                 old_ratings = Codeforces._adjust_old_ratings(int(contest_id), rating_changes)
 
-        if rated is None and Codeforces._is_old_contest(standings):
+        if rated is None and Codeforces._is_old_contest(standings['contest']):
             rated = False
 
         contest_finished = rated is not None
@@ -503,13 +509,19 @@ class Codeforces(Platform):
                 return 1
 
             # We can ensure that old_ratings is not None
-            return Codeforces._get_final_prefs(standings, old_ratings)
+            result = Codeforces._get_final_prefs(standings, old_ratings)
+            if result is None:
+                return -3
+            return result
 
-        if (standings['contest'].lower()
+        if (standings['contest']['name'].lower()
                 in ['unrated', 'fools', 'q#', 'kotlin', 'marathon', 'teams']):  # UNRATED_HINTS
             return 1
 
         if any('teamId' in standing for standing in standings['rows']):
             return 1
 
-        return Codeforces._get_predicted_prefs(standings)
+        result = Codeforces._get_predicted_prefs(standings)
+        if result is None:
+            return -3
+        return result
