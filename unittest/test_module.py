@@ -43,7 +43,7 @@ class Module(unittest.TestCase):
         with open('data.json', 'w', encoding='utf-8') as json_file:
             contest_id = "2043"
             json.dump({handle: asdict(predict)
-                       for handle, predict in Codeforces.get_contest_predict(contest_id).items()},
+                       for handle, predict in Codeforces._fetch_contest_predict(contest_id).items()},
                       json_file, ensure_ascii=False, indent=4)
 
 

@@ -62,7 +62,7 @@ def fetch_html(url: str, payload: dict = None) -> Element:
     return etree.HTML(response.text)
 
 
-def fetch_json(url: str, payload: dict = None, throw: bool = True) -> dict | int:
+def fetch_json(url: str, payload: dict = None, throw: bool = True, method: str = 'post') -> dict | int:
     code = 200
     try:
         headers = {
@@ -70,7 +70,14 @@ def fetch_json(url: str, payload: dict = None, throw: bool = True) -> dict | int
                           "Chrome/91.0.4472.77 Safari/537.36",
             'Connection': 'close'
         }
-        response = requests.post(url, headers=headers, json=payload)
+
+        if method == 'post':
+            response = requests.post(url, headers=headers, json=payload)
+        elif method == 'get':
+            response = requests.get(url, headers=headers)
+        else:
+            raise ValueError("Parameter method must be either 'post' or 'get'.")
+
         code = response.status_code
 
         if code != 200 and throw:
@@ -85,10 +92,12 @@ def fetch_json(url: str, payload: dict = None, throw: bool = True) -> dict | int
 
 def format_timestamp_diff(diff: int) -> str:
     abs_diff = abs(diff)
-    if abs_diff < 60:
+    if abs_diff == 0:
         return "刚刚"
 
-    if abs_diff < 3600:
+    if abs_diff < 60:
+        info = f"{abs_diff}秒"
+    elif abs_diff < 3600:
         minutes = abs_diff // 60
         info = f"{minutes}分钟"
     elif abs_diff < 86400:
@@ -152,8 +161,7 @@ async def save_img(url: str, file_path: str) -> bool:
         'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
                       "Chrome/91.0.4472.77 Safari/537.36"
     }
-    if not url.startswith('https://'):
-        url = f'https://{url}'
+    url = patch_https_url(url)
 
     sess = requests.session()
     sess.mount("https://", SSLAdapter())  # 将上面定义的SSLAdapter 应用起来
@@ -228,6 +236,21 @@ def resampling_img(img_path: str):
     final_image = Image.fromarray(scaled_image)
     final_image = final_image.resize((image.shape[1], image.shape[0]), resample=Resampling.LANCZOS, reducing_gap=3.0)
     final_image.save(img_path)
+
+
+def format_int_delta(delta: int) -> str:
+    if delta >= 0:
+        return f"+{delta}"
+    else:
+        return f"{delta}"
+
+
+def patch_https_url(url: str) -> str:
+    if url.startswith('//'):
+        return f'https:{url}'
+    if not url.startswith('https://'):
+        return f'https://{url}'
+    return url
 
 
 class SSLAdapter(HTTPAdapter):

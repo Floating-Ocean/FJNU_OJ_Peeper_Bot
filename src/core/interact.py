@@ -1,6 +1,6 @@
+import difflib
 import random
 import re
-import time
 import traceback
 
 from pypinyin import pinyin, Style
@@ -8,7 +8,7 @@ from pypinyin import pinyin, Style
 from src.core.command import command, __commands__
 from src.core.constants import Constants
 from src.core.output_cached import get_cached_prefix
-from src.core.tools import format_timestamp_diff, format_timestamp, format_seconds, png2jpg, get_simple_qrcode
+from src.core.tools import png2jpg, get_simple_qrcode
 from src.modules.message import RobotMessage, report_exception
 from src.platforms.atcoder import AtCoder
 from src.platforms.codeforces import Codeforces
@@ -88,22 +88,29 @@ async def reply_fixed(message: RobotMessage):
 
 @command(tokens=['contest', 'contests', '比赛', '近日比赛', '最近的比赛'])
 async def recent_contests(message: RobotMessage):
-    await message.reply("正在查询近日比赛，请稍等")
+    queries = [AtCoder, Codeforces, NowCoder]
+    if len(message.tokens) >= 2:
+        closest_type = difflib.get_close_matches(message.tokens[1].lower(),
+                                                 ["cf", "codeforces", "atc", "atcoder", "牛客", "nk", "nc", "nowcoder"])
+        if len(closest_type) > 0:
+            if closest_type[0] in ["cf", "codeforces"]:
+                queries = [Codeforces]
+            elif closest_type[0] in ["atc", "atcoder"]:
+                queries = [AtCoder]
+            else:
+                queries = [NowCoder]
+    if len(queries) == 1:
+        await message.reply(f"正在查询近日 {queries[0].platform_name} 比赛，请稍等")
+    else:
+        await message.reply(f"正在查询近日比赛，请稍等")
     contests: list[Contest] = []
 
-    for platform in [AtCoder, Codeforces, NowCoder]:
-        contests.extend(platform.get_contest_list())
+    for platform in queries:
+        contests.extend(platform.get_contest_list(overwrite_tag=len(queries) > 1)[0])
 
     contests.sort(key=lambda c: c.start_time)
 
-    infos = []
-    for contest in contests:
-        delta_time = format_timestamp_diff(int(time.time()) - contest.start_time)
-        infos.append(f"[{contest.platform}] {contest.name}\n"
-                     f"{delta_time}, {format_timestamp(contest.start_time)}\n"
-                     f"持续 {format_seconds(contest.duration)}, {contest.supplement}")
-
-    info = '\n\n'.join(infos)
+    info = '\n\n'.join([contest.format() for contest in contests])
     content = (f"近期比赛\n\n"
                f"{info}")
 

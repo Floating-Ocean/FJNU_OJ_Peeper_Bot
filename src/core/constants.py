@@ -8,7 +8,7 @@ class Constants:
     log = logging.get_logger()
     config = read(os.path.join(os.path.dirname(__file__), "..", "..", "config.yaml"))
 
-    core_version = "v3.0.3"
+    core_version = "v3.0.4"
 
     key_words = [
         [["傻逼"], ["谢谢夸奖", "反弹", "可能还真被你说对了", "嗯", "好的", "哼，你才是",
@@ -37,6 +37,11 @@ class Constants:
 /cf contest: 列出最近的 Codeforces 比赛.
 /cf tag: 列出 Codeforces 上的所有题目标签."""
 
+    atc_help_content = f"""/atc info [handle]: 获取用户名为 handle 的 AtCoder 基础用户信息.
+/atc contest: 列出最近的 AtCoder 比赛."""
+
+    nk_help_content = f"""/nk contest: 列出最近的 NowCoder 比赛."""
+
     rand_help_content = f"""/rand [num/int] [min] [max]: 在 [min, max] 中选择一个随机数，值域 [-1e9, 1e9].
 /rand seq [max]: 获取一个 1, 2, ..., max 的随机排列，值域 [1, 500]."""
 
@@ -54,7 +59,7 @@ class Constants:
 [sub]
 /user id [uid]: 查询 uid 对应用户的信息.
 /user name [name]: 查询名为 name 对应用户的信息，支持模糊匹配.
-/contests: 查询 Codeforces, AtCoder, NowCoder 三平台近日比赛.
+/contests (platform): 查询 platform 平台近日比赛，可指定 Codeforces, AtCoder, NowCoder，留空则返回三平台近日比赛集合.
 /alive: 检查 OJ, Codeforces, AtCoder 的可连通性.
 /api: 获取当前各模块的构建信息.
 
@@ -66,6 +71,12 @@ class Constants:
 
 [codeforces]
 {cf_help_content}
+
+[atcoder]
+{atc_help_content}
+
+[nowcoder]
+{nk_help_content}
 
 [random]
 {rand_help_content}

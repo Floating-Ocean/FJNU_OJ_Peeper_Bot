@@ -4,30 +4,30 @@ import re
 import time
 
 from src.core.tools import fetch_json, format_timestamp, get_week_start_timestamp, get_today_start_timestamp, \
-    format_timestamp_diff, format_seconds
+    format_timestamp_diff, format_seconds, format_int_delta
 from src.lib.cf_rating_calc import PredictResult, Contestant, predict
-from src.modules.message import RobotMessage
 from src.platforms.platform import Platform, Contest
 
 
 class Codeforces(Platform):
+    platform_name = "Codeforces"
     logo_url = "https://codeforces.org/s/24321/images/codeforces-sponsored-by-ton.png"
     rated_rks = {
         (-float('inf'), 1200): 'N',  # Newbie
-        (1200, 1400): 'P',           # Pupil
-        (1400, 1600): 'S',           # Specialist
-        (1600, 1900): 'E',           # Expert
-        (1900, 2100): 'CM',          # Candidate Master
-        (2100, 2300): 'M',           # Master
-        (2300, 2400): 'IM',          # International Master
-        (2400, 2600): 'GM',          # Grandmaster
-        (2600, 3000): 'IGM',         # International Grandmaster
-        (3000, 4000): 'LGM',         # Legendary Grandmaster
-        (4000, float('inf')): 'T'    # Tourist
+        (1200, 1400): 'P',  # Pupil
+        (1400, 1600): 'S',  # Specialist
+        (1600, 1900): 'E',  # Expert
+        (1900, 2100): 'CM',  # Candidate Master
+        (2100, 2300): 'M',  # Master
+        (2300, 2400): 'IM',  # International Master
+        (2400, 2600): 'GM',  # Grandmaster
+        (2600, 3000): 'IGM',  # International Grandmaster
+        (3000, 4000): 'LGM',  # Legendary Grandmaster
+        (4000, float('inf')): 'T'  # Tourist
     }
 
-    @staticmethod
-    def _api(api: str, **kwargs) -> dict | int:
+    @classmethod
+    def _api(cls, api: str, **kwargs) -> dict | int:
         """传递参数构造payload，添加首尾下划线可避免与关键词冲突"""
         url = f"https://codeforces.com/api/{api}"
         if len(kwargs) > 0:
@@ -42,8 +42,8 @@ class Codeforces(Platform):
 
         return json_data['result']
 
-    @staticmethod
-    def _format_verdict(verdict: str, passed_count: int) -> str:
+    @classmethod
+    def _format_verdict(cls, verdict: str, passed_count: int) -> str:
         verdict = verdict.replace("_", " ").capitalize()
         if verdict == "Ok":
             return "Accepted"
@@ -56,13 +56,13 @@ class Codeforces(Platform):
         else:
             return f"{verdict} on test {passed_count + 1}"
 
-    @staticmethod
-    def _format_contest_name(name: str) -> str:
+    @classmethod
+    def _format_contest_name(cls, name: str) -> str:
         """aaa.bbb -> aaaBbb"""
         return re.sub(r'(\w+)\.(\w+)', lambda m: m.group(1) + m.group(2).capitalize(), name)
 
-    @staticmethod
-    def _format_rank_delta(old_rating: int, delta: int) -> str:
+    @classmethod
+    def _format_rank_delta(cls, old_rating: int, delta: int) -> str:
         old_rk = next((rk for (l, r), rk in Codeforces.rated_rks.items() if l <= old_rating < r), 'N')
         new_rk = next((rk for (l, r), rk in Codeforces.rated_rks.items() if l <= old_rating + delta < r), 'N')
         if old_rk == new_rk:
@@ -70,8 +70,8 @@ class Codeforces(Platform):
         else:
             return f"段位变化 {old_rk}->{new_rk}"
 
-    @staticmethod
-    def _format_standing(standing: dict, contest_id: str) -> str:
+    @classmethod
+    def _format_standing(cls, standing: dict, contest_id: str) -> str:
         participant_types = {
             "CONTESTANT": "参赛",
             "PRACTICE": "练习",
@@ -94,12 +94,12 @@ class Codeforces(Platform):
         real_rank = standing['rank']
         contestant_predictions = ""
         if standing['party']['participantType'] == 'CONTESTANT':
-            all_predictions = Codeforces.get_contest_predict(contest_id)
+            all_predictions = Codeforces._fetch_contest_predict(contest_id)
             if not isinstance(all_predictions, int) and (standing['party']['members'][0]['handle'] in all_predictions):
                 prediction = all_predictions[standing['party']['members'][0]['handle']]
                 real_rank = prediction.rank
                 contestant_predictions = (f'\n表现分 {prediction.performance}，'
-                                          f'预测变化 {Codeforces._format_int_delta(prediction.delta)}，'
+                                          f'预测变化 {format_int_delta(prediction.delta)}，'
                                           f'{Codeforces._format_rank_delta(prediction.rating, prediction.delta)}')
 
         striped_points = f"{standing['points']}".rstrip('0').rstrip('.')
@@ -107,9 +107,9 @@ class Codeforces(Platform):
         hack_info = "Hack "
         hack_prop = []
         if standing['successfulHackCount'] > 0:
-            hack_prop.append(Codeforces._format_int_delta(standing['successfulHackCount']))
+            hack_prop.append(format_int_delta(standing['successfulHackCount']))
         if standing['unsuccessfulHackCount'] > 0:
-            hack_prop.append(Codeforces._format_int_delta(standing['unsuccessfulHackCount']))
+            hack_prop.append(format_int_delta(standing['unsuccessfulHackCount']))
         if len(hack_prop) > 0:
             hack_info += ':'.join(hack_prop)
             contestant_info += f"，{hack_info}"
@@ -121,8 +121,8 @@ class Codeforces(Platform):
         return '\n'.join([section for section in [member_info, submission_info, contestant_info]
                           if section is not None])
 
-    @staticmethod
-    def _format_contest(contest: dict) -> str:
+    @classmethod
+    def _format_contest(cls, contest: dict) -> str:
         phase = format_timestamp_diff(contest['relativeTimeSeconds'])
         if contest['phase'] == 'CODING':
             phase = "正在比赛中"
@@ -135,15 +135,8 @@ class Codeforces(Platform):
                 f"{format_timestamp(contest['startTimeSeconds'])}\n"
                 f"持续 {format_seconds(contest['durationSeconds'])}, {contest['type']} 赛制")
 
-    @staticmethod
-    def _format_int_delta(delta: int) -> str:
-        if delta >= 0:
-            return f"+{delta}"
-        else:
-            return f"{delta}"
-
-    @staticmethod
-    def _adjust_old_ratings(contest_id: int, rating_changes: list) -> dict:
+    @classmethod
+    def _adjust_old_ratings(cls, contest_id: int, rating_changes: list) -> dict:
         """
         Adapted from carrot at
         https://github.com/meooow25/carrot/blob/master/carrot/src/background/cache/contests-complete.js
@@ -161,12 +154,13 @@ class Codeforces(Platform):
         else:
             def _adjust(old: int) -> int:
                 return 1400 if old == 0 else old  # NEW_DEFAULT_RATING
+
             return {change['handle']: {'oldRating': _adjust(change['oldRating']),
                                        'realChange': (change['oldRating'], change['newRating'])}
                     for change in rating_changes}
 
-    @staticmethod
-    def _is_old_contest(contest: dict) -> bool:
+    @classmethod
+    def _is_old_contest(cls, contest: dict) -> bool:
         """
         Adapted from carrot at
         https://github.com/meooow25/carrot/blob/master/carrot/src/background/cache/contests-complete.js
@@ -175,8 +169,8 @@ class Codeforces(Platform):
                                   / (60 * 60 * 24))
         return days_since_contest_end > 3  # RATING_PENDING_MAX_DAYS
 
-    @staticmethod
-    def _get_predicted_prefs(standings: dict) -> dict[str, PredictResult] | None:
+    @classmethod
+    def _get_predicted_prefs(cls, standings: dict) -> dict[str, PredictResult] | None:
         """
         Adapted from carrot at
         https://github.com/meooow25/carrot/blob/master/carrot/src/background/cache/contests-complete.js
@@ -204,8 +198,8 @@ class Codeforces(Platform):
 
         return predict(contestants, True)
 
-    @staticmethod
-    def _get_final_prefs(standings: dict, old_ratings: dict) -> dict[str, PredictResult] | None:
+    @classmethod
+    def _get_final_prefs(cls, standings: dict, old_ratings: dict) -> dict[str, PredictResult] | None:
         """
         Adapted from carrot at
         https://github.com/meooow25/carrot/blob/master/carrot/src/background/cache/contests-complete.js
@@ -223,200 +217,8 @@ class Codeforces(Platform):
 
         return predict(contestants, True)
 
-    @staticmethod
-    def get_prob_tags_all() -> list[str] | None:
-        problems = Codeforces._api('problemset.problems')
-        if isinstance(problems, int):
-            return None
-
-        tags = []
-        for problem in problems['problems']:
-            for tag in problem['tags']:
-                tags.append(tag.replace(" ", "-"))
-        tags = list(set(tags))
-        return tags
-
-    @staticmethod
-    async def get_prob_filtered_by_tag(tag_needed: str, limit: str = None, newer: bool = False,
-                                       on_tag_chosen=None) -> dict | int:
-        min_point, max_point = 0, 0
-        if limit is not None:
-            # 检查格式是否为 dddd-dddd 或 dddd
-            if not re.match("^[0-9]+-[0-9]+$", limit) or not re.match("^[0-9]+$", limit):
-                return -3
-            # 检查范围数值是否合法
-            field_validate = True
-            if "-" in limit:
-                field_validate &= 7 <= len(limit) <= 9
-                [min_point, max_point] = list(map(int, limit.split("-")))
-            else:
-                field_validate &= 3 <= len(limit) <= 4
-                min_point = max_point = int(limit)
-            if not field_validate:
-                return 0
-
-        if tag_needed == "all":
-            problems = Codeforces._api('problemset.problems')
-        else:
-            all_tags = Codeforces.get_prob_tags_all()
-            if all_tags is None:
-                return -1
-            if tag_needed not in all_tags:  # 模糊匹配
-                closet_tag = difflib.get_close_matches(tag_needed, all_tags)
-                if len(closet_tag) == 0:
-                    return -2
-                tag_needed = closet_tag[0]
-                if on_tag_chosen is not None:
-                    await on_tag_chosen(f"标签最佳匹配: {tag_needed}")
-            problems = Codeforces._api('problemset.problems', tags=tag_needed.replace("-", " "))
-
-        if isinstance(problems, int) or len(problems) == 0:
-            return -3
-
-        filtered_data = problems['problems']
-        if limit is not None:
-            filtered_data = [prob for prob in problems['problems']
-                             if 'rating' in prob and min_point <= prob['rating'] <= max_point]
-        if newer:
-            filtered_data = [prob for prob in filtered_data if prob['contestId'] >= 1000]
-
-        return random.choice(filtered_data) if len(filtered_data) > 0 else 0
-
-    @staticmethod
-    def get_user_info(handle: str) -> tuple[str, str | None]:
-        info = Codeforces._api('user.info', handles=handle)
-
-        if info == -1:
-            return "查询异常", None
-        if info == 0 or len(info) == 0:
-            return "用户不存在", None
-
-        info = info[-1]
-        sections = []
-
-        # 归属地
-        belong, home, name = [], [], []
-        if 'firstName' in info:
-            name.append(info['firstName'])
-        if 'lastName' in info:
-            name.append(info['lastName'])
-        if len(name) > 0:
-            home.append(' '.join(name))
-        if 'city' in info:
-            home.append(info['city'])
-        if 'country' in info:
-            home.append(info['country'])
-        if len(home) > 0:
-            belong.append(', '.join(home))
-        if 'organization' in info:
-            if len(info['organization']) == 0:  # meme
-                info['organization'] = '地球'
-            belong.append(f"来自 {info['organization']}")
-        if len(belong) > 0:
-            sections.append('\n'.join(belong))
-
-        # 平台上的信息
-        rating = "0 Unrated"
-        if 'rating' in info:
-            rating = (f"{info['rating']} {info['rank'].capitalize()} "
-                      f"(max. {info['maxRating']} {info['maxRank']})")
-        platform = (f"比赛Rating: {rating}\n"
-                    f"贡献: {info['contribution']}\n"
-                    f"粉丝: {info['friendOfCount']}")
-        sections.append(platform)
-
-        return '\n\n'.join(sections), info.get('titlePhoto')
-
-    @staticmethod
-    def get_user_last_contest(handle: str) -> str:
-        rating = Codeforces._api('user.rating', handle=handle)
-
-        if rating == -1:
-            return "查询异常"
-        if rating == 0:
-            return "用户不存在"
-
-        rating = list(rating)
-        contest_count = len(rating)
-        if contest_count == 0:
-            return "还未参加过 Rated 比赛"
-
-        last = rating[-1]
-        info = (f"Rated 比赛数: {contest_count}\n"
-                f"最近一次比赛: {Codeforces._format_contest_name(last['contestName'])}\n"
-                f"比赛编号: {last['contestId']}\n"
-                f"位次: {last['rank']}\n"
-                f"Rating 变化: {Codeforces._format_int_delta(last['newRating'] - last['oldRating'])}")
-
-        return info
-
-    @staticmethod
-    def get_user_last_submit(handle: str, count: int = 5) -> str:
-        status = Codeforces._api('user.status', handle=handle, _from_=1, count=count)
-
-        if status == -1:
-            return "查询异常"
-        if status == 0:
-            return "用户不存在"
-
-        status = list(status)
-        if len(status) == 0:
-            return "还未提交过题目"
-
-        info = f"最近{count}发提交:"
-        for submit in status:
-            verdict = (Codeforces._format_verdict(submit['verdict'], submit['passedTestCount'])
-                       if 'verdict' in submit else "In queue")
-            points = f" *{int(submit['problem']['rating'])}" if 'rating' in submit['problem'] else ""
-            time = f" {submit['timeConsumedMillis']}ms" if 'timeConsumedMillis' in submit else ""
-            info += (f"\n[{submit['id']}] {verdict} "
-                     f"P{submit['problem']['contestId']}{submit['problem']['index']}{points}{time} "
-                     f"{format_timestamp(submit['creationTimeSeconds'])}")
-
-        return info
-
-    @staticmethod
-    def get_user_submit_counts(handle: str) -> tuple[int, int, int]:
-        status = Codeforces._api('user.status', handle=handle)
-
-        if isinstance(status, int):
-            return -1, -1, -1
-
-        status = list(status)
-        submit_len = len(status)
-        if submit_len == 0:
-            return 0, 0, 0
-
-        total_set, weekly_set, daily_set = set(), set(), set()
-        week_start_time, today_start_time = get_week_start_timestamp(), get_today_start_timestamp()
-        for submit in status:
-            if submit['verdict'] != "OK":
-                continue
-            current_prob = f"{submit['problem'].get('contestId')}-{submit['problem'].get('index')}"
-            total_set.add(current_prob)
-            if submit['creationTimeSeconds'] >= week_start_time:
-                weekly_set.add(current_prob)
-            if submit['creationTimeSeconds'] >= today_start_time:
-                daily_set.add(current_prob)
-
-        return len(total_set), len(weekly_set), len(daily_set)
-
-    @staticmethod
-    def get_user_contest_standings(handle: str, contest_id: str) -> tuple[str, list[str] | None]:
-        standings = Codeforces._api('contest.standings', handles=handle, contestId=contest_id, showUnofficial=True)
-
-        if standings == -1:
-            return "查询异常", None
-        if standings == 0:
-            return "比赛不存在", None
-
-        contest_info = Codeforces._format_contest(standings['contest'])
-        standings_info = [Codeforces._format_standing(standing, contest_id) for standing in standings['rows']]
-
-        return contest_info, standings_info
-
-    @staticmethod
-    def get_contest_list_all() -> list[dict] | None:
+    @classmethod
+    def _fetch_contest_list_all(cls) -> list[dict] | None:
         contest_list = Codeforces._api('contest.list')
 
         if isinstance(contest_list, int):
@@ -428,49 +230,8 @@ class Codeforces(Platform):
 
         return contest_list
 
-    @staticmethod
-    def get_contest_list() -> list[Contest] | None:
-        contest_list = Codeforces.get_contest_list_all()
-
-        if contest_list is None:
-            return None
-
-        return [Contest(
-            start_time=contest['startTimeSeconds'],
-            duration=contest['durationSeconds'],
-            platform='Codeforces',
-            name=contest['name'],
-            supplement=f"{contest['type']} 赛制"
-        ) for contest in contest_list if contest['phase'] == 'BEFORE']
-
-    @staticmethod
-    def get_recent_contests() -> str:
-        contest_list = Codeforces.get_contest_list_all()
-
-        if contest_list is None:
-            return "查询异常"
-
-        if len(contest_list) == 0:
-            return "最近没有比赛"
-
-        limit = len(contest_list) - 1
-        for i, contest in enumerate(contest_list):
-            if contest['phase'] == 'FINISHED':
-                limit = i - 1
-                break
-
-        unfinished_contests = contest_list[limit::-1]  # 按日期升序排列
-        info = ""
-        for contest in unfinished_contests:
-            info += Codeforces._format_contest(contest) + "\n\n"
-
-        last_finished_contest = contest_list[limit + 1]
-        info += "上一场已结束的比赛:\n" + Codeforces._format_contest(last_finished_contest)
-
-        return info
-
-    @staticmethod
-    def get_contest_predict(contest_id: str) -> dict[str, PredictResult] | int:
+    @classmethod
+    def _fetch_contest_predict(cls, contest_id: str) -> dict[str, PredictResult] | int:
         """
         Adapted from carrot at
         https://github.com/meooow25/carrot/blob/master/carrot/src/background/cache/contests-complete.js
@@ -525,3 +286,235 @@ class Codeforces(Platform):
         if result is None:
             return -3
         return result
+
+    @classmethod
+    def get_contest_list(cls, overwrite_tag: bool = False) -> tuple[list[Contest], Contest] | None:
+        contest_list = Codeforces._fetch_contest_list_all()
+
+        if contest_list is None:
+            return None
+
+        upcoming_contests = [Contest(
+            start_time=contest['startTimeSeconds'],
+            duration=contest['durationSeconds'],
+            tag=Codeforces.platform_name if overwrite_tag else contest['id'],
+            name=contest['name'],
+            supplement=f"{contest['type']} 赛制"
+        ) for contest in contest_list if contest['phase'] == 'BEFORE']
+
+        finished_contest_dict = next(contest for contest in contest_list if contest['phase'] == 'FINISHED')
+        finished_contest = Contest(
+            start_time=finished_contest_dict['startTimeSeconds'],
+            duration=finished_contest_dict['durationSeconds'],
+            tag=Codeforces.platform_name if overwrite_tag else finished_contest_dict['id'],
+            name=finished_contest_dict['name'],
+            supplement=f"{finished_contest_dict['type']} 赛制"
+        )
+
+        return upcoming_contests, finished_contest
+
+    @classmethod
+    def get_prob_tags_all(cls) -> list[str] | None:
+        problems = Codeforces._api('problemset.problems')
+        if isinstance(problems, int):
+            return None
+
+        tags = []
+        for problem in problems['problems']:
+            for tag in problem['tags']:
+                tags.append(tag.replace(" ", "-"))
+        tags = list(set(tags))
+        return tags
+
+    @classmethod
+    async def get_prob_filtered_by_tag(cls, tag_needed: str, limit: str = None, newer: bool = False,
+                                       on_tag_chosen=None) -> dict | int:
+        min_point, max_point = 0, 0
+        if limit is not None:
+            # 检查格式是否为 dddd-dddd 或 dddd
+            if not re.match("^[0-9]+-[0-9]+$", limit) or not re.match("^[0-9]+$", limit):
+                return -3
+            # 检查范围数值是否合法
+            field_validate = True
+            if "-" in limit:
+                field_validate &= 7 <= len(limit) <= 9
+                [min_point, max_point] = list(map(int, limit.split("-")))
+            else:
+                field_validate &= 3 <= len(limit) <= 4
+                min_point = max_point = int(limit)
+            if not field_validate:
+                return 0
+
+        if tag_needed == "all":
+            problems = Codeforces._api('problemset.problems')
+        else:
+            all_tags = Codeforces.get_prob_tags_all()
+            if all_tags is None:
+                return -1
+            if tag_needed not in all_tags:  # 模糊匹配
+                closet_tag = difflib.get_close_matches(tag_needed, all_tags)
+                if len(closet_tag) == 0:
+                    return -2
+                tag_needed = closet_tag[0]
+                if on_tag_chosen is not None:
+                    await on_tag_chosen(f"标签最佳匹配: {tag_needed}")
+            problems = Codeforces._api('problemset.problems', tags=tag_needed.replace("-", " "))
+
+        if isinstance(problems, int) or len(problems) == 0:
+            return -3
+
+        filtered_data = problems['problems']
+        if limit is not None:
+            filtered_data = [prob for prob in problems['problems']
+                             if 'rating' in prob and min_point <= prob['rating'] <= max_point]
+        if newer:
+            filtered_data = [prob for prob in filtered_data if prob['contestId'] >= 1000]
+
+        return random.choice(filtered_data) if len(filtered_data) > 0 else 0
+
+    @classmethod
+    def get_user_rank(cls, handle: str) -> str | None:
+        info = Codeforces._api('user.info', handles=handle)
+
+        if info == -1:
+            return None
+        if info == 0 or len(info) == 0:
+            return None
+
+        info = info[-1]
+
+        return (f"{info['rating']} "
+                f"{next((rk for (l, r), rk in Codeforces.rated_rks.items() if l <= info['rating'] < r), 'N')}")
+
+    @classmethod
+    def get_user_info(cls, handle: str) -> tuple[str, str | None]:
+        info = Codeforces._api('user.info', handles=handle)
+
+        if info == -1:
+            return "查询异常", None
+        if info == 0 or len(info) == 0:
+            return "用户不存在", None
+
+        info = info[-1]
+        sections = []
+
+        # 归属地
+        belong, home, name = [], [], []
+        if 'firstName' in info:
+            name.append(info['firstName'])
+        if 'lastName' in info:
+            name.append(info['lastName'])
+        if len(name) > 0:
+            home.append(' '.join(name))
+        if 'city' in info:
+            home.append(info['city'])
+        if 'country' in info:
+            home.append(info['country'])
+        if len(home) > 0:
+            belong.append(', '.join(home))
+        if 'organization' in info:
+            if len(info['organization']) == 0:  # meme
+                info['organization'] = '地球'
+            belong.append(f"来自 {info['organization']}")
+        if len(belong) > 0:
+            sections.append('\n'.join(belong))
+
+        # 平台上的信息
+        rating = "0 Unrated"
+        if 'rating' in info:
+            rating = (f"{info['rating']} {info['rank'].capitalize()} "
+                      f"(max. {info['maxRating']} {info['maxRank']})")
+        platform = (f"比赛Rating: {rating}\n"
+                    f"贡献: {info['contribution']}\n"
+                    f"粉丝: {info['friendOfCount']}")
+        sections.append(platform)
+
+        return '\n\n'.join(sections), info.get('titlePhoto')
+
+    @classmethod
+    def get_user_last_contest(cls, handle: str) -> str:
+        rating = Codeforces._api('user.rating', handle=handle)
+
+        if rating == -1:
+            return "查询异常"
+        if rating == 0:
+            return "用户不存在"
+
+        rated_contests = list(rating)
+        contest_count = len(rated_contests)
+        if contest_count == 0:
+            return "还未参加过 Rated 比赛"
+
+        last = rated_contests[-1]
+        info = (f"Rated 比赛数: {contest_count}\n"
+                f"最近一次比赛: {Codeforces._format_contest_name(last['contestName'])}\n"
+                f"比赛编号: {last['contestId']}\n"
+                f"位次: {last['rank']}\n"
+                f"Rating 变化: {format_int_delta(last['newRating'] - last['oldRating'])}")
+
+        return info
+
+    @classmethod
+    def get_user_last_submit(cls, handle: str, count: int = 5) -> str:
+        status = Codeforces._api('user.status', handle=handle, _from_=1, count=count)
+
+        if status == -1:
+            return "查询异常"
+        if status == 0:
+            return "用户不存在"
+
+        status = list(status)
+        if len(status) == 0:
+            return "还未提交过题目"
+
+        info = f"最近{count}发提交:"
+        for submit in status:
+            verdict = (Codeforces._format_verdict(submit['verdict'], submit['passedTestCount'])
+                       if 'verdict' in submit else "In queue")
+            points = f" *{int(submit['problem']['rating'])}" if 'rating' in submit['problem'] else ""
+            time_consumed = f" {submit['timeConsumedMillis']}ms" if 'timeConsumedMillis' in submit else ""
+            info += (f"\n[{submit['id']}] {verdict} "
+                     f"P{submit['problem']['contestId']}{submit['problem']['index']}{points}{time_consumed} "
+                     f"{format_timestamp(submit['creationTimeSeconds'])}")
+
+        return info
+
+    @classmethod
+    def get_user_submit_counts(cls, handle: str) -> tuple[int, int, int]:
+        status = Codeforces._api('user.status', handle=handle)
+
+        if isinstance(status, int):
+            return -1, -1, -1
+
+        status = list(status)
+        submit_len = len(status)
+        if submit_len == 0:
+            return 0, 0, 0
+
+        total_set, weekly_set, daily_set = set(), set(), set()
+        week_start_time, today_start_time = get_week_start_timestamp(), get_today_start_timestamp()
+        for submit in status:
+            if submit['verdict'] != "OK":
+                continue
+            current_prob = f"{submit['problem'].get('contestId')}-{submit['problem'].get('index')}"
+            total_set.add(current_prob)
+            if submit['creationTimeSeconds'] >= week_start_time:
+                weekly_set.add(current_prob)
+            if submit['creationTimeSeconds'] >= today_start_time:
+                daily_set.add(current_prob)
+
+        return len(total_set), len(weekly_set), len(daily_set)
+
+    @classmethod
+    def get_user_contest_standings(cls, handle: str, contest_id: str) -> tuple[str, list[str] | None]:
+        standings = Codeforces._api('contest.standings', handles=handle, contestId=contest_id, showUnofficial=True)
+
+        if standings == -1:
+            return "查询异常", None
+        if standings == 0:
+            return "比赛不存在", None
+
+        contest_info = Codeforces._format_contest(standings['contest'])
+        standings_info = [Codeforces._format_standing(standing, contest_id) for standing in standings['rows']]
+
+        return contest_info, standings_info
