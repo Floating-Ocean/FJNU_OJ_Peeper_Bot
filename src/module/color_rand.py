@@ -15,7 +15,7 @@ from src.core.command import command
 from src.core.constants import Constants
 from src.core.output_cached import get_cached_prefix
 from src.core.tools import png2jpg
-from src.modules.message import RobotMessage
+from src.module.message import RobotMessage
 
 _lib_path = os.path.join(Constants.config["lib_path"], "Color-Rand")
 __color_rand_version__ = "v1.1.1"

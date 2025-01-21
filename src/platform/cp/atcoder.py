@@ -1,13 +1,16 @@
+import random
+import re
 from datetime import datetime
 
 from lxml import etree
 
-from src.core.tools import fetch_html, fetch_json, format_int_delta, patch_https_url
-from src.platforms.codeforces import Codeforces
-from src.platforms.platform import Platform, Contest
+from src.core.tools import fetch_html, fetch_json, format_int_delta, patch_https_url, decode_range
+from src.platform.cp.codeforces import Codeforces
+from src.platform.it.clist import Clist
+from src.platform.model import CompetitivePlatform, Contest
 
 
-class AtCoder(Platform):
+class AtCoder(CompetitivePlatform):
     platform_name = "AtCoder"
 
     @classmethod
@@ -55,6 +58,37 @@ class AtCoder(Platform):
         )
 
         return upcoming_contests, finished_contest
+
+    @classmethod
+    def get_prob_filtered(cls, contest_type: str = 'common', limit: str = None) -> dict | int:
+        min_point, max_point = 0, 0
+        if limit is not None:
+            min_point, max_point = decode_range(limit, length=(3, 4))
+            if min_point == -2:
+                return -1
+            elif min_point == -3:
+                return 0
+
+        filter_regex = ''
+        if contest_type == 'common':
+            filter_regex = r'^https:\/\/atcoder\.jp\/contests\/(abc|arc|agc|ahc)'
+        elif contest_type in ['abc', 'arc', 'agc', 'ahc']:
+            filter_regex = rf'^https:\/\/atcoder\.jp\/contests\/{contest_type}'
+        elif contest_type == 'sp':
+            filter_regex = r'^(?!https:\/\/atcoder\.jp\/contests\/(abc|arc|agc|ahc)).*'
+        elif contest_type != 'all':
+            return -2
+
+        if limit is not None:
+            filtered_data = Clist.api("problem", resource_id=93, rating__gte=min_point, rating__lte=max_point,
+                                      url__regex=filter_regex)
+        else:
+            filtered_data = Clist.api("problem", resource_id=93, url__regex=filter_regex)
+
+        if isinstance(filtered_data, int):
+            return -3
+
+        return random.choice(filtered_data) if len(filtered_data) > 0 else 0
 
     @classmethod
     def get_user_info(cls, handle: str) -> tuple[str, str | None]:

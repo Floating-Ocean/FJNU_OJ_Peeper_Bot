@@ -62,7 +62,8 @@ def fetch_html(url: str, payload: dict = None) -> Element:
     return etree.HTML(response.text)
 
 
-def fetch_json(url: str, payload: dict = None, throw: bool = True, method: str = 'post') -> dict | int:
+def fetch_json(url: str, inject_headers: dict = None, payload: dict = None, throw: bool = True,
+               method: str = 'post') -> dict | int:
     code = 200
     try:
         headers = {
@@ -70,6 +71,9 @@ def fetch_json(url: str, payload: dict = None, throw: bool = True, method: str =
                           "Chrome/91.0.4472.77 Safari/537.36",
             'Connection': 'close'
         }
+        if inject_headers is not None:
+            for k, v in inject_headers.items():
+                headers[k] = v
 
         if method == 'post':
             response = requests.post(url, headers=headers, json=payload)
@@ -243,6 +247,30 @@ def format_int_delta(delta: int) -> str:
         return f"+{delta}"
     else:
         return f"{delta}"
+
+
+def decode_range(range_str: str, length: tuple[int, int]) -> tuple[int, int]:
+    if length[0] > length[1]:
+        return -1, -1
+
+    min_point, max_point = 0, 0
+
+    if range_str is not None:
+        # 检查格式是否为 dddd-dddd 或 dddd
+        if not re.match("^[0-9]+-[0-9]+$", range_str) and not re.match("^[0-9]+$", range_str):
+            return -2, -2
+        # 检查范围数值是否合法
+        field_validate = True
+        if "-" in range_str:
+            field_validate &= length[0] * 2 + 1 <= len(range_str) <= length[1] * 2 + 1
+            [min_point, max_point] = list(map(int, range_str.split("-")))
+        else:
+            field_validate &= length[0] <= len(range_str) <= length[1]
+            min_point = max_point = int(range_str)
+        if not field_validate:
+            return -3, -3
+
+    return min_point, max_point
 
 
 def patch_https_url(url: str) -> str:

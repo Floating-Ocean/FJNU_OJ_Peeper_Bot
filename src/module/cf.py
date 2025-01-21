@@ -5,8 +5,8 @@ from src.core.command import command
 from src.core.constants import Constants
 from src.core.output_cached import get_cached_prefix
 from src.core.tools import check_is_int, get_simple_qrcode, png2jpg
-from src.modules.message import report_exception, RobotMessage
-from src.platforms.codeforces import Codeforces
+from src.module.message import report_exception, RobotMessage
+from src.platform.cp.codeforces import Codeforces
 
 __cf_version__ = "v3.0.0"
 
@@ -73,8 +73,8 @@ async def send_prob_tags(message: RobotMessage):
 async def send_prob_filter_tag(message: RobotMessage, tag: str, limit: str = None, newer: bool = False) -> bool:
     await message.reply("正在随机选题，请稍等")
 
-    chosen_prob = await Codeforces.get_prob_filtered_by_tag(tag, limit, newer,
-                                                            on_tag_chosen=lambda x: message.reply(x))
+    chosen_prob = await Codeforces.get_prob_filtered(tag, limit, newer,
+                                                     on_tag_chosen=lambda x: message.reply(x))
 
     if isinstance(chosen_prob, int) and chosen_prob < 0:
         return False
@@ -140,7 +140,7 @@ async def reply_cf_request(message: RobotMessage):
     try:
         content = re.sub(r'<@!\d+>', '', message.content).strip().split()
         if len(content) < 2:
-            await message.reply(f"[Codeforces]\n\n{Constants.cf_help_content}", modal_words=False)
+            await message.reply(f'[Codeforces]\n\n{Constants.help_contents["codeforces"]}', modal_words=False)
             return
 
         func = content[1]
@@ -197,7 +197,7 @@ async def reply_cf_request(message: RobotMessage):
             await send_logo(message)
 
         else:
-            await message.reply(f"[Codeforces]\n\n{Constants.cf_help_content}", modal_words=False)
+            await message.reply(f'[Codeforces]\n\n{Constants.help_contents["codeforces"]}', modal_words=False)
 
     except Exception as e:
         await report_exception(message, 'Codeforces', traceback.format_exc(), repr(e))

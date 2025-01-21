@@ -4,10 +4,10 @@ from datetime import datetime
 from lxml.etree import Element
 
 from src.core.tools import fetch_html
-from src.platforms.platform import Platform, Contest
+from src.platform.model import CompetitivePlatform, Contest
 
 
-class NowCoder(Platform):
+class NowCoder(CompetitivePlatform):
     platform_name = "NowCoder"
 
     @classmethod

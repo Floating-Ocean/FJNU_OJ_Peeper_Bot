@@ -12,7 +12,7 @@ nest_asyncio.apply()
 urllib3.disable_warnings()
 
 # 加载模块
-importlib.import_module("src.modules")
+importlib.import_module("src.module")
 
 if __name__ == '__main__':
     # a lock containing pid

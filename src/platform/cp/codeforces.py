@@ -4,12 +4,12 @@ import re
 import time
 
 from src.core.tools import fetch_json, format_timestamp, get_week_start_timestamp, get_today_start_timestamp, \
-    format_timestamp_diff, format_seconds, format_int_delta
+    format_timestamp_diff, format_seconds, format_int_delta, decode_range
 from src.lib.cf_rating_calc import PredictResult, Contestant, predict
-from src.platforms.platform import Platform, Contest
+from src.platform.model import CompetitivePlatform, Contest
 
 
-class Codeforces(Platform):
+class Codeforces(CompetitivePlatform):
     platform_name = "Codeforces"
     logo_url = "https://codeforces.org/s/24321/images/codeforces-sponsored-by-ton.png"
     rated_rks = {
@@ -23,7 +23,7 @@ class Codeforces(Platform):
         (2400, 2600): 'GM',  # Grandmaster
         (2600, 3000): 'IGM',  # International Grandmaster
         (3000, 4000): 'LGM',  # Legendary Grandmaster
-        (4000, float('inf')): 'T'  # Tourist
+        (4000, float('inf')): 'T'  # The Ones Who Reach 4000, Like Tourist and Jiangly
     }
 
     @classmethod
@@ -327,22 +327,14 @@ class Codeforces(Platform):
         return tags
 
     @classmethod
-    async def get_prob_filtered_by_tag(cls, tag_needed: str, limit: str = None, newer: bool = False,
-                                       on_tag_chosen=None) -> dict | int:
+    async def get_prob_filtered(cls, tag_needed: str, limit: str = None, newer: bool = False,
+                                on_tag_chosen=None) -> dict | int:
         min_point, max_point = 0, 0
         if limit is not None:
-            # 检查格式是否为 dddd-dddd 或 dddd
-            if not re.match("^[0-9]+-[0-9]+$", limit) or not re.match("^[0-9]+$", limit):
-                return -3
-            # 检查范围数值是否合法
-            field_validate = True
-            if "-" in limit:
-                field_validate &= 7 <= len(limit) <= 9
-                [min_point, max_point] = list(map(int, limit.split("-")))
-            else:
-                field_validate &= 3 <= len(limit) <= 4
-                min_point = max_point = int(limit)
-            if not field_validate:
+            min_point, max_point = decode_range(limit, length=(3, 4))
+            if min_point == -2:
+                return -1
+            elif min_point == -3:
                 return 0
 
         if tag_needed == "all":
@@ -350,18 +342,18 @@ class Codeforces(Platform):
         else:
             all_tags = Codeforces.get_prob_tags_all()
             if all_tags is None:
-                return -1
+                return -2
             if tag_needed not in all_tags:  # 模糊匹配
                 closet_tag = difflib.get_close_matches(tag_needed, all_tags)
                 if len(closet_tag) == 0:
-                    return -2
+                    return -3
                 tag_needed = closet_tag[0]
                 if on_tag_chosen is not None:
                     await on_tag_chosen(f"标签最佳匹配: {tag_needed}")
             problems = Codeforces._api('problemset.problems', tags=tag_needed.replace("-", " "))
 
         if isinstance(problems, int) or len(problems) == 0:
-            return -3
+            return -1
 
         filtered_data = problems['problems']
         if limit is not None:

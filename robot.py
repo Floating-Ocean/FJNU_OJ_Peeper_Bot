@@ -16,7 +16,7 @@ from src.core.command import command
 from src.core.constants import Constants
 from src.core.interact import RobotMessage, call_handle_message
 from src.core.tools import run_async
-from src.modules.peeper import daily_update_job, noon_report_job
+from src.module.peeper import daily_update_job, noon_report_job
 
 _query_queue = queue.Queue()
 

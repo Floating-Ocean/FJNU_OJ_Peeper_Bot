@@ -7,7 +7,7 @@ from qrcode.image.styles.colormasks import SolidFillColorMask
 from qrcode.image.styles.moduledrawers import RoundedModuleDrawer
 from qrcode.main import QRCode
 
-from src.modules.color_rand import load_colors, _colors
+from src.module.color_rand import load_colors, _colors
 
 
 class QrCode(unittest.TestCase):

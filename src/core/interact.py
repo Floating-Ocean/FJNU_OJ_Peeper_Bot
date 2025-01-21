@@ -9,16 +9,16 @@ from src.core.command import command, __commands__
 from src.core.constants import Constants
 from src.core.output_cached import get_cached_prefix
 from src.core.tools import png2jpg, get_simple_qrcode
-from src.modules.message import RobotMessage, report_exception
-from src.platforms.atcoder import AtCoder
-from src.platforms.codeforces import Codeforces
-from src.platforms.nowcoder import NowCoder
-from src.platforms.platform import Contest
+from src.module.message import RobotMessage, report_exception
+from src.platform.cp.atcoder import AtCoder
+from src.platform.cp.codeforces import Codeforces
+from src.platform.cp.nowcoder import NowCoder
+from src.platform.model import Contest
 
 _fixed_reply = {
     "ping": "pong",
     "活着吗": "你猜",
-    "help": Constants.help_content
+    "help": Constants.merged_help_content
 }
 
 

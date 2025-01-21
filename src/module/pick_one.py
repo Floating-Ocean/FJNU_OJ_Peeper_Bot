@@ -6,7 +6,7 @@ import random
 from src.core.command import command
 from src.core.constants import Constants
 from src.core.tools import save_img, rand_str_len32, get_md5
-from src.modules.message import RobotMessage
+from src.module.message import RobotMessage
 
 _lib_path = Constants.config["lib_path"] + "\\Pick-One"
 __pick_one_version__ = "v2.3.1"

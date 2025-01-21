@@ -25,7 +25,7 @@ class Contest:
                  f"持续 {format_seconds(self.duration)}, {self.supplement}"))
 
 
-class Platform(abc.ABC):
+class CompetitivePlatform(abc.ABC):
     platform_name: str
 
     @classmethod

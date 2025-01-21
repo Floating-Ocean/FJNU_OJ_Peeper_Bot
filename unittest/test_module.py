@@ -3,9 +3,10 @@ import random
 import unittest
 from dataclasses import asdict
 
-from src.core.tools import png2jpg
-from src.modules.color_rand import load_colors, _colors, generate_color_card, add_qrcode
-from src.platforms.codeforces import Codeforces
+from src.core.tools import png2jpg, decode_range
+from src.module.color_rand import load_colors, _colors, generate_color_card, add_qrcode
+from src.platform.cp.atcoder import AtCoder
+from src.platform.cp.codeforces import Codeforces
 
 
 class Module(unittest.TestCase):
@@ -45,6 +46,14 @@ class Module(unittest.TestCase):
             json.dump({handle: asdict(predict)
                        for handle, predict in Codeforces._fetch_contest_predict(contest_id).items()},
                       json_file, ensure_ascii=False, indent=4)
+
+    def test_cf_rand_problem(self):
+        print(decode_range("2100", (3, 4)))
+
+    def test_atc_rand_problem(self):
+        contest_type = "common"
+        limit = "2100"
+        print(AtCoder.get_prob_filtered(contest_type, limit))
 
 
 if __name__ == '__main__':

@@ -7,9 +7,10 @@ import requests
 from src.core.command import command
 from src.core.constants import Constants
 from src.core.tools import check_is_int, fetch_json
-from src.modules.cf import reply_cf_request
-from src.modules.color_rand import reply_color_rand
-from src.modules.message import report_exception, RobotMessage
+from src.module.atc import reply_atc_request
+from src.module.cf import reply_cf_request
+from src.module.color_rand import reply_color_rand
+from src.module.message import report_exception, RobotMessage
 
 __rand_version__ = "v2.1.1"
 
@@ -50,7 +51,7 @@ async def reply_rand_request(message: RobotMessage):
     try:
         content = message.tokens
         if len(content) < 2 and not content[0].startswith("/选择"):
-            return await message.reply(f"[Random]\n\n{Constants.rand_help_content}", modal_words=False)
+            return await message.reply(f'[Random]\n\n{Constants.help_contents["random"]}', modal_words=False)
 
         if content[0] == "/shuffle" or content[0] == "/打乱":
             if len(content) != 2:
@@ -108,8 +109,11 @@ async def reply_rand_request(message: RobotMessage):
         elif func == "cf":
             await reply_cf_request(message)
 
+        elif func == "atc":
+            await reply_atc_request(message)
+
         else:
-            await message.reply(f"[Random]\n\n{Constants.rand_help_content}", modal_words=False)
+            await message.reply(f'[Random]\n\n{Constants.help_contents["random"]}', modal_words=False)
 
     except Exception as e:
         await report_exception(message, 'Random', traceback.format_exc(), repr(e))

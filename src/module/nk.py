@@ -3,11 +3,11 @@ import traceback
 
 from src.core.command import command
 from src.core.constants import Constants
-from src.modules.message import report_exception, RobotMessage
+from src.module.message import report_exception, RobotMessage
 
 __nk_version__ = "v1.0.0"
 
-from src.platforms.nowcoder import NowCoder
+from src.platform.cp.nowcoder import NowCoder
 
 
 def register_module():
@@ -26,11 +26,11 @@ async def send_contest(message: RobotMessage):
 
 
 @command(tokens=['nk', 'nc', 'nowcoder'])
-async def reply_cf_request(message: RobotMessage):
+async def reply_nk_request(message: RobotMessage):
     try:
         content = re.sub(r'<@!\d+>', '', message.content).strip().split()
         if len(content) < 2:
-            await message.reply(f"[NowCoder]\n\n{Constants.nk_help_content}", modal_words=False)
+            await message.reply(f'[NowCoder]\n\n{Constants.help_contents["nowcoder"]}', modal_words=False)
             return
 
         func = content[1]
@@ -39,7 +39,7 @@ async def reply_cf_request(message: RobotMessage):
             await send_contest(message)
 
         else:
-            await message.reply(f"[NowCoder]\n\n{Constants.nk_help_content}", modal_words=False)
+            await message.reply(f'[NowCoder]\n\n{Constants.help_contents["nowcoder"]}', modal_words=False)
 
     except Exception as e:
         await report_exception(message, 'NowCoder', traceback.format_exc(), repr(e))

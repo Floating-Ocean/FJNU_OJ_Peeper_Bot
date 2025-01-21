@@ -8,13 +8,13 @@ from src.core.command import command
 from src.core.constants import Constants
 from src.core.output_cached import get_cached_prefix
 from src.core.tools import run_shell, run_async, escape_mail_url, png2jpg, check_is_int
-from src.modules.atc import __atc_version__
-from src.modules.cf import __cf_version__
-from src.modules.color_rand import __color_rand_version__
-from src.modules.message import report_exception, RobotMessage
-from src.modules.nk import __nk_version__
-from src.modules.pick_one import __pick_one_version__
-from src.modules.rand import __rand_version__
+from src.module.atc import __atc_version__
+from src.module.cf import __cf_version__
+from src.module.color_rand import __color_rand_version__
+from src.module.message import report_exception, RobotMessage
+from src.module.nk import __nk_version__
+from src.module.pick_one import __pick_one_version__
+from src.module.rand import __rand_version__
 
 _lib_path = Constants.config["lib_path"] + "\\Peeper-Board-Generator"
 
