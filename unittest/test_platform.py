@@ -36,6 +36,19 @@ class Platform(unittest.TestCase):
         self.assertIsNotNone(problems)
         print(json.dumps(problems, indent=4, ensure_ascii=False))
 
+    def test_nowcoder_user(self):
+        handle = "144128559"
+        p = NowCoder.get_user_info(handle)
+        print(p[0])
+        print(p[1])
+        self.assertIsNotNone(p)
+
+    def test_nowcoder_user_last_contest(self):
+        handle = "144128559"
+        p = NowCoder.get_user_last_contest(handle)
+        print(p)
+        self.assertIsNotNone(p)
+
 
 if __name__ == '__main__':
     unittest.main()

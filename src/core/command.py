@@ -4,7 +4,7 @@ __commands__ = {}
 def command(tokens: list, permission_level: int = 0, is_command: bool = True,
             need_check_exclude: bool = False):
     """
-        创建一条命令，主指令名为函数名。
+        创建一条命令。
 
         :param tokens: 指令的调用名。
         :param permission_level: 执行需要的权限等级，默认为0都可执行，1代表至少是mod，2代表至少是admin

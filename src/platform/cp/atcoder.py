@@ -1,8 +1,5 @@
 import random
-import re
 from datetime import datetime
-
-from lxml import etree
 
 from src.core.tools import fetch_html, fetch_json, format_int_delta, patch_https_url, decode_range
 from src.platform.cp.codeforces import Codeforces
@@ -93,7 +90,6 @@ class AtCoder(CompetitivePlatform):
     @classmethod
     def get_user_info(cls, handle: str) -> tuple[str, str | None]:
         html = fetch_html(f"https://atcoder.jp/users/{handle}")
-        print(etree.tostring(html).decode('utf-8'))
 
         sections = []
 

@@ -3,15 +3,33 @@ import traceback
 
 from src.core.command import command
 from src.core.constants import Constants
+from src.core.tools import check_is_int
 from src.module.message import report_exception, RobotMessage
 
-__nk_version__ = "v1.0.0"
+__nk_version__ = "v1.1.0"
 
 from src.platform.cp.nowcoder import NowCoder
 
 
 def register_module():
     pass
+
+
+async def send_user_info(message: RobotMessage, handle: str):
+    await message.reply(f"正在查询 {handle} 的 NowCoder 平台信息，请稍等")
+
+    info, avatar = NowCoder.get_user_info(handle)
+
+    if avatar is None:
+        content = (f"[NowCoder] {handle}\n\n"
+                   f"{info}")
+    else:
+        last_contest = NowCoder.get_user_last_contest(handle)
+        content = (f"[NowCoder] {handle}\n\n"
+                   f"{info}\n\n"
+                   f"{last_contest}")
+
+    await message.reply(content, img_url=avatar, modal_words=False)
 
 
 async def send_contest(message: RobotMessage):
@@ -35,7 +53,18 @@ async def reply_nk_request(message: RobotMessage):
 
         func = content[1]
 
-        if func == "contest" or func == "contests":
+        if func == "info" or func == "user":
+            if len(content) != 3:
+                await message.reply("请输入正确的指令格式，如\"/nk info 815516497\"")
+                return
+
+            if not check_is_int(content[2]):
+                await message.reply("暂不支持使用昵称检索用户，请使用uid")
+                return
+
+            await send_user_info(message, content[2])
+
+        elif func == "contest" or func == "contests":
             await send_contest(message)
 
         else:

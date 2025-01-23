@@ -48,6 +48,8 @@ class CompetitivePlatform(abc.ABC):
             return "查询异常"
 
         upcoming_contests, finished_contest = contest_list
+        upcoming_contests.sort(key=lambda c: c.start_time)
+
         info = ""
 
         if len(upcoming_contests) == 0:
