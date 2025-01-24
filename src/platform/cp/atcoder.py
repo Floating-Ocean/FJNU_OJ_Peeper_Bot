@@ -1,5 +1,8 @@
 import random
+import re
 from datetime import datetime
+
+from lxml import etree
 
 from src.core.tools import fetch_html, fetch_json, format_int_delta, patch_https_url, decode_range
 from src.platform.cp.codeforces import Codeforces
@@ -55,6 +58,18 @@ class AtCoder(CompetitivePlatform):
         )
 
         return upcoming_contests, finished_contest
+    
+    @classmethod
+    def get_contest(cls,contestId:str):
+        contest_list = AtCoder.get_contest_list()
+        contest = [Contest(
+            start_time=contest['startTimeSeconds'],
+            duration=contest['durationSeconds'],
+            tag=contest['id'],
+            name=contest['name'],
+            supplement=f"{contest['type']} 赛制"
+        ) for contest in contest_list if contest['tag'] == int(contestId)][0]
+        return contest
 
     @classmethod
     def get_prob_filtered(cls, contest_type: str = 'common', limit: str = None) -> dict | int:
@@ -83,13 +98,14 @@ class AtCoder(CompetitivePlatform):
             filtered_data = Clist.api("problem", resource_id=93, url__regex=filter_regex)
 
         if isinstance(filtered_data, int):
-            return -3
+            return int(filtered_data)
 
         return random.choice(filtered_data) if len(filtered_data) > 0 else 0
 
     @classmethod
     def get_user_info(cls, handle: str) -> tuple[str, str | None]:
         html = fetch_html(f"https://atcoder.jp/users/{handle}")
+        print(etree.tostring(html).decode('utf-8'))
 
         sections = []
 

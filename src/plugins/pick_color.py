@@ -1,7 +1,15 @@
+from io import BytesIO
 import json
 import os
 import random
 from colorsys import rgb_to_hsv
+
+from nonebot import require,on_command
+from nonebot.rule import to_me
+require("nonebot_plugin_localstore")
+import nonebot_plugin_localstore as store
+from nonebot_plugin_saa import AggregatedMessageFactory,MessageFactory
+from nonebot_plugin_saa import Image as SAAImage
 
 import pixie
 import qrcode
@@ -11,24 +19,15 @@ from qrcode.image.styles.colormasks import SolidFillColorMask
 from qrcode.image.styles.moduledrawers import RoundedModuleDrawer
 from qrcode.main import QRCode
 
-from src.core.command import command
 from src.core.constants import Constants
-from src.core.output_cached import get_cached_prefix
-from src.core.tools import png2jpg
-from src.module.message import RobotMessage
 
-_lib_path = os.path.join(Constants.config["lib_path"], "Color-Rand")
 __color_rand_version__ = "v1.1.1"
 
 _colors = []
-
-
-def register_module():
-    pass
-
+data_dir = store.get_plugin_data_dir()
 
 def load_colors():
-    with open(os.path.join(_lib_path, "chinese_traditional.json"), 'r', encoding="utf-8") as f:
+    with open(os.path.join(data_dir, "chinese_traditional.json"), 'r', encoding="utf-8") as f:
         _colors.clear()
         _colors.extend(json.load(f))
 
@@ -39,7 +38,7 @@ def choose_text_color(color: dict) -> tuple[int, int, int]:
 
 
 def draw_text(img: pixie.Image, content: str, x: int, y: int, font_weight: str, font_size: int, color: dict) -> int:
-    font = pixie.read_font(os.path.join(_lib_path, "data", f"OPPOSans-{font_weight}.ttf"))
+    font = pixie.read_font(os.path.join(data_dir, f"OPPOSans-{font_weight}.ttf"))
     font.size = font_size
     font_color = choose_text_color(color)
     font.paint.color = pixie.Color(font_color[0] / 255, font_color[1] / 255, font_color[2] / 255, 1)
@@ -80,7 +79,7 @@ def generate_color_card(color: dict) -> pixie.Image:
     return img
 
 
-def add_qrcode(target_path: str, color: dict):
+def add_qrcode(color_card: pixie.Image, color: dict):
     qr = QRCode(error_correction=qrcode.constants.ERROR_CORRECT_L, box_size=8)
 
     hex_clean = color["hex"][1:].lower()
@@ -91,27 +90,23 @@ def add_qrcode(target_path: str, color: dict):
                                module_drawer=RoundedModuleDrawer(), eye_drawer=RoundedModuleDrawer(),
                                color_mask=SolidFillColorMask((font_color[0], font_color[1], font_color[2], 0),
                                                              (font_color[0], font_color[1], font_color[2], 255)))
-
-    target_img = Image.open(target_path)
+    pic = os.path.join(data_dir,'target.png')
+    color_card.write_file(pic)
+    target_img = Image.open(pic)
     target_img.paste(qrcode_img, (1215, 618), qrcode_img)
-    target_img.save(target_path)
+    return target_img
 
-
-@command(tokens=["color", "颜色", "色", "来个颜色", "来个色卡", "色卡"])
-async def reply_color_rand(message: RobotMessage):
-    cached_prefix = get_cached_prefix('Color-Rand')
-    img_path = f"{cached_prefix}.png"
-
+color_handler = on_command('color',rule=to_me(),aliases={"颜色", "色", "来个颜色", "来个色卡", "色卡"},priority=Constants.MISC_PRIOR,block=True)
+@color_handler.handle()
+async def color_handle():
     load_colors()
     picked_color = random.choice(_colors)
 
-    color_card = generate_color_card(picked_color)
-    color_card.write_file(img_path)
-    add_qrcode(img_path, picked_color)
+    color_card = add_qrcode(generate_color_card(picked_color), picked_color)
 
     name = picked_color["name"]
     pinyin = picked_color["pinyin"]
     hex_text, rgb_text, hsv_text = transform_color(picked_color)
-
-    await message.reply(f"[Color] {name} {pinyin}\nHEX: {hex_text}\nRGB: {rgb_text}\nHSV: {hsv_text}",
-                        img_path=png2jpg(img_path), modal_words=False)
+    img_byte = BytesIO()
+    color_card.save(img_byte,format='PNG')
+    await AggregatedMessageFactory([MessageFactory(f"[Color] {name} {pinyin}\nHEX: {hex_text}\nRGB: {rgb_text}\nHSV: {hsv_text}"),MessageFactory(SAAImage(img_byte))]).finish()

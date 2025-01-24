@@ -1,2 +1,5 @@
 /config.yaml
 /lib/
+/.venv/
+.env*
+*.log

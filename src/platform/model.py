@@ -48,8 +48,6 @@ class CompetitivePlatform(abc.ABC):
             return "查询异常"
 
         upcoming_contests, finished_contest = contest_list
-        upcoming_contests.sort(key=lambda c: c.start_time)
-
         info = ""
 
         if len(upcoming_contests) == 0:
@@ -59,3 +57,7 @@ class CompetitivePlatform(abc.ABC):
         info += "\n\n上一场已结束的比赛:\n" + finished_contest.format()
 
         return info
+    
+    @classmethod
+    def get_contest(cls,contestId: str) -> Contest:
+        pass

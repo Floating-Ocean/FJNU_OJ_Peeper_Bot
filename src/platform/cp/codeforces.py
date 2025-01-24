@@ -510,3 +510,15 @@ class Codeforces(CompetitivePlatform):
         standings_info = [Codeforces._format_standing(standing, contest_id) for standing in standings['rows']]
 
         return contest_info, standings_info
+
+    @classmethod
+    def get_contest(cls,contestId:str):
+        contest_list = Codeforces._fetch_contest_list_all()
+        contest = [Contest(
+            start_time=contest['startTimeSeconds'],
+            duration=contest['durationSeconds'],
+            tag=contest['id'],
+            name=contest['name'],
+            supplement=f"{contest['type']} 赛制"
+        ) for contest in contest_list if contest['phase'] == 'BEFORE' and contest['id'] == int(contestId)][0]
+        return contest
