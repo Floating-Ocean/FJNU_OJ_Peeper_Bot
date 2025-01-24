@@ -109,6 +109,6 @@ class RobotMessage:
 
 
 async def report_exception(message: RobotMessage, name: str, trace: str, info: str):
+    Constants.log.warn(f"[Operation failed] in module {name}.\n{info}")
     Constants.log.error(trace)
-    info = info.replace(".", ". ")
-    await message.reply(f"[Operation failed] in module {name}.\n\n{info}", modal_words=False)
+    await message.reply("出现未知异常，请联系管理员")

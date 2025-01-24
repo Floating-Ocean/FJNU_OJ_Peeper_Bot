@@ -83,7 +83,7 @@ class AtCoder(CompetitivePlatform):
             filtered_data = Clist.api("problem", resource_id=93, url__regex=filter_regex)
 
         if isinstance(filtered_data, int):
-            return -3
+            return filtered_data
 
         return random.choice(filtered_data) if len(filtered_data) > 0 else 0
 

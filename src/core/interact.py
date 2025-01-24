@@ -17,8 +17,11 @@ from src.platform.model import Contest
 
 _fixed_reply = {
     "ping": "pong",
-    "活着吗": "你猜",
-    "help": Constants.merged_help_content
+    "活着吗": "你猜捏",
+    "似了吗": "？",
+    "死了吗": "？？？",
+    "help": Constants.merged_help_content,
+    "帮助": Constants.merged_help_content
 }
 
 

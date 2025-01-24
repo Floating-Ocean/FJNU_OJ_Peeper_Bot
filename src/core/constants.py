@@ -8,12 +8,12 @@ class Constants:
     log = logging.get_logger()
     config = read(os.path.join(os.path.dirname(__file__), "..", "..", "config.yaml"))
 
-    core_version = "v3.1.0"
+    core_version = "v3.1.1"
 
     key_words = [
-        [["傻逼"], [
+        [["沙壁", "纸张", "挠蚕", "sb", "老缠", "nt"], [
             "谢谢夸奖", "反弹", "可能还真被你说对了", "嗯", "好的", "哼，你才是", "哈哈", "你可能说对了，你可能没说对",
-            "干什么"
+            "干什么", "你干嘛害哎呦"
         ]],
         [["性别"], ["盲猜我的性别是武装直升机", "我也不知道我的性别是啥"]],
         [["干嘛", "干什么"], ["how", "what", "which", "why", "whether", "when"]],
@@ -24,7 +24,7 @@ class Constants:
         [["似"], ["看上去我还活着", "似了"]],
         [["go"], ["哎你们这些go批", "还在go还在go"]],
         [["春日影"], ["为什么要演奏春日影"]],
-        [["乌蒙"], ["哎你们这些wmc", "awmc", "我们乌蒙怎么你了"]]
+        [["乌蒙"], ["哎你们这些wmc", "awmc", "我们乌蒙怎么你了", "要开始了哟"]]
     ]
 
     modal_words = ["喵", "呢", "捏", "qaq"]
@@ -50,20 +50,20 @@ class Constants:
         'codeforces': '\n'.join([
             "/cf info [handle]: 获取用户名为 handle 的 Codeforces 基础用户信息.",
             "/cf recent [handle] (count): 获取用户名为 handle 的 Codeforces 最近 count 发提交，count 默认为 5.",
-            "/cf pick [标签|all] (难度) (New): 从 Codeforces 上随机选题. 标签中间不能有空格，支持模糊匹配. 难度为整数或一个区间，格式为xxx-xxx"
-            ". 末尾加上 New 参数则会忽视 P1000A 以前的题.",
-            "/cf contest: 列出最近的 Codeforces 比赛.",
-            "/cf tag: 列出 Codeforces 上的所有题目标签."
+            "/cf pick [标签|all] (难度) (new): 从 Codeforces 上随机选题. 标签中间不能有空格，支持模糊匹配. 难度为整数或一个区间，格式为xxx-xxx"
+            ". 末尾加上 new 参数则会忽视 P1000A 以前的题.",
+            "/cf contests: 列出最近的 Codeforces 比赛.",
+            "/cf tags: 用于列出 codeforces 平台的 tags (辅助 pick)."
         ]),
         'atcoder': '\n'.join([
             "/atc info [handle]: 获取用户名为 handle 的 AtCoder 基础用户信息.",
             "/atc pick [比赛类型|all] (难度): 从 AtCoder 上随机选题，基于 Clist API"
             ". 比赛类型可选参数为 [abc, arc, agc, ahc, common, sp, all]"
             "，其中 common 涵盖前四个类型，而 sp 则是排除前四个类型. 难度为整数或一个区间，格式为xxx-xxx.",
-            "/atc contest: 列出最近的 AtCoder 比赛."
+            "/atc contests: 列出最近的 AtCoder 比赛."
         ]),
         'nowcoder': '\n'.join([
-            "/nk contest: 列出最近的 NowCoder 比赛."
+            "/nk contests: 列出最近的 NowCoder 比赛."
         ]),
         'random': '\n'.join([
             "/rand [num/int] [min] [max]: 在 [min, max] 中选择一个随机数，值域 [-1e9, 1e9].",
