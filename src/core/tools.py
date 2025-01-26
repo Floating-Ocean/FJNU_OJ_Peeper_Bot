@@ -23,6 +23,7 @@ from requests.adapters import HTTPAdapter
 
 from src.core.constants import Constants
 
+from nonebot_plugin_saa import MessageFactory,AggregatedMessageFactory
 
 def run_shell(shell: str) -> str:
     Constants.log.info(shell)
@@ -52,12 +53,11 @@ def fetch_html(url: str, payload: dict = None) -> Element:
     headers = {
         'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
                       "Chrome/91.0.4472.77 Safari/537.36",
-        'Connection': 'close'
     }
     response = requests.get(url, headers=headers, json=payload)
 
     if response.status_code != 200:
-        raise ConnectionError(f"Filed to connect {url}, code {response.status_code}.")
+        raise ConnectionError(f"Filed to connect {url}, code {response.status_code}. with message {response.text}")
 
     return etree.HTML(response.text)
 
@@ -294,3 +294,15 @@ class SSLAdapter(HTTPAdapter):
         ssl_context.maximum_version = ssl.TLSVersion.TLSv1_2  # 最大版本设置成1.2
         kwargs["ssl_context"] = ssl_context
         return super().init_poolmanager(*args, **kwargs)
+
+async def reply_help(module,content="",isAdmin=False):
+    messages = []
+    if content != "":
+        messages.append(MessageFactory(content))
+    if isAdmin:
+        messages.append(MessageFactory(f"[{module} (admin)]"))
+        messages.append(MessageFactory(Constants.help_contents[f'{module} (admin)']))
+    else:
+        messages.append(MessageFactory(f"[{module}]"))
+        messages.append(MessageFactory(Constants.help_contents[f'{module}']))
+    await AggregatedMessageFactory(messages).finish()
