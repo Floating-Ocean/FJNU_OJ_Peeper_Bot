@@ -10,7 +10,7 @@ from nonebot_plugin_saa import MessageFactory,AggregatedMessageFactory,Image
 from io import BytesIO
 
 from src.core.constants import Constants
-from src.core.tools import check_is_int, get_simple_qrcode, png2jpg,help
+from src.core.tools import check_is_int, get_simple_qrcode, png2jpg,reply_help
 from src.platform.cp.codeforces import Codeforces
 
 
@@ -147,7 +147,7 @@ help_trigger = on_command('cf',rule=to_me(),aliases={'codeforces'},priority=Cons
 
 @help_trigger.handle()
 async def handle_help():
-    await help("Codeforces")
+    await reply_help("Codeforces")
 
 @regular_handler.handle()
 @fullname_handler.handle()
@@ -198,8 +198,10 @@ async def handle_regular(command:tuple[str,str]=Command(),message:Message = Comm
                                     f"{func_prefix} all 1800").finish()
         elif func == "tags" or func == 'tag':
             await send_prob_tags()
+        else:
+            await reply_help("Codeforces","",False)
     except MatcherException:
         raise
     except Exception as e:
         logger.exception(e.__str__)
-        await help("Codeforces","出现未知异常。请联系管理员。",False)
+        await reply_help("Codeforces","出现未知异常。请联系管理员。",False)

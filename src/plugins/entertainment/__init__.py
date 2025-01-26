@@ -1,0 +1,1 @@
+from .pick_color import register

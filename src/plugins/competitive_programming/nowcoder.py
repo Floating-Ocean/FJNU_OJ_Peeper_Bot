@@ -14,12 +14,15 @@ from nonebot_plugin_saa import MessageFactory,AggregatedMessageFactory,Image
 from src.core.constants import Constants
 from src.core.tools import check_is_int
 from src.platform.cp.nowcoder import NowCoder
-from src.core.tools import help
+from src.core.tools import reply_help
 
 __nk_version__ = "v1.1.0"
 
 
 supported_commands = ['info','user','contests']
+
+def register_module():
+    pass
 
 regular_handler = on_command(('nk','help'),rule=to_me(),
                              aliases = {('nk', command) for command in supported_commands},
@@ -37,7 +40,7 @@ help_trigger = on_command('nowcoder',rule=to_me(),aliases={'nk','nc'},priority=C
 
 @help_trigger.handle()
 async def handle_help():
-    await help("Nowcoder")
+    await reply_help("Nowcoder")
 
 async def send_user_info(handle: str):
     await MessageFactory(f"正在查询 {handle} 的 NowCoder 平台信息，请稍等").send()
@@ -89,8 +92,10 @@ async def handle_regular(command:tuple[str,str]=Command(),message:Message = Comm
 
         elif func == "contest" or func == "contests":
             await send_contest()
+        else:
+            reply_help("Nowcoder","",False)
     except MatcherException:
         raise
     except Exception as e:
         logger.exception(e.__str__)
-        await help("Nowcoder","出现未知异常。请联系管理员。",False)
+        await reply_help("Nowcoder","出现未知异常。请联系管理员。",False)

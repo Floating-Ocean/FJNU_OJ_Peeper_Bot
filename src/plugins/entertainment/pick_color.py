@@ -6,6 +6,7 @@ from colorsys import rgb_to_hsv
 
 from nonebot import require,on_command
 from nonebot.rule import to_me
+
 require("nonebot_plugin_localstore")
 import nonebot_plugin_localstore as store
 from nonebot_plugin_saa import AggregatedMessageFactory,MessageFactory
@@ -25,6 +26,11 @@ __color_rand_version__ = "v1.1.1"
 
 _colors = []
 data_dir = store.get_plugin_data_dir()
+color_handler = on_command('color',rule=to_me(),aliases={"颜色", "色", "来个颜色", "来个色卡", "色卡"},priority=Constants.MISC_PRIOR,block=True)
+
+# dummy function
+def register():
+    pass
 
 def load_colors():
     with open(os.path.join(data_dir, "chinese_traditional.json"), 'r', encoding="utf-8") as f:
@@ -96,7 +102,6 @@ def add_qrcode(color_card: pixie.Image, color: dict):
     target_img.paste(qrcode_img, (1215, 618), qrcode_img)
     return target_img
 
-color_handler = on_command('color',rule=to_me(),aliases={"颜色", "色", "来个颜色", "来个色卡", "色卡"},priority=Constants.MISC_PRIOR,block=True)
 @color_handler.handle()
 async def color_handle():
     load_colors()

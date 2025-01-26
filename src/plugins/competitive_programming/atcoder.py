@@ -13,7 +13,7 @@ from io import BytesIO
 from src.core.constants import Constants
 from src.core.tools import get_simple_qrcode, png2jpg
 from src.platform.cp.atcoder import AtCoder
-from src.core.tools import help
+from src.core.tools import reply_help
 
 import re
 import traceback
@@ -22,6 +22,9 @@ import traceback
 __atc_version__ = "v1.2.0"
 
 supported_commands = ['pick']#'info','user', 'contests', 'pick']
+
+def register_module():
+    pass
 
 async def send_user_info(handle: str):
     await MessageFactory(f"[Atcoder] 正在查询 {handle} 的 AtCoder 平台信息，请稍等...").send()
@@ -96,7 +99,7 @@ help_trigger = on_command('atc',rule=to_me(),aliases={'atcoder'},priority=Consta
 
 @help_trigger.handle()
 async def handle_help():
-    await help("Atcoder")
+    await reply_help("Atcoder")
 
 @regular_handler.handle()
 @fullname_handler.handle()
@@ -126,9 +129,9 @@ async def handle_regular(command:tuple[str,str]=Command(),message:Message = Comm
             await send_contest()
 
         else:
-            await help("Atcoder","",False)
+            await reply_help("Atcoder","",False)
     except MatcherException:
         raise
     except Exception as e:
         logger.exception(e.__str__)
-        await help("Atcoder","出现未知异常。请联系管理员。",False)
+        await reply_help("Atcoder","出现未知异常。请联系管理员。",False)
