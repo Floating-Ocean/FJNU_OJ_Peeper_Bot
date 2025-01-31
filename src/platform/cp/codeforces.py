@@ -3,7 +3,7 @@ import random
 import re
 import time
 
-from src.core.tools import fetch_json, format_timestamp, get_week_start_timestamp, get_today_start_timestamp, \
+from src.core.tools import fetch_url_json, format_timestamp, get_week_start_timestamp, get_today_start_timestamp, \
     format_timestamp_diff, format_seconds, format_int_delta, decode_range
 from src.lib.cf_rating_calc import PredictResult, Contestant, predict
 from src.platform.model import CompetitivePlatform, Contest
@@ -33,7 +33,7 @@ class Codeforces(CompetitivePlatform):
         if len(kwargs) > 0:
             payload = '&'.join([f'{key.strip("_")}={val}' for key, val in kwargs.items()])
             url += f"?{payload}"
-        json_data = fetch_json(url, throw=False)
+        json_data = fetch_url_json(url, throw=False)
 
         if isinstance(json_data, int) or json_data['status'] != "OK":
             if isinstance(json_data, int) and json_data != 400:

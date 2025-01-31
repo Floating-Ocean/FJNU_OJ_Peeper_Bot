@@ -3,7 +3,7 @@ from datetime import datetime
 
 from lxml.etree import Element
 
-from src.core.tools import fetch_html, patch_https_url, fetch_json, format_int_delta
+from src.core.tools import fetch_url_element, patch_https_url, fetch_url_json, format_int_delta
 from src.platform.model import CompetitivePlatform, Contest
 
 
@@ -21,7 +21,7 @@ class NowCoder(CompetitivePlatform):
 
     @classmethod
     def _api(cls, url: str) -> list[dict] | int:
-        json_data = fetch_json(url, throw=False, method='get')
+        json_data = fetch_url_json(url, throw=False, method='get')
 
         if isinstance(json_data, int) or json_data['msg'] != "OK":
             if isinstance(json_data, int):
@@ -34,7 +34,7 @@ class NowCoder(CompetitivePlatform):
         # 爬取所有页
         page_count = json_data['data']['pageInfo']['pageCount']
         for page in range(2, page_count + 1):
-            json_data = fetch_json(f"{url}&page={page}", throw=False, method='get')
+            json_data = fetch_url_json(f"{url}&page={page}", throw=False, method='get')
             if isinstance(json_data, int) or json_data['msg'] != "OK":
                 return -1
             all_data.extend(list(json_data['data']['dataList']))
@@ -84,7 +84,7 @@ class NowCoder(CompetitivePlatform):
 
     @classmethod
     def _fetch_user_rating(cls, handle: str) -> str:
-        html = fetch_html(f"https://ac.nowcoder.com/acm/contest/profile/{handle}")
+        html = fetch_url_element(f"https://ac.nowcoder.com/acm/contest/profile/{handle}")
         rating = int(html.xpath("//div[contains(@class, 'state-num rate-score')]/text()")[0])
         return cls._format_rating(rating)
 
@@ -133,7 +133,7 @@ class NowCoder(CompetitivePlatform):
         upcoming_contests: list[Contest] = []
         finished_contests: list[Contest] = []
         for category_id in [13, 14]:
-            html = fetch_html(f"https://ac.nowcoder.com/acm/contest/vip-index?topCategoryFilter={category_id}")
+            html = fetch_url_element(f"https://ac.nowcoder.com/acm/contest/vip-index?topCategoryFilter={category_id}")
             js_current = html.xpath("//div[@class='platform-mod js-current']//div[@class='platform-item-cont']")
             js_end = html.xpath("//div[@class='platform-mod js-end']//div[@class='platform-item-cont']")
             upcoming_contests.extend([Contest(
@@ -160,7 +160,7 @@ class NowCoder(CompetitivePlatform):
 
     @classmethod
     def get_user_info(cls, handle: str) -> tuple[str, str | None]:
-        html = fetch_html(f"https://ac.nowcoder.com/acm/contest/profile/{handle}")
+        html = fetch_url_element(f"https://ac.nowcoder.com/acm/contest/profile/{handle}")
 
         sections = []
 

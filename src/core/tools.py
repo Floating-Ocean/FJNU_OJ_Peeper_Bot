@@ -19,6 +19,7 @@ from lxml.etree import Element
 from qrcode.image.styledpil import StyledPilImage
 from qrcode.image.styles.moduledrawers.pil import RoundedModuleDrawer
 from qrcode.main import QRCode
+from requests import Response
 from requests.adapters import HTTPAdapter
 
 from src.core.constants import Constants
@@ -48,22 +49,18 @@ def run_async(loop: AbstractEventLoop, func: any):
     return task.result()
 
 
-def fetch_html(url: str, payload: dict = None) -> Element:
-    headers = {
-        'User-Agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) "
-                      "Chrome/91.0.4472.77 Safari/537.36",
-        'Connection': 'close'
-    }
-    response = requests.get(url, headers=headers, json=payload)
+def fetch_url(url: str, inject_headers: dict = None, payload: dict = None, throw: bool = True,
+              method: str = 'post') -> Response | int:
+    proxies = {}  # 配置代理
+    if ('http_proxy' in Constants.config and
+            Constants.config['http_proxy'] is not None and len(Constants.config['http_proxy']) > 0):
+        proxies['http'] = Constants.config['http_proxy']
+    if ('https_proxy' in Constants.config and
+            Constants.config['https_proxy'] is not None and len(Constants.config['https_proxy']) > 0):
+        proxies['https'] = Constants.config['https_proxy']
+    if len(proxies) == 0:
+        proxies = None
 
-    if response.status_code != 200:
-        raise ConnectionError(f"Filed to connect {url}, code {response.status_code}.")
-
-    return etree.HTML(response.text)
-
-
-def fetch_json(url: str, inject_headers: dict = None, payload: dict = None, throw: bool = True,
-               method: str = 'post') -> dict | int:
     code = 200
     try:
         headers = {
@@ -75,23 +72,52 @@ def fetch_json(url: str, inject_headers: dict = None, payload: dict = None, thro
             for k, v in inject_headers.items():
                 headers[k] = v
 
+        method = method.lower()
         if method == 'post':
-            response = requests.post(url, headers=headers, json=payload)
+            response = requests.post(url, headers=headers, proxies=proxies, json=payload)
         elif method == 'get':
-            response = requests.get(url, headers=headers)
+            response = requests.get(url, headers=headers, proxies=proxies)
         else:
             raise ValueError("Parameter method must be either 'post' or 'get'.")
 
         code = response.status_code
+        Constants.log.info(f"Connected to {url}, code {code}.")
 
         if code != 200 and throw:
             raise ConnectionError(f"Filed to connect {url}, code {code}.")
 
-        return response.json()
+        return response
     except Exception as e:
         if throw:
             raise e
+        Constants.log.warn("A fetch exception ignored.")
+        Constants.log.warn(e)
         return code
+
+
+def fetch_url_text(url: str, inject_headers: dict = None, payload: dict = None, throw: bool = True,
+                   method: str = 'post') -> str | int:
+    response = fetch_url(url, inject_headers, payload, throw, method)
+
+    if isinstance(response, int):
+        return response
+
+    return response.text
+
+
+def fetch_url_json(url: str, inject_headers: dict = None, payload: dict = None, throw: bool = True,
+                   method: str = 'post') -> dict | int:
+    response = fetch_url(url, inject_headers, payload, throw, method)
+
+    if isinstance(response, int):
+        return response
+
+    return response.json()
+
+
+def fetch_url_element(url: str, payload: dict = None) -> Element:
+    response = fetch_url(url, payload, method='get')
+    return etree.HTML(response.text)
 
 
 def format_timestamp_diff(diff: int) -> str:

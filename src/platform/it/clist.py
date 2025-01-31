@@ -1,7 +1,7 @@
 from urllib.parse import quote
 
 from src.core.constants import Constants
-from src.core.tools import fetch_json
+from src.core.tools import fetch_url_json
 
 
 class Clist:
@@ -18,8 +18,8 @@ class Clist:
                 payload = '&'.join([f'{key.strip("_")}='
                                     f'{quote(str(val))}' for key, val in kwargs.items()])
                 route += f"?{payload}"
-            json_data = fetch_json(f"https://clist.by{route}", throw=False, method='get',
-                                   inject_headers={"Authorization": f"{cls._api_key}"})
+            json_data = fetch_url_json(f"https://clist.by{route}", throw=False, method='get',
+                                       inject_headers={"Authorization": f"{cls._api_key}"})
 
             if isinstance(json_data, int):
                 return -1

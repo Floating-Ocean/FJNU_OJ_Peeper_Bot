@@ -1,7 +1,7 @@
 import random
 from datetime import datetime
 
-from src.core.tools import fetch_html, fetch_json, format_int_delta, patch_https_url, decode_range
+from src.core.tools import fetch_url_element, fetch_url_json, format_int_delta, patch_https_url, decode_range
 from src.platform.cp.codeforces import Codeforces
 from src.platform.it.clist import Clist
 from src.platform.model import CompetitivePlatform, Contest
@@ -34,7 +34,7 @@ class AtCoder(CompetitivePlatform):
 
     @classmethod
     def get_contest_list(cls, overwrite_tag: bool = False) -> tuple[list[Contest], Contest] | None:
-        html = fetch_html("https://atcoder.jp/contests/")
+        html = fetch_url_element("https://atcoder.jp/contests/")
         contest_table_upcoming = html.xpath("//div[@id='contest-table-upcoming']//tbody/tr")
         contest_table_recent = html.xpath("//div[@id='contest-table-recent']//tbody/tr")
 
@@ -89,7 +89,7 @@ class AtCoder(CompetitivePlatform):
 
     @classmethod
     def get_user_info(cls, handle: str) -> tuple[str, str | None]:
-        html = fetch_html(f"https://atcoder.jp/users/{handle}")
+        html = fetch_url_element(f"https://atcoder.jp/users/{handle}")
 
         sections = []
 
@@ -133,7 +133,7 @@ class AtCoder(CompetitivePlatform):
     @classmethod
     def get_user_last_contest(cls, handle: str) -> str:
         url = f"https://atcoder.jp/users/{handle}/history/json"
-        json_data = fetch_json(url, throw=False, method='get')
+        json_data = fetch_url_json(url, throw=False, method='get')
 
         if isinstance(json_data, int):
             return "查询异常"

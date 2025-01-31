@@ -2,17 +2,15 @@ import random
 import re
 import traceback
 
-import requests
-
 from src.core.command import command
 from src.core.constants import Constants
-from src.core.tools import check_is_int, fetch_json
+from src.core.tools import check_is_int, fetch_url_json, fetch_url_text
 from src.module.atc import reply_atc_request
 from src.module.cf import reply_cf_request
 from src.module.color_rand import reply_color_rand
 from src.module.message import report_exception, RobotMessage
 
-__rand_version__ = "v2.1.1"
+__rand_version__ = "v2.1.2"
 
 
 def register_module():
@@ -22,13 +20,12 @@ def register_module():
 def get_rand_num(range_min: int, range_max: int) -> int:
     url = (f"https://www.random.org/integers/?num=1&"
            f"min={range_min}&max={range_max}&col=1&base=10&format=plain&rnd=new")
-    response = requests.get(url)
+    data = fetch_url_text(url, throw=False, method='get')
 
-    if response.status_code != 200:
-        Constants.log.info(f"failed to get random number, code {response.status_code}.")
+    if isinstance(data, int):
+        Constants.log.info(f"failed to get random number, code {data}.")
         return random.randint(range_min, range_max)
 
-    data = response.text
     return int(data)
 
 
@@ -36,13 +33,12 @@ def get_rand_seq(range_max: int) -> str:
     url = (f"https://www.random.org/integer-sets/?sets=1&"
            f"num={range_max}&min=1&max={range_max}&seqnos=off&commas=on&order=index&"
            f"format=plain&rnd=new")
-    response = requests.get(url)
+    data = fetch_url_text(url, throw=False, method='get')
 
-    if response.status_code != 200:
-        Constants.log.info(f"failed to get random sequence, code {response.status_code}.")
+    if isinstance(data, int):
+        Constants.log.info(f"failed to get random sequence, code {data}.")
         return ", ".join([str(x) for x in random.sample(range(1, range_max + 1), range_max)])
 
-    data = response.text
     return data
 
 
@@ -121,7 +117,7 @@ async def reply_rand_request(message: RobotMessage):
 
 @command(tokens=["hitokoto", "来句", "来一句", "来句话", "来一句话"])
 async def reply_hitokoto(message: RobotMessage):
-    json = fetch_json("https://v1.hitokoto.cn/")
+    json = fetch_url_json("https://v1.hitokoto.cn/")
     content = json['hitokoto']
     where = json['from']
     author = json['from_who'] if json['from_who'] else ""

@@ -1,6 +1,6 @@
 from src.core.command import command
 from src.core.constants import Constants
-from src.core.tools import fetch_json
+from src.core.tools import fetch_url_json
 from src.module.message import RobotMessage
 
 _api_key = Constants.config["uptime_apikey"]
@@ -10,44 +10,42 @@ def register_module():
     pass
 
 
-def fetch_status(check_url: str) -> int:
-    data = fetch_json("https://api.uptimerobot.com/v2/getMonitors",
-                      {"api_key": _api_key})
-
-    if data["stat"] != "ok":
-        return -1  # API 异常
-
-    monitors = data["monitors"]
-    for monitor in monitors:
-        if monitor["url"] == check_url:
-            return 1 if monitor["status"] == 2 else 0  # 1 活着, 0 似了
-
-    return -1
-
-
 @command(tokens=['alive'])
 async def alive(message: RobotMessage):
     await message.reply("正在查询服务状态，请稍等")
+    data = fetch_url_json("https://api.uptimerobot.com/v2/getMonitors",
+                          payload={"api_key": _api_key})
 
-    status = [
-        fetch_status("https://fjnuacm.top"),
-        fetch_status("https://codeforces.com"),
-        fetch_status("https://atcoder.jp")
+    checker_urls = [
+        "https://fjnuacm.top",
+        "https://codeforces.com",
+        "https://atcoder.jp",
+        "https://www.luogu.com.cn",
+        "https://nowcoder.com",
+        "https://vjudge.net"
     ]
+    checker_name = ["FjnuOJ", "Codeforces", "AtCoder", "Luogu", "NowCoder", "VJudge"]
+    checker_results = [-1] * len(checker_urls)
 
-    if min(status) == -1:
+    if data["stat"] == "ok":
+        monitors = data["monitors"]
+        for monitor in monitors:
+            url = monitor["url"]
+            if url in checker_urls:
+                checker_results[checker_urls.index(url)] = 1 if monitor["status"] == 2 else 0  # 1 活着, 0 似了
+
+    if min(checker_results) == -1:
         await message.reply("[UptimeRobot Api] Api 异常")
         return
 
     info = "[UptimeRobot Api] "
-    if min(status) == 1:
+    if min(checker_results) == 1:
         info += "所有服务均正常\n"
     else:
         info += "部分服务存在异常\n"
 
-    services = ["Fjnuacm OJ", "Codeforces", "Atcoder"]
-    for i in range(3):
-        status_text = "正常" if status[i] == 1 else "异常"
-        info += f"\n[{services[i]}] {status_text}"
+    for i in range(len(checker_results)):
+        status_text = "正常" if checker_results[i] == 1 else "异常"
+        info += f"\n[{checker_name[i]}] {status_text}"
 
     await message.reply(info, modal_words=False)
