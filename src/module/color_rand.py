@@ -14,6 +14,7 @@ from qrcode.main import QRCode
 from src.core.command import command
 from src.core.constants import Constants
 from src.core.output_cached import get_cached_prefix
+from src.core.painter import draw_round_rect, draw_text, choose_text_color
 from src.core.tools import png2jpg
 from src.module.message import RobotMessage
 
@@ -33,27 +34,6 @@ def load_colors():
         _colors.extend(json.load(f))
 
 
-def choose_text_color(color: dict) -> tuple[int, int, int]:
-    luminance = 0.299 * color["RGB"][0] + 0.587 * color["RGB"][1] + 0.114 * color["RGB"][2]
-    return (18, 18, 18) if luminance > 128 else (252, 252, 252)
-
-
-def draw_text(img: pixie.Image, content: str, x: int, y: int, font_weight: str, font_size: int, color: dict) -> int:
-    font = pixie.read_font(os.path.join(_lib_path, "data", f"OPPOSans-{font_weight}.ttf"))
-    font.size = font_size
-    font_color = choose_text_color(color)
-    font.paint.color = pixie.Color(font_color[0] / 255, font_color[1] / 255, font_color[2] / 255, 1)
-    img.fill_text(font, content, pixie.translate(x, y))
-    return font.layout_bounds(content).x
-
-
-def draw_round_rect(image: pixie.Image, paint: pixie.Paint, x: int, y: int, width: int, height: int, round_size: float):
-    ctx = image.new_context()
-    ctx.fill_style = paint
-    ctx.rounded_rect(x, y, width, height, round_size, round_size, round_size, round_size)
-    ctx.fill()
-
-
 def transform_color(color: dict) -> tuple[str, str, str]:
     hex_text = "#FF" + color["hex"].upper()[1:]
     rgb_text = ", ".join([f"{val}" for val in color["RGB"]])
@@ -64,19 +44,26 @@ def transform_color(color: dict) -> tuple[str, str, str]:
 
 def generate_color_card(color: dict) -> pixie.Image:
     hex_text, rgb_text, hsv_text = transform_color(color)
+
     img = pixie.Image(1664, 1040)
     img.fill(pixie.Color(0, 0, 0, 1))
+
     paint_bg = pixie.Paint(pixie.SOLID_PAINT)
-    paint_bg.color = pixie.Color(color["RGB"][0] / 255, color["RGB"][1] / 255, color["RGB"][2] / 255, 1.0)
+    paint_bg.color = pixie.Color(color["RGB"][0] / 255, color["RGB"][1] / 255, color["RGB"][2] / 255, 1)
     draw_round_rect(img, paint_bg, 32, 32, 1600, 976, 96)
-    draw_text(img, f"Color Collect - {color['pinyin']}", 144 + 32, 120 + 32, 'H', 48, color)
-    draw_text(img, color['name'], 144 + 32, 232 + 32, 'H', 144, color)
-    hex_width = draw_text(img, hex_text, 144 + 32, 472 + 32, 'M', 72, color)
-    rgb_width = draw_text(img, rgb_text, 144 + 32, 616 + 32, 'M', 72, color)
-    hsv_width = draw_text(img, hsv_text, 144 + 32, 760 + 32, 'M', 72, color)
-    draw_text(img, "HEX", 144 + hex_width + 32 + 32, 472 + 32 + 24, 'R', 48, color)
-    draw_text(img, "RGB", 144 + rgb_width + 32 + 32, 616 + 32 + 24, 'R', 48, color)
-    draw_text(img, "HSV", 144 + hsv_width + 32 + 32, 760 + 32 + 24, 'R', 48, color)
+
+    text_color_dict = choose_text_color(color)
+    text_color = pixie.Color(text_color_dict[0] / 255, text_color_dict[1] / 255, text_color_dict[2] / 255, 1)
+
+    draw_text(img, f"Color Collect - {color['pinyin']}", 144 + 32, 120 + 32, 'H', 48, text_color)
+    draw_text(img, color['name'], 144 + 32, 232 + 32, 'H', 144, text_color)
+    hex_width = draw_text(img, hex_text, 144 + 32, 472 + 32, 'M', 72, text_color)
+    rgb_width = draw_text(img, rgb_text, 144 + 32, 616 + 32, 'M', 72, text_color)
+    hsv_width = draw_text(img, hsv_text, 144 + 32, 760 + 32, 'M', 72, text_color)
+    draw_text(img, "HEX", 144 + hex_width + 32 + 32, 472 + 32 + 24, 'R', 48, text_color)
+    draw_text(img, "RGB", 144 + rgb_width + 32 + 32, 616 + 32 + 24, 'R', 48, text_color)
+    draw_text(img, "HSV", 144 + hsv_width + 32 + 32, 760 + 32 + 24, 'R', 48, text_color)
+
     return img
 
 

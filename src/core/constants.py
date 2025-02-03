@@ -8,7 +8,7 @@ class Constants:
     log = logging.get_logger()
     config = read(os.path.join(os.path.dirname(__file__), "..", "..", "config.yaml"))
 
-    core_version = "v3.1.2"
+    core_version = "v3.2.0"
 
     key_words = [
         [["沙壁", "纸张", "挠蚕", "sb", "老缠", "nt"], [
@@ -48,7 +48,8 @@ class Constants:
             "/添加(来只) [what]: 添加一个类别为 what 的表情包，需要管理员审核."
         ]),
         'codeforces': '\n'.join([
-            "/cf info [handle]: 获取用户名为 handle 的 Codeforces 基础用户信息.",
+            "/cf id [handle]: 获取用户名为 handle 的 Codeforces 基础用户信息卡片.",
+            "/cf info [handle]: 获取用户名为 handle 的 Codeforces 详细用户信息.",
             "/cf recent [handle] (count): 获取用户名为 handle 的 Codeforces 最近 count 发提交，count 默认为 5.",
             "/cf pick [标签|all] (难度) (new): 从 Codeforces 上随机选题. 标签中间不能有空格，支持模糊匹配. 难度为整数或一个区间，格式为xxx-xxx"
             ". 末尾加上 new 参数则会忽视 P1000A 以前的题.",

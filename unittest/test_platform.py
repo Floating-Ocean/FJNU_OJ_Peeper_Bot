@@ -49,6 +49,13 @@ class Platform(unittest.TestCase):
         print(p)
         self.assertIsNotNone(p)
 
+    def test_codeforces_user_card(self):
+        test_handles = ['floatingocean', 'qwedc001', 'jiangly', 'Lingyu0qwq', 'I_am_real_wx', 'BingYu2023', 'C10udz']
+        for handle in test_handles:
+            img = Codeforces.get_user_id_card(handle)
+            self.assertIsNotNone(img)
+            img.write_file(f"cf_user_card_{handle}.png")
+
 
 if __name__ == '__main__':
     unittest.main()

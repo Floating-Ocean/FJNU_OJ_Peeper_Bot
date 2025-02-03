@@ -24,7 +24,7 @@ async def alive(message: RobotMessage):
         "https://nowcoder.com",
         "https://vjudge.net"
     ]
-    checker_name = ["FjnuOJ", "Codeforces", "AtCoder", "Luogu", "NowCoder", "VJudge"]
+    checker_names = ["FjnuOJ", "Codeforces", "AtCoder", "Luogu", "NowCoder", "VJudge"]
     checker_results = [-1] * len(checker_urls)
 
     if data["stat"] == "ok":
@@ -46,6 +46,6 @@ async def alive(message: RobotMessage):
 
     for i in range(len(checker_results)):
         status_text = "正常" if checker_results[i] == 1 else "异常"
-        info += f"\n[{checker_name[i]}] {status_text}"
+        info += f"\n[{checker_names[i]}] {status_text}"
 
     await message.reply(info, modal_words=False)

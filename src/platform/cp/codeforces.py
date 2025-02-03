@@ -3,6 +3,9 @@ import random
 import re
 import time
 
+import pixie
+
+from src.core.painter import draw_round_rect, draw_text, apply_tint, draw_img, get_gradient_paint, darken_color
 from src.core.tools import fetch_url_json, format_timestamp, get_week_start_timestamp, get_today_start_timestamp, \
     format_timestamp_diff, format_seconds, format_int_delta, decode_range
 from src.lib.cf_rating_calc import PredictResult, Contestant, predict
@@ -13,17 +16,30 @@ class Codeforces(CompetitivePlatform):
     platform_name = "Codeforces"
     logo_url = "https://codeforces.org/s/24321/images/codeforces-sponsored-by-ton.png"
     rated_rks = {
-        (-float('inf'), 1200): 'N',  # Newbie
-        (1200, 1400): 'P',  # Pupil
-        (1400, 1600): 'S',  # Specialist
-        (1600, 1900): 'E',  # Expert
-        (1900, 2100): 'CM',  # Candidate Master
-        (2100, 2300): 'M',  # Master
-        (2300, 2400): 'IM',  # International Master
-        (2400, 2600): 'GM',  # Grandmaster
-        (2600, 3000): 'IGM',  # International Grandmaster
-        (3000, 4000): 'LGM',  # Legendary Grandmaster
-        (4000, float('inf')): 'T'  # The Ones Who Reach 4000, Like Tourist and Jiangly
+        (-float('inf'), 1200): 'N',
+        (1200, 1400): 'P',
+        (1400, 1600): 'S',
+        (1600, 1900): 'E',
+        (1900, 2100): 'CM',
+        (2100, 2300): 'M',
+        (2300, 2400): 'IM',
+        (2400, 2600): 'GM',
+        (2600, 3000): 'IGM',
+        (3000, 4000): 'LGM',
+        (4000, float('inf')): 'T'
+    }
+    rks_info = {
+        'N': ('Newbie', '#808080'),
+        'P': ('Pupil', '#008000'),
+        'S': ('Specialist', '#03a89e'),
+        'E': ('Expert', '#0000ff'),
+        'CM': ('Candidate Master', '#aa00aa'),
+        'M': ('Master', '#ff8c00'),
+        'IM': ('International Master', '#bbbb00'),
+        'GM': ('Grandmaster', '#ff0000'),
+        'IGM': ('International Grandmaster', '#ff0000'),
+        'LGM': ('Legendary Grandmaster', '#ff0000'),
+        'T': ('The Ones Who Reach 4000', '#ff0000'),
     }
 
     @classmethod
@@ -288,6 +304,52 @@ class Codeforces(CompetitivePlatform):
         return result
 
     @classmethod
+    def _format_social_info(cls, info: dict, i18n: tuple[str, str] = ("来自", "地球")) -> list[str]:
+        social_info, identity, name = [], [], []
+        if 'firstName' in info:
+            name.append(info['firstName'])
+        if 'lastName' in info:
+            name.append(info['lastName'])
+        if len(name) > 0:
+            identity.append(' '.join(name))
+        if 'city' in info:
+            identity.append(info['city'])
+        if 'country' in info:
+            identity.append(info['country'])
+        if len(identity) > 0:
+            social_info.append(', '.join(identity))
+        if 'organization' in info:
+            if len(info['organization']) == 0:  # meme
+                info['organization'] = i18n[1]
+            social_info.append(f"{i18n[0]} {info['organization']}")
+        return social_info
+
+    @classmethod
+    def _generate_user_card(cls, handle: str, social: str, rank: str, rating: int) -> pixie.Image:
+        img = pixie.Image(1664, 1040)
+        img.fill(pixie.Color(0, 0, 0, 1))
+
+        real_rk = next((rk for (l, r), rk in Codeforces.rated_rks.items() if l <= rating < r), 'N')
+        rk_color = cls.rks_info[real_rk][1]
+        paint_bg = get_gradient_paint(1600, 976, ["#fcfcfc", rk_color], [0.0, 1.0])
+        draw_round_rect(img, paint_bg, 32, 32, 1600, 976, 96)
+
+        bg_mask = pixie.Paint(pixie.SOLID_PAINT)
+        bg_mask.color = pixie.Color(1, 1, 1, 0.6)
+        mask_img = pixie.Image(1664, 1040)
+        draw_round_rect(mask_img, bg_mask, 32, 32, 1600, 976, 96)
+        img.draw(mask_img, blend_mode=pixie.NORMAL_BLEND)
+
+        text_color = darken_color(pixie.parse_color(rk_color), 0.2)
+        draw_img(img, "codeforces", 144 + 32, 120 + 6 + 32, (48, 48), text_color)
+        draw_text(img, f"Codeforces ID", 144 + 48 + 18 + 32, 120 + 32, 'H', 44, text_color)
+        draw_text(img, handle, 144 + 32, 208 + 32, 'H', 96, text_color)
+        draw_text(img, social, 144 + 32, 354 + 32, 'B', 28, text_color)
+        draw_text(img, rank, 144 + 32, 520 + 32, 'H', 44, text_color)
+        draw_text(img, f"{rating}", 144 - 10 + 32, 558 + 32, 'H', 256, text_color)
+        return img
+
+    @classmethod
     def get_contest_list(cls, overwrite_tag: bool = False) -> tuple[list[Contest], Contest] | None:
         contest_list = Codeforces._fetch_contest_list_all()
 
@@ -379,6 +441,30 @@ class Codeforces(CompetitivePlatform):
                 f"{next((rk for (l, r), rk in Codeforces.rated_rks.items() if l <= info['rating'] < r), 'N')}")
 
     @classmethod
+    def get_user_id_card(cls, handle: str) -> str | pixie.Image:
+        info = Codeforces._api('user.info', handles=handle)
+
+        if info == -1:
+            return "查询异常"
+        if info == 0 or len(info) == 0:
+            return "用户不存在"
+
+        info = info[-1]
+        sections = []
+
+        social = '. '.join(cls._format_social_info(info, ('From', 'Earth')))
+        if len(social) > 0:
+            social = f"{social}."
+
+        rating = 0
+        rank = "Unrated"
+        if 'rating' in info:
+            rating = info['rating']
+            rank = info['rank'].title()
+
+        return cls._generate_user_card(info['handle'], social, rank, rating)
+
+    @classmethod
     def get_user_info(cls, handle: str) -> tuple[str, str | None]:
         info = Codeforces._api('user.info', handles=handle)
 
@@ -390,31 +476,15 @@ class Codeforces(CompetitivePlatform):
         info = info[-1]
         sections = []
 
-        # 归属地
-        belong, home, name = [], [], []
-        if 'firstName' in info:
-            name.append(info['firstName'])
-        if 'lastName' in info:
-            name.append(info['lastName'])
-        if len(name) > 0:
-            home.append(' '.join(name))
-        if 'city' in info:
-            home.append(info['city'])
-        if 'country' in info:
-            home.append(info['country'])
-        if len(home) > 0:
-            belong.append(', '.join(home))
-        if 'organization' in info:
-            if len(info['organization']) == 0:  # meme
-                info['organization'] = '地球'
-            belong.append(f"来自 {info['organization']}")
-        if len(belong) > 0:
-            sections.append('\n'.join(belong))
+        # 社交信息
+        social = cls._format_social_info(info)
+        if len(social) > 0:
+            sections.append('\n'.join(social))
 
         # 平台上的信息
         rating = "0 Unrated"
         if 'rating' in info:
-            rating = (f"{info['rating']} {info['rank'].capitalize()} "
+            rating = (f"{info['rating']} {info['rank'].title()} "
                       f"(max. {info['maxRating']} {info['maxRank']})")
         platform = (f"比赛Rating: {rating}\n"
                     f"贡献: {info['contribution']}\n"
