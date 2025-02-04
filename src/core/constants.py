@@ -8,7 +8,7 @@ class Constants:
     log = logging.get_logger()
     config = read(os.path.join(os.path.dirname(__file__), "..", "..", "config.yaml"))
 
-    core_version = "v3.2.0"
+    core_version = "v3.2.1"
 
     key_words = [
         [["沙壁", "纸张", "挠蚕", "sb", "老缠", "nt"], [
@@ -57,13 +57,16 @@ class Constants:
             "/cf tags: 用于列出 codeforces 平台的 tags (辅助 pick)."
         ]),
         'atcoder': '\n'.join([
-            "/atc info [handle]: 获取用户名为 handle 的 AtCoder 基础用户信息.",
+            "/atc id [handle]: 获取用户名为 handle 的 AtCoder 基础用户信息卡片.",
+            "/atc info [handle]: 获取用户名为 handle 的 AtCoder 详细用户信息.",
             "/atc pick [比赛类型|all] (难度): 从 AtCoder 上随机选题，基于 Clist API"
             ". 比赛类型可选参数为 [abc, arc, agc, ahc, common, sp, all]"
             "，其中 common 涵盖前四个类型，而 sp 则是排除前四个类型. 难度为整数或一个区间，格式为xxx-xxx.",
             "/atc contests: 列出最近的 AtCoder 比赛."
         ]),
         'nowcoder': '\n'.join([
+            "/nk id [handle]: 获取用户名为 handle 的 NowCoder 基础用户信息卡片.",
+            "/nk info [handle]: 获取用户名为 handle 的 NowCoder 详细用户信息.",
             "/nk contests: 列出最近的 NowCoder 比赛."
         ]),
         'random': '\n'.join([
