@@ -1,6 +1,8 @@
 import random
 from datetime import datetime
 
+import pixie
+
 from src.core.tools import fetch_url_element, fetch_url_json, format_int_delta, patch_https_url, decode_range
 from src.platform.cp.codeforces import Codeforces
 from src.platform.it.clist import Clist
@@ -9,6 +11,19 @@ from src.platform.model import CompetitivePlatform, Contest
 
 class AtCoder(CompetitivePlatform):
     platform_name = "AtCoder"
+    rks_color = {
+        '10 Kyu': '#808080', '9 Kyu': '#808080',
+        '8 Kyu': '#804000', '7 Kyu': '#804000',
+        '6 Kyu': '#008000', '5 Kyu': '#008000',
+        '4 Kyu': '#00c0c0', '3 Kyu': '#00c0c0',
+        '2 Kyu': '#0000ff', '1 Kyu': '#0000ff',
+        '1 Dan': '#c0c000', '2 Dan': '#c0c000',
+        '3 Dan': '#ff8000', '4 Dan': '#ff8000',
+        '5 Dan': '#ff0000', '6 Dan': '#ff0000',
+        '7 Dan': '#ff0000', '8 Dan': '#ff0000',
+        '9 Dan': '#ff0000', '10 Dan': '#ff0000',
+        'King': '#ff0000'
+    }
 
     @classmethod
     def _extract_timestamp(cls, time_str: str) -> int:
@@ -33,25 +48,38 @@ class AtCoder(CompetitivePlatform):
         return f"为 {rating_str} 计分"
 
     @classmethod
+    def _format_social_info(cls, info: dict, i18n: tuple[str, str, str] = ("国家/地区", "出生年份", "来自")) -> list[str]:
+        social_info = []
+        tag_trans = {
+            "Country/Region": i18n[0],
+            "Birth Year": i18n[1],
+            "Affiliation": i18n[2]
+        }
+        for tag, trans in tag_trans.items():
+            if tag in info:
+                social_info.append(f"{trans} {info[tag]}")
+        return social_info
+
+    @classmethod
     def get_contest_list(cls, overwrite_tag: bool = False) -> tuple[list[Contest], Contest] | None:
         html = fetch_url_element("https://atcoder.jp/contests/")
         contest_table_upcoming = html.xpath("//div[@id='contest-table-upcoming']//tbody/tr")
         contest_table_recent = html.xpath("//div[@id='contest-table-recent']//tbody/tr")
 
         upcoming_contests = [Contest(
-            start_time=AtCoder._extract_timestamp(contest.xpath(".//td[1]/a/time/text()")[0]),
-            duration=AtCoder._extract_duration(contest.xpath(".//td[3]/text()")[0]),
-            tag=AtCoder.platform_name if overwrite_tag else contest.xpath(".//td[2]/a/@href")[0].split('/')[-1],
+            start_time=cls._extract_timestamp(contest.xpath(".//td[1]/a/time/text()")[0]),
+            duration=cls._extract_duration(contest.xpath(".//td[3]/text()")[0]),
+            tag=cls.platform_name if overwrite_tag else contest.xpath(".//td[2]/a/@href")[0].split('/')[-1],
             name=contest.xpath(".//td[2]/a/text()")[0],
-            supplement=AtCoder._format_rated_range(contest.xpath(".//td[4]/text()")[0])
+            supplement=cls._format_rated_range(contest.xpath(".//td[4]/text()")[0])
         ) for contest in contest_table_upcoming]
         finished_contest = Contest(
-            start_time=AtCoder._extract_timestamp(contest_table_recent[0].xpath(".//td[1]/a/time/text()")[0]),
-            duration=AtCoder._extract_duration(contest_table_recent[0].xpath(".//td[3]/text()")[0]),
-            tag=(AtCoder.platform_name if overwrite_tag else
+            start_time=cls._extract_timestamp(contest_table_recent[0].xpath(".//td[1]/a/time/text()")[0]),
+            duration=cls._extract_duration(contest_table_recent[0].xpath(".//td[3]/text()")[0]),
+            tag=(cls.platform_name if overwrite_tag else
                  contest_table_recent[0].xpath(".//td[2]/a/@href")[0].split('/')[-1]),
             name=contest_table_recent[0].xpath(".//td[2]/a/text()")[0],
-            supplement=AtCoder._format_rated_range(contest_table_recent[0].xpath(".//td[4]/text()")[0])
+            supplement=cls._format_rated_range(contest_table_recent[0].xpath(".//td[4]/text()")[0])
         )
 
         return upcoming_contests, finished_contest
@@ -88,6 +116,25 @@ class AtCoder(CompetitivePlatform):
         return random.choice(filtered_data) if len(filtered_data) > 0 else 0
 
     @classmethod
+    def get_user_id_card(cls, handle: str) -> pixie.Image | str:
+        html = fetch_url_element(f"https://atcoder.jp/users/{handle}")
+
+        info_table = html.xpath("//table[@class='dl-table']//tr")
+        info_dict = {row.xpath('.//th/text()')[0]: row.xpath('.//td//text()')[0].strip() for row in info_table}
+
+        social = '. '.join(cls._format_social_info(info_dict, ('', 'Born in', 'From'))).lstrip()
+        if len(social) > 0:
+            social = f"{social}."
+
+        rated_table = html.xpath("//div[h3[text()='Contest Status']]")[0].xpath(".//table")[0].xpath(".//tr")
+        rated_dict = {row.xpath('.//th/text()')[0].strip(): row.xpath('.//td//text()') for row in rated_table}
+
+        rating = rated_dict['Rating'][0]
+        rank = rated_dict['Highest Rating'][4]
+        return cls._render_user_card(handle=html.xpath("//a[@class='username']//text()")[0],
+                                     social=social, rank=rank, rank_alias=rank, rating=rating)
+
+    @classmethod
     def get_user_info(cls, handle: str) -> tuple[str, str | None]:
         html = fetch_url_element(f"https://atcoder.jp/users/{handle}")
 
@@ -96,26 +143,18 @@ class AtCoder(CompetitivePlatform):
         info_table = html.xpath("//table[@class='dl-table']//tr")
         info_dict = {row.xpath('.//th/text()')[0]: row.xpath('.//td//text()')[0].strip() for row in info_table}
 
-        belong = []
-        tag_trans = {
-            "Country/Region": "国家/地区",
-            "Birth Year": "出生年份",
-            "Affiliation": "来自"
-        }
-        for tag, trans in tag_trans.items():
-            if tag in info_dict:
-                belong.append(f"{trans} {info_dict[tag]}")
-        if len(belong) > 0:
-            sections.append('\n'.join(belong))
+        social = cls._format_social_info(info_dict)
+        if len(social) > 0:
+            sections.append('\n'.join(social))
 
-        social = ["关联账号"]
+        linked = ["关联账号"]
         for tag in ["Twitter ID", "TopCoder ID", "Codeforces ID"]:
             if tag == "Codeforces ID":
                 info_dict[tag] += f" ({Codeforces.get_user_rank(info_dict[tag])})"
             if tag in info_dict:
-                social.append(f"{tag[:-3]}: {info_dict[tag]}")
-        if len(social) > 1:
-            sections.append('\n'.join(social))
+                linked.append(f"{tag[:-3]}: {info_dict[tag]}")
+        if len(linked) > 1:
+            sections.append('\n'.join(linked))
 
         rated_table = html.xpath("//div[h3[text()='Contest Status']]")[0].xpath(".//table")[0].xpath(".//tr")
         rated_dict = {row.xpath('.//th/text()')[0].strip(): row.xpath('.//td//text()') for row in rated_table}

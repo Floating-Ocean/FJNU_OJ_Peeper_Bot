@@ -4,7 +4,7 @@ import unittest
 from dataclasses import asdict
 
 from src.core.tools import png2jpg, decode_range
-from src.module.color_rand import load_colors, _colors, generate_color_card, add_qrcode
+from src.module.color_rand import load_colors, _colors, render_color_card, add_qrcode
 from src.platform.cp.atcoder import AtCoder
 from src.platform.cp.codeforces import Codeforces
 
@@ -13,13 +13,13 @@ class Module(unittest.TestCase):
     def test_color_rand(self):
         load_colors()
         picked_color = random.choice(_colors)
-        color_card = generate_color_card(picked_color)
+        color_card = render_color_card(picked_color)
         color_card.write_file("test.png")
 
     def test_color_qrcode(self):
         load_colors()
         picked_color = random.choice(_colors)
-        color_card = generate_color_card(picked_color)
+        color_card = render_color_card(picked_color)
         color_card.write_file("test.png")
         add_qrcode("test.png", picked_color)
         png2jpg("test.png")

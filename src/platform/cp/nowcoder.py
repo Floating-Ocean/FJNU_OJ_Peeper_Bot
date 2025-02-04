@@ -1,6 +1,7 @@
 import re
 from datetime import datetime
 
+import pixie
 from lxml.etree import Element
 
 from src.core.tools import fetch_url_element, patch_https_url, fetch_url_json, format_int_delta
@@ -17,6 +18,15 @@ class NowCoder(CompetitivePlatform):
         (2000, 2400): '#黄',
         (2400, 2800): '#橙',
         (2800, float('inf')): '#红'
+    }
+    rks_color = {
+        '#灰': '#b4b4b4',
+        '#紫': '#c177e7',
+        '#蓝': '#5ea1f4',
+        '#青': '#25bb9b',
+        '#黄': '#ffd700',
+        '#橙': '#ff8800',
+        '#红': '#ff020a'
     }
 
     @classmethod
@@ -79,7 +89,7 @@ class NowCoder(CompetitivePlatform):
 
     @classmethod
     def _format_rating(cls, rating: int) -> str:
-        rk = next((rk for (l, r), rk in NowCoder.rated_rks.items() if l <= rating < r), '#灰')
+        rk = next((rk for (l, r), rk in cls.rated_rks.items() if l <= rating < r), '#灰')
         return f"{rating} {rk}"
 
     @classmethod
@@ -89,7 +99,7 @@ class NowCoder(CompetitivePlatform):
         return cls._format_rating(rating)
 
     @classmethod
-    def _fetch_team_members_info(cls, handle: str) -> str:
+    def _fetch_team_members_info(cls, handle: str, inline: bool = False) -> str:
         url = f"https://ac.nowcoder.com/acm/team/member-list?token=&teamId={handle}"
         members = cls._api(url)
 
@@ -102,12 +112,13 @@ class NowCoder(CompetitivePlatform):
 
         for member in members:
             member_info = [member['name']]
-            if member['isTeamAdmin']:
-                member_info.append("队长")
-            member_info.append(cls._fetch_user_rating(member['uid']))
+            if not inline:
+                if member['isTeamAdmin']:
+                    member_info.append("队长")
+                member_info.append(cls._fetch_user_rating(member['uid']))
             member_infos.append(' '.join(member_info))
 
-        return '\n'.join(member_infos)
+        return (', ' if inline else '\n').join(member_infos)
 
     @classmethod
     def _fetch_user_teams_info(cls, handle: str) -> str | None:
@@ -129,6 +140,18 @@ class NowCoder(CompetitivePlatform):
         return '\n'.join(teams_infos)
 
     @classmethod
+    def _format_social_info(cls, html: Element, i18n: str = "来自") -> list[str]:
+        social_info = []
+        edu_span = html.xpath('//a[contains(@class, "edu-item")]//span[@class="coder-edu-txt"]/text()')
+        coll_span = html.xpath('//a[contains(@class, "coll-item")]//span[@class="coder-edu-txt"]/text()')
+        edu_text = f"{i18n} {edu_span[0]}" if len(edu_span) > 0 else None
+        coll_text = f"{coll_span[0]}er" if len(coll_span) > 0 else None
+        edu_info = [edu_txt for edu_txt in [coll_text, edu_text] if edu_txt is not None]
+        if len(edu_info) > 0:
+            social_info.append('. '.join(edu_info))
+        return social_info
+
+    @classmethod
     def get_contest_list(cls, overwrite_tag: bool = False) -> tuple[list[Contest], Contest] | None:
         upcoming_contests: list[Contest] = []
         finished_contests: list[Contest] = []
@@ -137,19 +160,19 @@ class NowCoder(CompetitivePlatform):
             js_current = html.xpath("//div[@class='platform-mod js-current']//div[@class='platform-item-cont']")
             js_end = html.xpath("//div[@class='platform-mod js-end']//div[@class='platform-item-cont']")
             upcoming_contests.extend([Contest(
-                start_time=NowCoder._extract_timestamp(NowCoder._decode_contest_time_set(contest)[1]),
-                duration=NowCoder._extract_duration(NowCoder._decode_contest_time_set(contest)[4]),
-                tag=NowCoder.platform_name if overwrite_tag else None,
+                start_time=cls._extract_timestamp(cls._decode_contest_time_set(contest)[1]),
+                duration=cls._extract_duration(cls._decode_contest_time_set(contest)[4]),
+                tag=cls.platform_name if overwrite_tag else None,
                 name=contest.xpath(".//a/text()")[0],
-                supplement=NowCoder._decode_rated(contest)
+                supplement=cls._decode_rated(contest)
             ) for contest in js_current
                 if contest.xpath(".//span[contains(@class, 'match-status')]/text()")[0].strip() == '报名中'])
             finished_contests.append(Contest(
-                start_time=NowCoder._extract_timestamp(NowCoder._decode_contest_time_set(js_end[0])[1]),
-                duration=NowCoder._extract_duration(NowCoder._decode_contest_time_set(js_end[0])[4]),
-                tag=NowCoder.platform_name if overwrite_tag else None,
+                start_time=cls._extract_timestamp(cls._decode_contest_time_set(js_end[0])[1]),
+                duration=cls._extract_duration(cls._decode_contest_time_set(js_end[0])[4]),
+                tag=cls.platform_name if overwrite_tag else None,
                 name=js_end[0].xpath(".//a/text()")[0],
-                supplement=NowCoder._decode_rated(js_end[0])
+                supplement=cls._decode_rated(js_end[0])
             ))
 
         finished_contests.sort(key=lambda c: -c.start_time)
@@ -159,26 +182,39 @@ class NowCoder(CompetitivePlatform):
         return upcoming_contests, finished_contests[0]
 
     @classmethod
+    def get_user_id_card(cls, handle: str) -> pixie.Image | str:
+        html = fetch_url_element(f"https://ac.nowcoder.com/acm/contest/profile/{handle}")
+
+        is_group = len(html.xpath("//a[@class='group-member-btn']")) > 0
+        if is_group:
+            social = cls._fetch_team_members_info(handle, inline=True)
+            if len(social) > 0:
+                social = f"Team of {social}."
+        else:
+            social = '. '.join(cls._format_social_info(html, 'From'))
+            if len(social) > 0:
+                social = f"{social}."
+
+        rating = int(html.xpath("//div[contains(@class, 'state-num rate-score')]/text()")[0])
+        rank = next((rk for (l, r), rk in cls.rated_rks.items() if l <= rating < r), '#灰')
+        return cls._render_user_card(handle=html.xpath("//a[contains(@class, 'coder-name')]/text()")[0].strip(),
+                                     social=social, rank=rank, rank_alias=rank, rating=rating)
+
+    @classmethod
     def get_user_info(cls, handle: str) -> tuple[str, str | None]:
         html = fetch_url_element(f"https://ac.nowcoder.com/acm/contest/profile/{handle}")
 
         sections = []
 
-        belong = []
+        social = []
         name = html.xpath("//a[contains(@class, 'coder-name')]/text()")[0].strip()
-        belong.append(name)
+        social.append(name)
         brief_intro = html.xpath("//div[@class='coder-brief']/text()")[0].strip()
-        belong.append(brief_intro)
-        edu_span = html.xpath('//div[contains(@class, "edu-item")]//span[@class="coder-edu-txt"]/text()')
-        coll_span = html.xpath('//div[contains(@class, "coll-item")]//span[@class="coder-edu-txt"]/text()')
-        edu_text = f"来自 {edu_span[0]}" if len(edu_span) > 0 else None
-        coll_text = f"{coll_span[0]}er" if len(coll_span) > 0 else None
-        edu_info = [edu_txt for edu_txt in [coll_text, edu_text] if edu_txt is not None]
-        if len(edu_info) > 0:
-            belong.append('，'.join(edu_info))
+        social.append(brief_intro)
+        social.extend(cls._format_social_info(html))
 
-        if len(belong) > 0:
-            sections.append('\n'.join(belong))
+        if len(social) > 0:
+            sections.append('\n'.join(social))
 
         is_group = len(html.xpath("//a[@class='group-member-btn']")) > 0
         if is_group:

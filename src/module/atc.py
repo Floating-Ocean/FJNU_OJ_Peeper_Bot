@@ -8,11 +8,26 @@ from src.core.tools import get_simple_qrcode, png2jpg
 from src.module.message import report_exception, RobotMessage
 from src.platform.cp.atcoder import AtCoder
 
-__atc_version__ = "v1.2.0"
+__atc_version__ = "v1.3.0"
 
 
 def register_module():
     pass
+
+
+async def send_user_id_card(message: RobotMessage, handle: str):
+    await message.reply(f"正在查询 {handle} 的 AtCoder 基础信息，请稍等")
+
+    id_card = AtCoder.get_user_id_card(handle)
+
+    if isinstance(id_card, str):
+        content = (f"[AtCoder ID] {handle}"
+                   f"{id_card}")
+        await message.reply(content, modal_words=False)
+    else:
+        cached_prefix = get_cached_prefix('Platform-ID')
+        id_card.write_file(f"{cached_prefix}.png")
+        await message.reply(f"[AtCoder] {handle}", png2jpg(f"{cached_prefix}.png"), modal_words=False)
 
 
 async def send_user_info(message: RobotMessage, handle: str):

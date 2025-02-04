@@ -42,7 +42,7 @@ def transform_color(color: dict) -> tuple[str, str, str]:
     return hex_text, rgb_text, hsv_text
 
 
-def generate_color_card(color: dict) -> pixie.Image:
+def render_color_card(color: dict) -> pixie.Image:
     hex_text, rgb_text, hsv_text = transform_color(color)
 
     img = pixie.Image(1664, 1040)
@@ -92,7 +92,7 @@ async def reply_color_rand(message: RobotMessage):
     load_colors()
     picked_color = random.choice(_colors)
 
-    color_card = generate_color_card(picked_color)
+    color_card = render_color_card(picked_color)
     color_card.write_file(img_path)
     add_qrcode(img_path, picked_color)
 

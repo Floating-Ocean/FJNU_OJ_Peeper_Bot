@@ -3,16 +3,32 @@ import traceback
 
 from src.core.command import command
 from src.core.constants import Constants
-from src.core.tools import check_is_int
+from src.core.output_cached import get_cached_prefix
+from src.core.tools import check_is_int, png2jpg
 from src.module.message import report_exception, RobotMessage
 
-__nk_version__ = "v1.1.0"
+__nk_version__ = "v1.2.0"
 
 from src.platform.cp.nowcoder import NowCoder
 
 
 def register_module():
     pass
+
+
+async def send_user_id_card(message: RobotMessage, handle: str):
+    await message.reply(f"正在查询 {handle} 的 NowCoder 基础信息，请稍等")
+
+    id_card = NowCoder.get_user_id_card(handle)
+
+    if isinstance(id_card, str):
+        content = (f"[NowCoder ID] {handle}"
+                   f"{id_card}")
+        await message.reply(content, modal_words=False)
+    else:
+        cached_prefix = get_cached_prefix('Platform-ID')
+        id_card.write_file(f"{cached_prefix}.png")
+        await message.reply(f"[NowCoder] {handle}", png2jpg(f"{cached_prefix}.png"), modal_words=False)
 
 
 async def send_user_info(message: RobotMessage, handle: str):

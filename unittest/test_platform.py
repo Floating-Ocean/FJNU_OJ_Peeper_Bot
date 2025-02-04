@@ -56,6 +56,20 @@ class Platform(unittest.TestCase):
             self.assertIsNotNone(img)
             img.write_file(f"cf_user_card_{handle}.png")
 
+    def test_atcoder_user_card(self):
+        test_handles = ['floatingocean', 'qwedc001', 'jiangly', 'Lingyu0qwq']
+        for handle in test_handles:
+            img = AtCoder.get_user_id_card(handle)
+            self.assertIsNotNone(img)
+            img.write_file(f"atc_user_card_{handle}.png")
+
+    def test_nowcoder_user_card(self):
+        test_handles = ['144128559', '140690880', '737857302', '329687984', '815516497', '882260751']
+        for handle in test_handles:
+            img = NowCoder.get_user_id_card(handle)
+            self.assertIsNotNone(img)
+            img.write_file(f"nk_user_card_{handle}.png")
+
 
 if __name__ == '__main__':
     unittest.main()

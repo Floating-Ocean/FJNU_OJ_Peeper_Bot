@@ -16,30 +16,30 @@ class Codeforces(CompetitivePlatform):
     platform_name = "Codeforces"
     logo_url = "https://codeforces.org/s/24321/images/codeforces-sponsored-by-ton.png"
     rated_rks = {
-        (-float('inf'), 1200): 'N',
-        (1200, 1400): 'P',
-        (1400, 1600): 'S',
-        (1600, 1900): 'E',
-        (1900, 2100): 'CM',
-        (2100, 2300): 'M',
-        (2300, 2400): 'IM',
-        (2400, 2600): 'GM',
-        (2600, 3000): 'IGM',
-        (3000, 4000): 'LGM',
-        (4000, float('inf')): 'T'
+        (-float('inf'), 1200): 'N',  # Newbie
+        (1200, 1400): 'P',  # Pupil
+        (1400, 1600): 'S',  # Specialist
+        (1600, 1900): 'E',  # Expert
+        (1900, 2100): 'CM',  # Candidate Master
+        (2100, 2300): 'M',  # Master
+        (2300, 2400): 'IM',  # International Master
+        (2400, 2600): 'GM',  # Grandmaster
+        (2600, 3000): 'IGM',  # International Grandmaster
+        (3000, 4000): 'LGM',  # Legendary Grandmaster
+        (4000, float('inf')): 'T'  # The Ones Who Reach 4000
     }
-    rks_info = {
-        'N': ('Newbie', '#808080'),
-        'P': ('Pupil', '#008000'),
-        'S': ('Specialist', '#03a89e'),
-        'E': ('Expert', '#0000ff'),
-        'CM': ('Candidate Master', '#aa00aa'),
-        'M': ('Master', '#ff8c00'),
-        'IM': ('International Master', '#bbbb00'),
-        'GM': ('Grandmaster', '#ff0000'),
-        'IGM': ('International Grandmaster', '#ff0000'),
-        'LGM': ('Legendary Grandmaster', '#ff0000'),
-        'T': ('The Ones Who Reach 4000', '#ff0000'),
+    rks_color = {
+        'N': '#808080',
+        'P': '#008000',
+        'S': '#03a89e',
+        'E': '#0000ff',
+        'CM': '#aa00aa',
+        'M': '#ff8c00',
+        'IM': '#bbbb00',
+        'GM': '#ff0000',
+        'IGM': '#ff0000',
+        'LGM': '#ff0000',
+        'T': '#ff0000'
     }
 
     @classmethod
@@ -79,8 +79,8 @@ class Codeforces(CompetitivePlatform):
 
     @classmethod
     def _format_rank_delta(cls, old_rating: int, delta: int) -> str:
-        old_rk = next((rk for (l, r), rk in Codeforces.rated_rks.items() if l <= old_rating < r), 'N')
-        new_rk = next((rk for (l, r), rk in Codeforces.rated_rks.items() if l <= old_rating + delta < r), 'N')
+        old_rk = next((rk for (l, r), rk in cls.rated_rks.items() if l <= old_rating < r), 'N')
+        new_rk = next((rk for (l, r), rk in cls.rated_rks.items() if l <= old_rating + delta < r), 'N')
         if old_rk == new_rk:
             return "段位无变化"
         else:
@@ -110,13 +110,13 @@ class Codeforces(CompetitivePlatform):
         real_rank = standing['rank']
         contestant_predictions = ""
         if standing['party']['participantType'] == 'CONTESTANT':
-            all_predictions = Codeforces._fetch_contest_predict(contest_id)
+            all_predictions = cls._fetch_contest_predict(contest_id)
             if not isinstance(all_predictions, int) and (standing['party']['members'][0]['handle'] in all_predictions):
                 prediction = all_predictions[standing['party']['members'][0]['handle']]
                 real_rank = prediction.rank
                 contestant_predictions = (f'\n表现分 {prediction.performance}，'
                                           f'预测变化 {format_int_delta(prediction.delta)}，'
-                                          f'{Codeforces._format_rank_delta(prediction.rating, prediction.delta)}')
+                                          f'{cls._format_rank_delta(prediction.rating, prediction.delta)}')
 
         striped_points = f"{standing['points']}".rstrip('0').rstrip('.')
         contestant_info = f"位次 {real_rank}，总分 {striped_points}，总罚时 {standing['penalty']}"
@@ -146,7 +146,7 @@ class Codeforces(CompetitivePlatform):
             phase = "正在等待重测"
         elif contest['phase'] == 'SYSTEM_TEST':
             phase = "正在重测中"
-        return (f"[{contest['id']}] {Codeforces._format_contest_name(contest['name'])}\n"
+        return (f"[{contest['id']}] {cls._format_contest_name(contest['name'])}\n"
                 f"{phase}, "
                 f"{format_timestamp(contest['startTimeSeconds'])}\n"
                 f"持续 {format_seconds(contest['durationSeconds'])}, {contest['type']} 赛制")
@@ -191,7 +191,7 @@ class Codeforces(CompetitivePlatform):
         Adapted from carrot at
         https://github.com/meooow25/carrot/blob/master/carrot/src/background/cache/contests-complete.js
         """
-        ratings = Codeforces._api('user.ratedList', activeOnly=False, contestId=standings['contest']['id'])
+        ratings = cls._api('user.ratedList', activeOnly=False, contestId=standings['contest']['id'])
         if isinstance(ratings, int):
             return None
         ratings = {user['handle']: user['rating'] for user in ratings}
@@ -235,7 +235,7 @@ class Codeforces(CompetitivePlatform):
 
     @classmethod
     def _fetch_contest_list_all(cls) -> list[dict] | None:
-        contest_list = Codeforces._api('contest.list')
+        contest_list = cls._api('contest.list')
 
         if isinstance(contest_list, int):
             return None
@@ -254,7 +254,7 @@ class Codeforces(CompetitivePlatform):
         and
         https://github.com/meooow25/carrot/blob/master/carrot/src/background/background.js
         """
-        standings = Codeforces._api('contest.standings', contestId=contest_id, showUnofficial=False)
+        standings = cls._api('contest.standings', contestId=contest_id, showUnofficial=False)
 
         if standings == -1:
             return -1
@@ -264,7 +264,7 @@ class Codeforces(CompetitivePlatform):
         rated, old_ratings = None, None
 
         if standings['contest']['phase'] == 'FINISHED':
-            rating_changes = Codeforces._api('contest.ratingChanges', contestId=contest_id)
+            rating_changes = cls._api('contest.ratingChanges', contestId=contest_id)
             if rating_changes == -1:
                 return -2
             if rating_changes == 0:
@@ -274,9 +274,9 @@ class Codeforces(CompetitivePlatform):
                 if len(rating_changes) == 0:
                     return -2
                 rated = True
-                old_ratings = Codeforces._adjust_old_ratings(int(contest_id), rating_changes)
+                old_ratings = cls._adjust_old_ratings(int(contest_id), rating_changes)
 
-        if rated is None and Codeforces._is_old_contest(standings['contest']):
+        if rated is None and cls._is_old_contest(standings['contest']):
             rated = False
 
         contest_finished = rated is not None
@@ -286,7 +286,7 @@ class Codeforces(CompetitivePlatform):
                 return 1
 
             # We can ensure that old_ratings is not None
-            result = Codeforces._get_final_prefs(standings, old_ratings)
+            result = cls._get_final_prefs(standings, old_ratings)
             if result is None:
                 return -3
             return result
@@ -298,7 +298,7 @@ class Codeforces(CompetitivePlatform):
         if any('teamId' in standing for standing in standings['rows']):
             return 1
 
-        result = Codeforces._get_predicted_prefs(standings)
+        result = cls._get_predicted_prefs(standings)
         if result is None:
             return -3
         return result
@@ -325,33 +325,8 @@ class Codeforces(CompetitivePlatform):
         return social_info
 
     @classmethod
-    def _generate_user_card(cls, handle: str, social: str, rank: str, rating: int) -> pixie.Image:
-        img = pixie.Image(1664, 1040)
-        img.fill(pixie.Color(0, 0, 0, 1))
-
-        real_rk = next((rk for (l, r), rk in Codeforces.rated_rks.items() if l <= rating < r), 'N')
-        rk_color = cls.rks_info[real_rk][1]
-        paint_bg = get_gradient_paint(1600, 976, ["#fcfcfc", rk_color], [0.0, 1.0])
-        draw_round_rect(img, paint_bg, 32, 32, 1600, 976, 96)
-
-        bg_mask = pixie.Paint(pixie.SOLID_PAINT)
-        bg_mask.color = pixie.Color(1, 1, 1, 0.6)
-        mask_img = pixie.Image(1664, 1040)
-        draw_round_rect(mask_img, bg_mask, 32, 32, 1600, 976, 96)
-        img.draw(mask_img, blend_mode=pixie.NORMAL_BLEND)
-
-        text_color = darken_color(pixie.parse_color(rk_color), 0.2)
-        draw_img(img, "codeforces", 144 + 32, 120 + 6 + 32, (48, 48), text_color)
-        draw_text(img, f"Codeforces ID", 144 + 48 + 18 + 32, 120 + 32, 'H', 44, text_color)
-        draw_text(img, handle, 144 + 32, 208 + 32, 'H', 96, text_color)
-        draw_text(img, social, 144 + 32, 354 + 32, 'B', 28, text_color)
-        draw_text(img, rank, 144 + 32, 520 + 32, 'H', 44, text_color)
-        draw_text(img, f"{rating}", 144 - 10 + 32, 558 + 32, 'H', 256, text_color)
-        return img
-
-    @classmethod
     def get_contest_list(cls, overwrite_tag: bool = False) -> tuple[list[Contest], Contest] | None:
-        contest_list = Codeforces._fetch_contest_list_all()
+        contest_list = cls._fetch_contest_list_all()
 
         if contest_list is None:
             return None
@@ -359,7 +334,7 @@ class Codeforces(CompetitivePlatform):
         upcoming_contests = [Contest(
             start_time=contest['startTimeSeconds'],
             duration=contest['durationSeconds'],
-            tag=Codeforces.platform_name if overwrite_tag else contest['id'],
+            tag=cls.platform_name if overwrite_tag else contest['id'],
             name=contest['name'],
             supplement=f"{contest['type']} 赛制"
         ) for contest in contest_list if contest['phase'] == 'BEFORE']
@@ -368,7 +343,7 @@ class Codeforces(CompetitivePlatform):
         finished_contest = Contest(
             start_time=finished_contest_dict['startTimeSeconds'],
             duration=finished_contest_dict['durationSeconds'],
-            tag=Codeforces.platform_name if overwrite_tag else finished_contest_dict['id'],
+            tag=cls.platform_name if overwrite_tag else finished_contest_dict['id'],
             name=finished_contest_dict['name'],
             supplement=f"{finished_contest_dict['type']} 赛制"
         )
@@ -377,7 +352,7 @@ class Codeforces(CompetitivePlatform):
 
     @classmethod
     def get_prob_tags_all(cls) -> list[str] | None:
-        problems = Codeforces._api('problemset.problems')
+        problems = cls._api('problemset.problems')
         if isinstance(problems, int):
             return None
 
@@ -400,9 +375,9 @@ class Codeforces(CompetitivePlatform):
                 return 0
 
         if tag_needed == "all":
-            problems = Codeforces._api('problemset.problems')
+            problems = cls._api('problemset.problems')
         else:
-            all_tags = Codeforces.get_prob_tags_all()
+            all_tags = cls.get_prob_tags_all()
             if all_tags is None:
                 return -2
             if tag_needed not in all_tags:  # 模糊匹配
@@ -412,7 +387,7 @@ class Codeforces(CompetitivePlatform):
                 tag_needed = closet_tag[0]
                 if on_tag_chosen is not None:
                     await on_tag_chosen(f"标签最佳匹配: {tag_needed}")
-            problems = Codeforces._api('problemset.problems', tags=tag_needed.replace("-", " "))
+            problems = cls._api('problemset.problems', tags=tag_needed.replace("-", " "))
 
         if isinstance(problems, int) or len(problems) == 0:
             return -1
@@ -428,7 +403,7 @@ class Codeforces(CompetitivePlatform):
 
     @classmethod
     def get_user_rank(cls, handle: str) -> str | None:
-        info = Codeforces._api('user.info', handles=handle)
+        info = cls._api('user.info', handles=handle)
 
         if info == -1:
             return None
@@ -438,11 +413,11 @@ class Codeforces(CompetitivePlatform):
         info = info[-1]
 
         return (f"{info['rating']} "
-                f"{next((rk for (l, r), rk in Codeforces.rated_rks.items() if l <= info['rating'] < r), 'N')}")
+                f"{next((rk for (l, r), rk in cls.rated_rks.items() if l <= info['rating'] < r), 'N')}")
 
     @classmethod
-    def get_user_id_card(cls, handle: str) -> str | pixie.Image:
-        info = Codeforces._api('user.info', handles=handle)
+    def get_user_id_card(cls, handle: str) -> pixie.Image | str:
+        info = cls._api('user.info', handles=handle)
 
         if info == -1:
             return "查询异常"
@@ -450,7 +425,6 @@ class Codeforces(CompetitivePlatform):
             return "用户不存在"
 
         info = info[-1]
-        sections = []
 
         social = '. '.join(cls._format_social_info(info, ('From', 'Earth')))
         if len(social) > 0:
@@ -461,12 +435,13 @@ class Codeforces(CompetitivePlatform):
         if 'rating' in info:
             rating = info['rating']
             rank = info['rank'].title()
-
-        return cls._generate_user_card(info['handle'], social, rank, rating)
+            
+        rank_alias = next((rk for (l, r), rk in cls.rated_rks.items() if l <= rating < r), 'N')
+        return cls._render_user_card(info['handle'], social, rank, rank_alias, rating)
 
     @classmethod
     def get_user_info(cls, handle: str) -> tuple[str, str | None]:
-        info = Codeforces._api('user.info', handles=handle)
+        info = cls._api('user.info', handles=handle)
 
         if info == -1:
             return "查询异常", None
@@ -495,7 +470,7 @@ class Codeforces(CompetitivePlatform):
 
     @classmethod
     def get_user_last_contest(cls, handle: str) -> str:
-        rating = Codeforces._api('user.rating', handle=handle)
+        rating = cls._api('user.rating', handle=handle)
 
         if rating == -1:
             return "查询异常"
@@ -509,7 +484,7 @@ class Codeforces(CompetitivePlatform):
 
         last = rated_contests[-1]
         info = (f"Rated 比赛数: {contest_count}\n"
-                f"最近一次比赛: {Codeforces._format_contest_name(last['contestName'])}\n"
+                f"最近一次比赛: {cls._format_contest_name(last['contestName'])}\n"
                 f"比赛编号: {last['contestId']}\n"
                 f"位次: {last['rank']}\n"
                 f"Rating 变化: {format_int_delta(last['newRating'] - last['oldRating'])}")
@@ -518,7 +493,7 @@ class Codeforces(CompetitivePlatform):
 
     @classmethod
     def get_user_last_submit(cls, handle: str, count: int = 5) -> str:
-        status = Codeforces._api('user.status', handle=handle, _from_=1, count=count)
+        status = cls._api('user.status', handle=handle, _from_=1, count=count)
 
         if status == -1:
             return "查询异常"
@@ -531,7 +506,7 @@ class Codeforces(CompetitivePlatform):
 
         info = f"最近{count}发提交:"
         for submit in status:
-            verdict = (Codeforces._format_verdict(submit['verdict'], submit['passedTestCount'])
+            verdict = (cls._format_verdict(submit['verdict'], submit['passedTestCount'])
                        if 'verdict' in submit else "In queue")
             points = f" *{int(submit['problem']['rating'])}" if 'rating' in submit['problem'] else ""
             time_consumed = f" {submit['timeConsumedMillis']}ms" if 'timeConsumedMillis' in submit else ""
@@ -543,7 +518,7 @@ class Codeforces(CompetitivePlatform):
 
     @classmethod
     def get_user_submit_counts(cls, handle: str) -> tuple[int, int, int]:
-        status = Codeforces._api('user.status', handle=handle)
+        status = cls._api('user.status', handle=handle)
 
         if isinstance(status, int):
             return -1, -1, -1
@@ -569,14 +544,14 @@ class Codeforces(CompetitivePlatform):
 
     @classmethod
     def get_user_contest_standings(cls, handle: str, contest_id: str) -> tuple[str, list[str] | None]:
-        standings = Codeforces._api('contest.standings', handles=handle, contestId=contest_id, showUnofficial=True)
+        standings = cls._api('contest.standings', handles=handle, contestId=contest_id, showUnofficial=True)
 
         if standings == -1:
             return "查询异常", None
         if standings == 0:
             return "比赛不存在", None
 
-        contest_info = Codeforces._format_contest(standings['contest'])
-        standings_info = [Codeforces._format_standing(standing, contest_id) for standing in standings['rows']]
+        contest_info = cls._format_contest(standings['contest'])
+        standings_info = [cls._format_standing(standing, contest_id) for standing in standings['rows']]
 
         return contest_info, standings_info

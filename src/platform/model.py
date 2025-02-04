@@ -2,6 +2,9 @@ import abc
 import time
 from dataclasses import dataclass
 
+import pixie
+
+from src.core.painter import get_gradient_paint, draw_round_rect, darken_color, draw_img, draw_text
 from src.core.tools import format_timestamp_diff, format_seconds, format_timestamp
 
 
@@ -27,6 +30,36 @@ class Contest:
 
 class CompetitivePlatform(abc.ABC):
     platform_name: str
+    rks_color: dict[str, str]
+
+    @classmethod
+    def _render_user_card(cls, handle: str, social: str,
+                          rank: str, rank_alias: str, rating: int | str) -> pixie.Image:
+        """
+        渲染用户基础信息卡片
+        :return: 绘制完成的图片对象
+        """
+        img = pixie.Image(1664, 1040)
+        img.fill(pixie.Color(0, 0, 0, 1))
+
+        rk_color = cls.rks_color[rank_alias]
+        paint_bg = get_gradient_paint(1600, 976, ["#fcfcfc", rk_color], [0.0, 1.0])
+        draw_round_rect(img, paint_bg, 32, 32, 1600, 976, 96)
+
+        bg_mask = pixie.Paint(pixie.SOLID_PAINT)
+        bg_mask.color = pixie.Color(1, 1, 1, 0.6)
+        mask_img = pixie.Image(1664, 1040)
+        draw_round_rect(mask_img, bg_mask, 32, 32, 1600, 976, 96)
+        img.draw(mask_img, blend_mode=pixie.NORMAL_BLEND)
+
+        text_color = darken_color(pixie.parse_color(rk_color), 0.2)
+        draw_img(img, cls.platform_name, 144 + 32, 120 + 6 + 32, (48, 48), text_color)
+        draw_text(img, f"{cls.platform_name} ID", 144 + 48 + 18 + 32, 120 + 32, 'H', 44, text_color)
+        draw_text(img, handle, 144 + 32, 208 + 32, 'H', 96, text_color)
+        draw_text(img, social, 144 + 32, 354 + 32, 'B', 28, text_color)
+        draw_text(img, rank, 144 + 32, 520 + 32, 'H', 44, text_color)
+        draw_text(img, f"{rating}", 144 - 10 + 32, 558 + 32, 'H', 256, text_color)
+        return img
 
     @classmethod
     def get_contest_list(cls, overwrite_tag: bool = False) -> tuple[list[Contest], Contest] | None:
@@ -59,3 +92,19 @@ class CompetitivePlatform(abc.ABC):
         info += "\n\n上一场已结束的比赛:\n" + finished_contest.format()
 
         return info
+
+    @classmethod
+    def get_user_id_card(cls, handle: str) -> pixie.Image | str:
+        """
+        获取指定用户的基础信息卡片
+        :return: 绘制完成的图片对象 | 错误信息
+        """
+        pass
+
+    @classmethod
+    def get_user_info(cls, handle: str) -> tuple[str, str | None]:
+        """
+        获取指定用户的详细信息
+        :return: tuple[信息, 头像url | None]
+        """
+        pass
