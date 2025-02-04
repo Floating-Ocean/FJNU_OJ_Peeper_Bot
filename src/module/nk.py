@@ -69,9 +69,20 @@ async def reply_nk_request(message: RobotMessage):
 
         func = content[1]
 
-        if func == "info" or func == "user":
+        if func == "identity" or func == "id" or func == "card":
             if len(content) != 3:
-                await message.reply("请输入正确的指令格式，如\"/nk info 815516497\"")
+                await message.reply(f"请输入正确的指令格式，如\"/nk {func} 329687984\"")
+                return
+
+            if not check_is_int(content[2]):
+                await message.reply("暂不支持使用昵称检索用户，请使用uid")
+                return
+
+            await send_user_id_card(message, content[2])
+
+        elif func == "info" or func == "user":
+            if len(content) != 3:
+                await message.reply(f"请输入正确的指令格式，如\"/nk {func} 329687984\"")
                 return
 
             if not check_is_int(content[2]):

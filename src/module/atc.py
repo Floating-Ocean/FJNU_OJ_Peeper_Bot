@@ -98,9 +98,16 @@ async def reply_atc_request(message: RobotMessage):
 
         func = content[1]
 
-        if func == "info" or func == "user":
+        if func == "identity" or func == "id" or func == "card":
             if len(content) != 3:
-                await message.reply("请输入正确的指令格式，如\"/atc info jiangly\"")
+                await message.reply(f"请输入正确的指令格式，如\"/atc {func} jiangly\"")
+                return
+
+            await send_user_id_card(message, content[2])
+
+        elif func == "info" or func == "user":
+            if len(content) != 3:
+                await message.reply(f"请输入正确的指令格式，如\"/atc {func} jiangly\"")
                 return
 
             await send_user_info(message, content[2])
