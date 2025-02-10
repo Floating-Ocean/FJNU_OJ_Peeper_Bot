@@ -1,7 +1,6 @@
 import base64
 import random
 import re
-from enum import Enum
 
 from botpy import BotAPI
 from botpy.message import Message, GroupMessage, C2CMessage
@@ -10,18 +9,9 @@ from src.core.constants import Constants
 from src.core.tools import run_async
 
 
-# 事件来源的类型
-class SubjectType(Enum):
-    UNKNOWN: -1
-    GUILD_MESSAGE: 0
-    GROUP_MESSAGE: 1
-    C2C_MESSAGE: 2
-
-
 class RobotMessage:
     def __init__(self, api: BotAPI):
         self.api = api
-        self.subject_type = SubjectType.UNKNOWN
         self.guild_public = False
         self.guild_message = None
         self.group_message = None
@@ -36,7 +26,6 @@ class RobotMessage:
 
     def setup_guild_message(self, main_event_loop, message: Message, is_public: bool = False):
         self.main_event_loop = main_event_loop
-        self.subject_type = SubjectType.GUILD_MESSAGE
         self.guild_public = is_public
         self.guild_message = message
         self.content = message.content
@@ -49,7 +38,6 @@ class RobotMessage:
 
     def setup_group_message(self, main_event_loop, message: GroupMessage):
         self.main_event_loop = main_event_loop
-        self.subject_type = SubjectType.GROUP_MESSAGE
         self.group_message = message
         self.content = message.content
         self.tokens = re.sub(r'<@!\d+>', '', message.content).strip().split()
@@ -61,7 +49,6 @@ class RobotMessage:
 
     def setup_c2c_message(self, main_event_loop, message: C2CMessage):
         self.main_event_loop = main_event_loop
-        self.subject_type = SubjectType.C2C_MESSAGE
         self.c2c_message = message
         self.content = message.content
         self.tokens = re.sub(r'<@!\d+>', '', message.content).strip().split()
@@ -77,13 +64,13 @@ class RobotMessage:
             content += chosen_modal_word
 
         self.msg_seq += 1
-        if self.subject_type == SubjectType.GUILD_MESSAGE:  # 频道消息
+        if self.guild_message:  # 频道消息
             run_async(self.main_event_loop,
                       self.api.post_message(
                           channel_id=self.guild_message.channel_id, msg_id=self.guild_message.id,
                           content=f"<@{self.guild_message.author.id}>{content}",
                           file_image=img_path, image=img_url))
-        elif self.subject_type == SubjectType.GROUP_MESSAGE:  # 群消息
+        elif self.group_message:  # 群消息
             if img_path is not None or img_url is not None:
                 media = None
                 retry_times = 0
@@ -127,7 +114,7 @@ class RobotMessage:
                               msg_type=0, msg_id=self.group_message.id,
                               content=content, msg_seq=self.msg_seq)
                           )
-        elif self.subject_type == SubjectType.C2C_MESSAGE:  # 私聊消息
+        elif self.c2c_message:  # 私聊消息
             if img_path is not None or img_url is not None:
                 media = None
                 retry_times = 0
