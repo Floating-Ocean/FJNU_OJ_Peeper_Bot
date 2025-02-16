@@ -5,7 +5,7 @@ from src.core.command import command
 from src.core.constants import Constants
 from src.core.output_cached import get_cached_prefix
 from src.core.tools import get_simple_qrcode, png2jpg
-from src.module.message import report_exception, RobotMessage
+from src.module.message import RobotMessage, report_exception
 from src.platform.cp.atcoder import AtCoder
 
 __atc_version__ = "v1.3.0"
@@ -135,4 +135,4 @@ async def reply_atc_request(message: RobotMessage):
             await message.reply(f'[AtCoder]\n\n{Constants.help_contents["atcoder"]}', modal_words=False)
 
     except Exception as e:
-        await report_exception(message, 'AtCoder', traceback.format_exc(), repr(e))
+        await report_exception(message, 'AtCoder', traceback.format_exc(), e)

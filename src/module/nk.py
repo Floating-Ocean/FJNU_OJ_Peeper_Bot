@@ -5,7 +5,7 @@ from src.core.command import command
 from src.core.constants import Constants
 from src.core.output_cached import get_cached_prefix
 from src.core.tools import check_is_int, png2jpg
-from src.module.message import report_exception, RobotMessage
+from src.module.message import RobotMessage, report_exception
 
 __nk_version__ = "v1.2.0"
 
@@ -98,4 +98,4 @@ async def reply_nk_request(message: RobotMessage):
             await message.reply(f'[NowCoder]\n\n{Constants.help_contents["nowcoder"]}', modal_words=False)
 
     except Exception as e:
-        await report_exception(message, 'NowCoder', traceback.format_exc(), repr(e))
+        await report_exception(message, 'NowCoder', traceback.format_exc(), e)

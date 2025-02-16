@@ -6,6 +6,7 @@ from botpy import BotAPI
 from botpy.message import Message, GroupMessage, C2CMessage
 
 from src.core.constants import Constants
+from src.core.exception import handle_exception
 from src.core.tools import run_async
 
 
@@ -169,7 +170,7 @@ class RobotMessage:
             return
 
 
-async def report_exception(message: RobotMessage, name: str, trace: str, info: str):
-    Constants.log.warn(f"[Operation failed] in module {name}.\n{info}")
+async def report_exception(message: RobotMessage, module_name: str, trace: str, e: Exception):
+    Constants.log.warn(f"[Operation failed] in module {module_name}.\n{repr(e)}")
     Constants.log.error(trace)
-    await message.reply("出现未知异常，请联系管理员")
+    await message.reply(handle_exception(e), modal_words=False)
