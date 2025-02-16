@@ -6,12 +6,13 @@ from botpy import BotAPI
 
 from src.core.command import command
 from src.core.constants import Constants
+from src.core.exception import ModuleRuntimeError
 from src.core.output_cached import get_cached_prefix
 from src.core.tools import run_shell, run_async, escape_mail_url, png2jpg, check_is_int
 from src.module.atc import __atc_version__
 from src.module.cf import __cf_version__
 from src.module.color_rand import __color_rand_version__
-from src.module.message import report_exception, RobotMessage
+from src.module.message import RobotMessage, report_exception
 from src.module.nk import __nk_version__
 from src.module.pick_one import __pick_one_version__
 from src.module.rand import __rand_version__
@@ -56,7 +57,8 @@ async def execute_lib_method(prop: str, message: RobotMessage | None, no_id: boo
             return result
 
     if message is not None:
-        await report_exception(message, 'Peeper-Board-Generator', traceback, traceback.split('\n')[-2])
+        await report_exception(message, 'Peeper-Board-Generator', traceback,
+                               ModuleRuntimeError(traceback.split('\n')[-2]))
 
     return None
 

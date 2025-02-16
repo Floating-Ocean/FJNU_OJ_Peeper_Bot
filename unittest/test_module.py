@@ -3,6 +3,10 @@ import random
 import unittest
 from dataclasses import asdict
 
+from aiohttp import ClientConnectorSSLError
+from botpy.errors import ServerError
+
+from src.core.exception import handle_exception, UnauthorizedError, ModuleRuntimeError
 from src.core.tools import png2jpg, decode_range
 from src.module.color_rand import load_colors, _colors, render_color_card, add_qrcode
 from src.platform.cp.atcoder import AtCoder
@@ -54,6 +58,12 @@ class Module(unittest.TestCase):
         contest_type = "common"
         limit = "2100"
         print(AtCoder.get_prob_filtered(contest_type, limit))
+
+    def test_error_handle(self):
+        print(handle_exception(ServerError('This is a test server error.')))
+        print(handle_exception(ClientConnectorSSLError(None, OSError('This is a test client connector ssl error.'))))
+        print(handle_exception(UnauthorizedError('阿弥诺斯')))
+        print(handle_exception(ModuleRuntimeError('IndexError(...)')))
 
 
 if __name__ == '__main__':
