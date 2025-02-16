@@ -10,7 +10,7 @@ from typing import Union, List
 import botpy
 from apscheduler.schedulers.blocking import BlockingScheduler
 from botpy import BotAPI, Client, Intents
-from botpy.message import Message, GroupMessage
+from botpy.message import Message, GroupMessage, C2CMessage
 
 from src.core.command import command
 from src.core.constants import Constants
@@ -92,10 +92,18 @@ class MyClient(Client):
         packed_message.setup_group_message(self._main_event_loop, message)
         await join_in_message(packed_message)
 
+    async def on_c2c_message_create(self, message: C2CMessage):
+        Constants.log.info(
+            f"{self.robot.name} receive private message {message.content} {message.attachments} "
+            f"from {message.author.user_openid}")
+        packed_message = RobotMessage(self.api)
+        packed_message.setup_c2c_message(self._main_event_loop, message)
+        await join_in_message(packed_message)
+
 
 def start_client(loop: AbstractEventLoop):
-    # 通过kwargs，设置需要监听的事件通道
-    intents = botpy.Intents(public_messages=True, public_guild_messages=True, guild_messages=True)
+    # 对目前已支持的所有事件进行监听
+    intents = botpy.Intents.default()
     client = MyClient(loop, intents=intents, timeout=60)
 
     # 午间推送机制
