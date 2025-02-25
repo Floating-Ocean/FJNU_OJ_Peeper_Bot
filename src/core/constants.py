@@ -8,7 +8,7 @@ class Constants:
     log = logging.get_logger()
     config = read(os.path.join(os.path.dirname(__file__), "..", "..", "config.yaml"))
 
-    core_version = "v3.3.0"
+    core_version = "v3.3.1"
 
     key_words = [
         [["沙壁", "纸张", "挠蚕", "sb", "老缠", "nt"], [
@@ -24,7 +24,8 @@ class Constants:
         [["似"], ["看上去我还活着", "似了"]],
         [["go"], ["哎你们这些go批", "还在go还在go"]],
         [["春日影"], ["为什么要演奏春日影"]],
-        [["乌蒙"], ["哎你们这些wmc", "awmc", "我们乌蒙怎么你了", "要开始了哟"]]
+        [["乌蒙"], ["哎你们这些wmc", "awmc", "我们乌蒙怎么你了", "要开始了哟", "游戏结束，还有剩余哟", "完美挑战曲，后面忘了"]],
+        [["creeper", "creeper?"], ["ohh, man."]]
     ]
 
     modal_words = ["喵", "呢", "捏", "qaq"]
@@ -38,7 +39,8 @@ class Constants:
         'sub': '\n'.join([
             "/user id [uid]: 查询 uid 对应用户的信息.",
             "/user name [name]: 查询名为 name 对应用户的信息，支持模糊匹配.",
-            "/contests (platform): 查询 platform 平台近日比赛，可指定 Codeforces, AtCoder, NowCoder，留空则返回三平台近日比赛集合.",
+            "/contests (platform): 查询 platform 平台近期比赛，可指定 Codeforces, AtCoder, NowCoder，留空则返回三平台近日比赛集合.",
+            "/contests today (platform): 查询 platform 平台今日比赛，参数同上.",
             "/alive: 检查 OJ, Codeforces, AtCoder 的可连通性.",
             "/api: 获取当前各模块的构建信息."
         ]),

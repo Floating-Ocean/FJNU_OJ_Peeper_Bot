@@ -9,7 +9,7 @@ from src.core.command import command, __commands__
 from src.core.constants import Constants
 from src.core.exception import UnauthorizedError
 from src.core.output_cached import get_cached_prefix
-from src.core.tools import png2jpg, get_simple_qrcode
+from src.core.tools import png2jpg, get_simple_qrcode, get_today_start_timestamp
 from src.module.message import RobotMessage, report_exception
 from src.platform.cp.atcoder import AtCoder
 from src.platform.cp.codeforces import Codeforces
@@ -89,23 +89,31 @@ async def reply_fixed(message: RobotMessage):
     await message.reply(_fixed_reply.get(message.tokens[0][1:], ""), modal_words=False)
 
 
-@command(tokens=['contest', 'contests', '比赛', '近日比赛', '最近的比赛'])
+@command(tokens=['contest', 'contests', '比赛', '近日比赛', '最近的比赛', '今天比赛', '今天的比赛', '今日比赛', '今日的比赛'])
 async def recent_contests(message: RobotMessage):
+    query_today = message.tokens[0] in ['/今天比赛', '/今天的比赛', '/今日比赛', '/今日的比赛']
+    if len(message.tokens) >= 3 and message.tokens[1] == 'today':
+        query_today = True
+        message.tokens[1] = message.tokens[2]
     queries = [AtCoder, Codeforces, NowCoder]
     if len(message.tokens) >= 2:
-        closest_type = difflib.get_close_matches(message.tokens[1].lower(),
-                                                 ["cf", "codeforces", "atc", "atcoder", "牛客", "nk", "nc", "nowcoder"])
-        if len(closest_type) > 0:
-            if closest_type[0] in ["cf", "codeforces"]:
-                queries = [Codeforces]
-            elif closest_type[0] in ["atc", "atcoder"]:
-                queries = [AtCoder]
-            else:
-                queries = [NowCoder]
+        if message.tokens[1] == 'today':
+            query_today = True
+        else:
+            closest_type = difflib.get_close_matches(message.tokens[1].lower(),
+                                                     ["cf", "codeforces", "atc", "atcoder", "牛客", "nk", "nc", "nowcoder"])
+            if len(closest_type) > 0:
+                if closest_type[0] in ["cf", "codeforces"]:
+                    queries = [Codeforces]
+                elif closest_type[0] in ["atc", "atcoder"]:
+                    queries = [AtCoder]
+                else:
+                    queries = [NowCoder]
+    tip_time_range = '今日' if query_today else '近期'
     if len(queries) == 1:
-        await message.reply(f"正在查询近日 {queries[0].platform_name} 比赛，请稍等")
+        await message.reply(f"正在查询{tip_time_range} {queries[0].platform_name} 比赛，请稍等")
     else:
-        await message.reply(f"正在查询近日比赛，请稍等")
+        await message.reply(f"正在查询{tip_time_range}比赛，请稍等")
     contests: list[Contest] = []
 
     for platform in queries:
@@ -113,9 +121,16 @@ async def recent_contests(message: RobotMessage):
 
     contests.sort(key=lambda c: c.start_time)
 
-    info = '\n\n'.join([contest.format() for contest in contests])
-    content = (f"近期比赛\n\n"
-               f"{info}")
+    if query_today:
+        tomorrow_start_timestamp = get_today_start_timestamp() + 24 * 60 * 60
+        contests = [contest for contest in contests if contest.start_time < tomorrow_start_timestamp]
+
+    if len(contests) == 0:
+        content = f"{tip_time_range}无比赛"
+    else:
+        info = '\n\n'.join([contest.format() for contest in contests])
+        content = (f"{tip_time_range}比赛\n\n"
+                   f"{info}")
 
     await message.reply(content, modal_words=False)
 
