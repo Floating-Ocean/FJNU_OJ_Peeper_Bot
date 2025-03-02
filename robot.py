@@ -36,7 +36,7 @@ def noon_sched_thread(loop: AbstractEventLoop, api: BotAPI):
 
 @command(tokens=["去死", "重启", "restart", "reboot"], permission_level=2)
 async def reply_restart_bot(message: RobotMessage):
-    await message.reply("好的捏，正在原地去世" if message.tokens[0] == '/去死' else "好的捏，正在重启bot")
+    await message.reply("好的捏，捏？欸我怎么似了" if message.tokens[0] == '/去死' else "好的捏，正在重启bot")
     Constants.log.info(f"Restarting bot...")
     os.execl(sys.executable, sys.executable, *sys.argv)
 

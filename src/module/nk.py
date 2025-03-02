@@ -7,7 +7,7 @@ from src.core.output_cached import get_cached_prefix
 from src.core.tools import check_is_int, png2jpg
 from src.module.message import RobotMessage, report_exception
 
-__nk_version__ = "v1.2.0"
+__nk_version__ = "v1.2.1"
 
 from src.platform.cp.nowcoder import NowCoder
 

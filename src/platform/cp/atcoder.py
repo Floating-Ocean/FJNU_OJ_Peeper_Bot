@@ -2,8 +2,10 @@ import random
 from datetime import datetime
 
 import pixie
+from lxml.etree import Element
 
-from src.core.tools import fetch_url_element, fetch_url_json, format_int_delta, patch_https_url, decode_range
+from src.core.tools import fetch_url_element, fetch_url_json, format_int_delta, patch_https_url, decode_range, \
+    check_intersect, get_today_timestamp_range
 from src.platform.cp.codeforces import Codeforces
 from src.platform.it.clist import Clist
 from src.platform.model import CompetitivePlatform, Contest
@@ -35,6 +37,12 @@ class AtCoder(CompetitivePlatform):
         return hour * 3600 + minute * 60
 
     @classmethod
+    def _merge_timestamp_range(cls, time_set: list[str]) -> tuple[int, int]:
+        start_timestamp = cls._extract_timestamp(time_set[0])
+        duration = cls._extract_duration(time_set[1])
+        return start_timestamp, start_timestamp + duration
+
+    @classmethod
     def _format_rated_range(cls, rating_str: str) -> str:
         rating_str = rating_str.replace(' ', '')
         if rating_str == '-':
@@ -61,28 +69,35 @@ class AtCoder(CompetitivePlatform):
         return social_info
 
     @classmethod
-    def get_contest_list(cls, overwrite_tag: bool = False) -> tuple[list[Contest], Contest] | None:
+    def get_contest_list(cls, overwrite_tag: bool = False) -> tuple[list[Contest], list[Contest], list[Contest]] | None:
         html = fetch_url_element("https://atcoder.jp/contests/")
         contest_table_upcoming = html.xpath("//div[@id='contest-table-upcoming']//tbody/tr")
+        contest_table_active = html.xpath("//div[@id='contest-table-active']//tbody/tr")
         contest_table_recent = html.xpath("//div[@id='contest-table-recent']//tbody/tr")
 
-        upcoming_contests = [Contest(
-            start_time=cls._extract_timestamp(contest.xpath(".//td[1]/a/time/text()")[0]),
-            duration=cls._extract_duration(contest.xpath(".//td[3]/text()")[0]),
-            tag=cls.platform_name if overwrite_tag else contest.xpath(".//td[2]/a/@href")[0].split('/')[-1],
-            name=contest.xpath(".//td[2]/a/text()")[0],
-            supplement=cls._format_rated_range(contest.xpath(".//td[4]/text()")[0])
-        ) for contest in contest_table_upcoming]
-        finished_contest = Contest(
-            start_time=cls._extract_timestamp(contest_table_recent[0].xpath(".//td[1]/a/time/text()")[0]),
-            duration=cls._extract_duration(contest_table_recent[0].xpath(".//td[3]/text()")[0]),
-            tag=(cls.platform_name if overwrite_tag else
-                 contest_table_recent[0].xpath(".//td[2]/a/@href")[0].split('/')[-1]),
-            name=contest_table_recent[0].xpath(".//td[2]/a/text()")[0],
-            supplement=cls._format_rated_range(contest_table_recent[0].xpath(".//td[4]/text()")[0])
-        )
+        def _pack_contest(contest: Element, phase: str) -> Contest:
+            return Contest(
+                start_time=cls._extract_timestamp(contest.xpath(".//td[1]/a/time/text()")[0]),
+                phase=phase,
+                duration=cls._extract_duration(contest.xpath(".//td[3]/text()")[0]),
+                tag=cls.platform_name if overwrite_tag else contest.xpath(".//td[2]/a/@href")[0].split('/')[-1],
+                name=contest.xpath(".//td[2]/a/text()")[0],
+                supplement=cls._format_rated_range(contest.xpath(".//td[4]/text()")[0])
+            )
 
-        return upcoming_contests, finished_contest
+        upcoming_contests = [_pack_contest(contest, '即将开始') for contest in contest_table_upcoming]
+        running_contests = [_pack_contest(contest, '正在比赛中') for contest in contest_table_active]
+        finished_contests = [_pack_contest(contest, '已结束') for contest in contest_table_recent if
+                             check_intersect(range1=get_today_timestamp_range(),
+                                             range2=cls._merge_timestamp_range([
+                                                 contest.xpath(".//td[1]/a/time/text()")[0],
+                                                 contest.xpath(".//td[3]/text()")[0]]))
+                             ]
+
+        if len(finished_contests) == 0:
+            finished_contests = [_pack_contest(contest_table_recent[0], '已结束')]
+
+        return upcoming_contests, running_contests, finished_contests
 
     @classmethod
     def get_prob_filtered(cls, contest_type: str = 'common', limit: str = None) -> dict | int:

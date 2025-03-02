@@ -8,7 +8,7 @@ from src.core.tools import check_is_int, get_simple_qrcode, png2jpg
 from src.module.message import RobotMessage, report_exception
 from src.platform.cp.codeforces import Codeforces
 
-__cf_version__ = "v3.1.0"
+__cf_version__ = "v3.1.2"
 
 
 def register_module():

@@ -9,12 +9,11 @@ from src.core.command import command, __commands__
 from src.core.constants import Constants
 from src.core.exception import UnauthorizedError
 from src.core.output_cached import get_cached_prefix
-from src.core.tools import png2jpg, get_simple_qrcode, get_today_start_timestamp
+from src.core.tools import png2jpg, get_simple_qrcode, check_intersect, get_today_timestamp_range
 from src.module.message import RobotMessage, report_exception
 from src.platform.cp.atcoder import AtCoder
 from src.platform.cp.codeforces import Codeforces
 from src.platform.cp.nowcoder import NowCoder
-from src.platform.model import Contest
 
 _fixed_reply = {
     "ping": "pong",
@@ -100,8 +99,8 @@ async def recent_contests(message: RobotMessage):
         if message.tokens[1] == 'today':
             query_today = True
         else:
-            closest_type = difflib.get_close_matches(message.tokens[1].lower(),
-                                                     ["cf", "codeforces", "atc", "atcoder", "牛客", "nk", "nc", "nowcoder"])
+            closest_type = difflib.get_close_matches(message.tokens[1].lower(), [
+                "cf", "codeforces", "atc", "atcoder", "牛客", "nk", "nc", "nowcoder"])
             if len(closest_type) > 0:
                 if closest_type[0] in ["cf", "codeforces"]:
                     queries = [Codeforces]
@@ -114,21 +113,43 @@ async def recent_contests(message: RobotMessage):
         await message.reply(f"正在查询{tip_time_range} {queries[0].platform_name} 比赛，请稍等")
     else:
         await message.reply(f"正在查询{tip_time_range}比赛，请稍等")
-    contests: list[Contest] = []
 
+    upcoming_contests, running_contests, finished_contests = [], [], []
     for platform in queries:
-        contests.extend(platform.get_contest_list(overwrite_tag=len(queries) > 1)[0])
+        upcoming, running, finished = platform.get_contest_list(overwrite_tag=len(queries) > 1)
+        upcoming_contests.extend(upcoming)
+        running_contests.extend(running)
+        finished_contests.extend(finished)
 
-    contests.sort(key=lambda c: c.start_time)
+    upcoming_contests.sort(key=lambda c: c.start_time)
+    running_contests.sort(key=lambda c: c.start_time)
+    finished_contests.sort(key=lambda c: c.start_time)
 
     if query_today:
-        tomorrow_start_timestamp = get_today_start_timestamp() + 24 * 60 * 60
-        contests = [contest for contest in contests if contest.start_time < tomorrow_start_timestamp]
+        upcoming_contests = [contest for contest in upcoming_contests if check_intersect(
+            range1=get_today_timestamp_range(),
+            range2=(contest.start_time, contest.start_time + contest.duration)
+        )]
+        running_contests = [contest for contest in running_contests if check_intersect(
+            range1=get_today_timestamp_range(),
+            range2=(contest.start_time, contest.start_time + contest.duration)
+        )]
+        finished_contests = [contest for contest in finished_contests if check_intersect(
+            range1=get_today_timestamp_range(),
+            range2=(contest.start_time, contest.start_time + contest.duration)
+        )]
 
-    if len(contests) == 0:
+    if len(upcoming_contests) == 0 and len(running_contests) == 0 and len(finished_contests) == 0:
         content = f"{tip_time_range}无比赛"
     else:
-        info = '\n\n'.join([contest.format() for contest in contests])
+        sections = []
+        if len(running_contests) > 0:
+            sections.append(">> 正在进行的比赛 >>\n\n" + ('\n\n'.join([contest.format() for contest in running_contests])))
+        if len(upcoming_contests) > 0:
+            sections.append(">> 即将开始的比赛 >>\n\n" + ('\n\n'.join([contest.format() for contest in upcoming_contests])))
+        if len(finished_contests) > 0:
+            sections.append(">> 已结束的比赛 >>\n\n" + ('\n\n'.join([contest.format() for contest in finished_contests])))
+        info = '\n\n'.join(sections)
         content = (f"{tip_time_range}比赛\n\n"
                    f"{info}")
 

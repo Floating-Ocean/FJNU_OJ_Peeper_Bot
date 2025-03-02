@@ -4,7 +4,8 @@ from datetime import datetime
 import pixie
 from lxml.etree import Element
 
-from src.core.tools import fetch_url_element, patch_https_url, fetch_url_json, format_int_delta
+from src.core.tools import fetch_url_element, fetch_url_json, format_int_delta, check_intersect, \
+    get_today_timestamp_range
 from src.platform.model import CompetitivePlatform, Contest
 
 
@@ -88,6 +89,12 @@ class NowCoder(CompetitivePlatform):
         return f"为 0-{unrated_range} 计分"
 
     @classmethod
+    def _merge_timestamp_range(cls, time_set: list[str]) -> tuple[int, int]:
+        start_timestamp = cls._extract_timestamp(time_set[1])
+        duration = cls._extract_duration(time_set[4])
+        return start_timestamp, start_timestamp + duration
+
+    @classmethod
     def _format_rating(cls, rating: int) -> str:
         rk = next((rk for (l, r), rk in cls.rated_rks.items() if l <= rating < r), '#灰')
         return f"{rating} {rk}"
@@ -152,34 +159,46 @@ class NowCoder(CompetitivePlatform):
         return social_info
 
     @classmethod
-    def get_contest_list(cls, overwrite_tag: bool = False) -> tuple[list[Contest], Contest] | None:
+    def get_contest_list(cls, overwrite_tag: bool = False) -> tuple[list[Contest], list[Contest], list[Contest]] | None:
         upcoming_contests: list[Contest] = []
-        finished_contests: list[Contest] = []
+        running_contests: list[Contest] = []
+        finished_contests_today: list[Contest] = []
+        finished_contests_last: list[Contest] = []
+
+        def _pack_contest(contest: Element, phase: str, supplement: str) -> Contest:
+            return Contest(
+                start_time=cls._extract_timestamp(cls._decode_contest_time_set(contest)[1]),
+                phase=phase,
+                duration=cls._extract_duration(cls._decode_contest_time_set(contest)[4]),
+                tag=cls.platform_name if overwrite_tag else None,
+                name=contest.xpath(".//a/text()")[0],
+                supplement=supplement + cls._decode_rated(contest)
+            )
+
         for category_id in [13, 14]:
             html = fetch_url_element(f"https://ac.nowcoder.com/acm/contest/vip-index?topCategoryFilter={category_id}")
             js_current = html.xpath("//div[@class='platform-mod js-current']//div[@class='platform-item-cont']")
             js_end = html.xpath("//div[@class='platform-mod js-end']//div[@class='platform-item-cont']")
-            upcoming_contests.extend([Contest(
-                start_time=cls._extract_timestamp(cls._decode_contest_time_set(contest)[1]),
-                duration=cls._extract_duration(cls._decode_contest_time_set(contest)[4]),
-                tag=cls.platform_name if overwrite_tag else None,
-                name=contest.xpath(".//a/text()")[0],
-                supplement=cls._decode_rated(contest)
-            ) for contest in js_current
+            tag = '高校比赛, ' if category_id == 14 else ''
+            upcoming_contests.extend([
+                _pack_contest(contest, '即将开始', tag) for contest in js_current
                 if contest.xpath(".//span[contains(@class, 'match-status')]/text()")[0].strip() == '报名中'])
-            finished_contests.append(Contest(
-                start_time=cls._extract_timestamp(cls._decode_contest_time_set(js_end[0])[1]),
-                duration=cls._extract_duration(cls._decode_contest_time_set(js_end[0])[4]),
-                tag=cls.platform_name if overwrite_tag else None,
-                name=js_end[0].xpath(".//a/text()")[0],
-                supplement=cls._decode_rated(js_end[0])
-            ))
+            running_contests.extend([
+                _pack_contest(contest, '正在比赛中', tag) for contest in js_current
+                if contest.xpath(".//span[contains(@class, 'match-status')]/text()")[0].strip() == '比赛中'])
+            finished_contests_today.extend([
+                _pack_contest(contest, '已结束', tag) for contest in js_end if
+                check_intersect(range1=get_today_timestamp_range(),
+                                range2=cls._merge_timestamp_range(cls._decode_contest_time_set(contest)))])
+            finished_contests_last.append(_pack_contest(js_end[0], '已结束', '高校比赛, '))
 
-        finished_contests.sort(key=lambda c: -c.start_time)
-        if len(finished_contests) == 0:
-            return None
+        finished_contests_last.sort(key=lambda c: -c.start_time)
+        if len(finished_contests_today) == 0:
+            finished_contests = [finished_contests_last[0]]
+        else:
+            finished_contests = finished_contests_today
 
-        return upcoming_contests, finished_contests[0]
+        return upcoming_contests, running_contests, finished_contests
 
     @classmethod
     def get_user_id_card(cls, handle: str) -> pixie.Image | str:

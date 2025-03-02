@@ -8,7 +8,7 @@ from src.core.tools import get_simple_qrcode, png2jpg
 from src.module.message import RobotMessage, report_exception
 from src.platform.cp.atcoder import AtCoder
 
-__atc_version__ = "v1.3.0"
+__atc_version__ = "v1.3.1"
 
 
 def register_module():

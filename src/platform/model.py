@@ -11,6 +11,7 @@ from src.core.tools import format_timestamp_diff, format_seconds, format_timesta
 @dataclass
 class Contest:
     start_time: int
+    phase: str
     duration: int
     tag: str | None
     name: str
@@ -21,10 +22,13 @@ class Contest:
         格式化为文本
         :return: 格式化后的文本信息
         """
-        delta_time = format_timestamp_diff(int(time.time()) - self.start_time)
+        if int(time.time()) >= self.start_time:
+            status = self.phase  # 用于展示"比赛中"，或者诸如 Codeforces 平台的 "正在重测中"
+        else:
+            status = format_timestamp_diff(int(time.time()) - self.start_time)
         return ((f"[{self.tag}] " if self.tag is not None else "") +
                 (f"{self.name}\n"
-                 f"{delta_time}, {format_timestamp(self.start_time)}\n"
+                 f"{status}, {format_timestamp(self.start_time)}\n"
                  f"持续 {format_seconds(self.duration)}, {self.supplement}"))
 
 
@@ -62,10 +66,11 @@ class CompetitivePlatform(abc.ABC):
         return img
 
     @classmethod
-    def get_contest_list(cls, overwrite_tag: bool = False) -> tuple[list[Contest], Contest] | None:
+    def get_contest_list(cls, overwrite_tag: bool = False) -> tuple[list[Contest], list[Contest], list[Contest]] | None:
         """
-        指定平台待举行的比赛以及上一个已结束的比赛
-        :return: tuple[平台待举行的比赛, 上一个已结束的比赛] | None
+        指定平台分类比赛列表
+        其中，已结束的比赛为 上一个已结束的比赛 与 当天所有已结束的比赛 的并集
+        :return: tuple[待举行的比赛，正在进行的比赛, 已结束的比赛] | None
         """
         pass
 
@@ -80,16 +85,26 @@ class CompetitivePlatform(abc.ABC):
         if contest_list is None:
             return "查询异常"
 
-        upcoming_contests, finished_contest = contest_list
+        upcoming_contests, running_contests, finished_contests = contest_list
         upcoming_contests.sort(key=lambda c: c.start_time)
+        running_contests.sort(key=lambda c: c.start_time)
+        finished_contests.sort(key=lambda c: c.start_time)
 
         info = ""
 
-        if len(upcoming_contests) == 0:
-            info = "最近没有比赛"
+        if len(running_contests) > 0:
+            info += ">> 正在进行的比赛 >>\n\n"
+            info += '\n\n'.join([contest.format() for contest in running_contests])
+            info += "\n\n"
 
-        info += '\n\n'.join([contest.format() for contest in upcoming_contests])
-        info += "\n\n上一场已结束的比赛:\n" + finished_contest.format()
+        if len(upcoming_contests) == 0:
+            info += ">> 最近没有比赛 >>\n\n"
+        else:
+            info += ">> 即将开始的比赛 >>\n\n"
+            info += '\n\n'.join([contest.format() for contest in upcoming_contests])
+            info += "\n\n"
+
+        info += ">> 上一场已结束的比赛 >>\n\n" + finished_contests[0].format()
 
         return info
 

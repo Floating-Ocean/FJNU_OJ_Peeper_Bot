@@ -249,6 +249,10 @@ def get_week_start_timestamp() -> int:
     return timestamp
 
 
+def get_today_timestamp_range() -> tuple[int, int]:
+    return get_today_start_timestamp(), get_today_start_timestamp() + 24 * 60 * 60
+
+
 def get_simple_qrcode(content: str) -> Image:
     qr = QRCode()
     qr.add_data(content)
@@ -297,6 +301,10 @@ def decode_range(range_str: str, length: tuple[int, int]) -> tuple[int, int]:
             return -3, -3
 
     return min_point, max_point
+
+
+def check_intersect(range1: tuple[int, int], range2: tuple[int, int]) -> bool:
+    return max(range1[0], range2[0]) <= min(range1[1], range2[1])
 
 
 def patch_https_url(url: str) -> str:

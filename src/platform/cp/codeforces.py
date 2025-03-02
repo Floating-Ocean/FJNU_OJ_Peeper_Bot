@@ -5,9 +5,8 @@ import time
 
 import pixie
 
-from src.core.painter import draw_round_rect, draw_text, apply_tint, draw_img, get_gradient_paint, darken_color
 from src.core.tools import fetch_url_json, format_timestamp, get_week_start_timestamp, get_today_start_timestamp, \
-    format_timestamp_diff, format_seconds, format_int_delta, decode_range
+    format_timestamp_diff, format_seconds, format_int_delta, decode_range, check_intersect, get_today_timestamp_range
 from src.lib.cf_rating_calc import PredictResult, Contestant, predict
 from src.platform.model import CompetitivePlatform, Contest
 
@@ -138,14 +137,24 @@ class Codeforces(CompetitivePlatform):
                           if section is not None])
 
     @classmethod
+    def _format_phase(cls, phase: str) -> str:
+        formatter = {
+            'BEFORE': '即将开始',
+            'CODING': '正在比赛中',
+            'PENDING_SYSTEM_TEST': '正在等待重测',
+            'SYSTEM_TEST': '正在重测中',
+            'FINISHED': '已结束'
+        }
+        if phase in formatter:
+            return formatter[phase]
+        else:
+            raise ValueError(f'Invalid phase: {phase}')
+
+    @classmethod
     def _format_contest(cls, contest: dict) -> str:
         phase = format_timestamp_diff(contest['relativeTimeSeconds'])
-        if contest['phase'] == 'CODING':
-            phase = "正在比赛中"
-        elif contest['phase'] == 'PENDING_SYSTEM_TEST':
-            phase = "正在等待重测"
-        elif contest['phase'] == 'SYSTEM_TEST':
-            phase = "正在重测中"
+        if contest['phase'] in ['CODING', 'PENDING_SYSTEM_TEST', 'SYSTEM_TEST']:
+            phase = cls._format_phase(contest['phase'])
         return (f"[{contest['id']}] {cls._format_contest_name(contest['name'])}\n"
                 f"{phase}, "
                 f"{format_timestamp(contest['startTimeSeconds'])}\n"
@@ -325,30 +334,38 @@ class Codeforces(CompetitivePlatform):
         return social_info
 
     @classmethod
-    def get_contest_list(cls, overwrite_tag: bool = False) -> tuple[list[Contest], Contest] | None:
+    def get_contest_list(cls, overwrite_tag: bool = False) -> tuple[list[Contest], list[Contest], list[Contest]] | None:
         contest_list = cls._fetch_contest_list_all()
 
         if contest_list is None:
             return None
 
-        upcoming_contests = [Contest(
-            start_time=contest['startTimeSeconds'],
-            duration=contest['durationSeconds'],
-            tag=cls.platform_name if overwrite_tag else contest['id'],
-            name=contest['name'],
-            supplement=f"{contest['type']} 赛制"
-        ) for contest in contest_list if contest['phase'] == 'BEFORE']
+        def _pack_contest(contest: dict) -> Contest:
+            return Contest(
+                start_time=contest['startTimeSeconds'],
+                phase=cls._format_phase(contest['phase']),
+                duration=contest['durationSeconds'],
+                tag=cls.platform_name if overwrite_tag else contest['id'],
+                name=contest['name'],
+                supplement=f"{contest['type']} 赛制"
+            )
 
-        finished_contest_dict = next(contest for contest in contest_list if contest['phase'] == 'FINISHED')
-        finished_contest = Contest(
-            start_time=finished_contest_dict['startTimeSeconds'],
-            duration=finished_contest_dict['durationSeconds'],
-            tag=cls.platform_name if overwrite_tag else finished_contest_dict['id'],
-            name=finished_contest_dict['name'],
-            supplement=f"{finished_contest_dict['type']} 赛制"
-        )
+        upcoming_contests = [_pack_contest(contest) for contest in contest_list if contest['phase'] == 'BEFORE']
+        running_contests = [_pack_contest(contest) for contest in contest_list
+                            if contest['phase'] not in ['BEFORE', 'FINISHED']
+                            and contest['startTimeSeconds'] + contest['durationSeconds']
+                            >= get_today_start_timestamp() - 7 * 24 * 60 * 60]  # 不考虑结束后一周还不重测的比赛
+        finished_contests = [_pack_contest(contest) for contest in contest_list if contest['phase'] == 'FINISHED'
+                             and check_intersect(range1=get_today_timestamp_range(),
+                                                 range2=(contest['startTimeSeconds'],
+                                                         contest['startTimeSeconds'] + contest['durationSeconds']))
+                             ]  # 所有和今天有交集的已结束比赛
 
-        return upcoming_contests, finished_contest
+        if len(finished_contests) == 0:
+            finished_contests = [_pack_contest(next(contest for contest in contest_list
+                                                    if contest['phase'] == 'FINISHED'))]
+
+        return upcoming_contests, running_contests, finished_contests
 
     @classmethod
     def get_prob_tags_all(cls) -> list[str] | None:
@@ -435,7 +452,7 @@ class Codeforces(CompetitivePlatform):
         if 'rating' in info:
             rating = info['rating']
             rank = info['rank'].title()
-            
+
         rank_alias = next((rk for (l, r), rk in cls.rated_rks.items() if l <= rating < r), 'N')
         return cls._render_user_card(info['handle'], social, rank, rank_alias, rating)
 
