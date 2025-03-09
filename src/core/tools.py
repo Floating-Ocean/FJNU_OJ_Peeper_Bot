@@ -9,6 +9,7 @@ import string
 import subprocess
 import time
 from asyncio import AbstractEventLoop
+from typing import Coroutine
 
 import numpy as np
 import requests
@@ -42,11 +43,14 @@ def run_shell(shell: str) -> str:
     return info
 
 
-def run_async(loop: AbstractEventLoop, func: any):
-    asyncio.set_event_loop(loop)
-    task = loop.create_task(func)
-    loop.run_until_complete(task)
-    return task.result()
+def run_coro(loop: AbstractEventLoop, coro: Coroutine):
+    if not asyncio.iscoroutine(coro):
+        raise TypeError('A coroutine object is required')
+    future = asyncio.run_coroutine_threadsafe(coro, loop)
+    print(111)
+    result = future.result()  # 阻塞当前线程，但事件循环在其他线程安全运行
+    print(222)
+    return result
 
 
 def fetch_url(url: str, inject_headers: dict = None, payload: dict = None, throw: bool = True,

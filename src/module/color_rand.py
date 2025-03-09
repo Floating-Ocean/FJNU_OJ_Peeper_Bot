@@ -100,5 +100,5 @@ async def reply_color_rand(message: RobotMessage):
     pinyin = picked_color["pinyin"]
     hex_text, rgb_text, hsv_text = transform_color(picked_color)
 
-    await message.reply(f"[Color] {name} {pinyin}\nHEX: {hex_text}\nRGB: {rgb_text}\nHSV: {hsv_text}",
+    message.reply(f"[Color] {name} {pinyin}\nHEX: {hex_text}\nRGB: {rgb_text}\nHSV: {hsv_text}",
                         img_path=png2jpg(img_path), modal_words=False)

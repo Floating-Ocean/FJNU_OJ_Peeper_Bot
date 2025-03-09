@@ -1,3 +1,4 @@
+import asyncio
 import difflib
 import random
 import re
@@ -41,7 +42,7 @@ async def call_handle_message(message: RobotMessage):
         content = message.tokens
 
         if len(content) == 0 and not message.guild_public:
-            return await message.reply(f"{match_key_words('')}")
+            return message.reply(f"{match_key_words('')}")
 
         func = content[0].lower()
         for cmd in __commands__.keys():
@@ -75,9 +76,9 @@ async def call_handle_message(message: RobotMessage):
             return
 
         if '/' in func:
-            await message.reply(f"其他指令还在开发中")
+            message.reply(f"其他指令还在开发中")
         else:
-            await message.reply(f"{match_key_words(func)}")
+            message.reply(f"{match_key_words(func)}")
 
     except Exception as e:
         await report_exception(message, 'Core', traceback.format_exc(), e)
@@ -85,7 +86,7 @@ async def call_handle_message(message: RobotMessage):
 
 @command(tokens=list(_fixed_reply.keys()))
 async def reply_fixed(message: RobotMessage):
-    await message.reply(_fixed_reply.get(message.tokens[0][1:], ""), modal_words=False)
+    message.reply(_fixed_reply.get(message.tokens[0][1:], ""), modal_words=False)
 
 
 @command(tokens=['contest', 'contests', '比赛', '近日比赛', '最近的比赛', '今天比赛', '今天的比赛', '今日比赛', '今日的比赛'])
@@ -110,9 +111,9 @@ async def recent_contests(message: RobotMessage):
                     queries = [NowCoder]
     tip_time_range = '今日' if query_today else '近期'
     if len(queries) == 1:
-        await message.reply(f"正在查询{tip_time_range} {queries[0].platform_name} 比赛，请稍等")
+        message.reply(f"正在查询{tip_time_range} {queries[0].platform_name} 比赛，请稍等")
     else:
-        await message.reply(f"正在查询{tip_time_range}比赛，请稍等")
+        message.reply(f"正在查询{tip_time_range}比赛，请稍等")
 
     upcoming_contests, running_contests, finished_contests = [], [], []
     for platform in queries:
@@ -153,7 +154,7 @@ async def recent_contests(message: RobotMessage):
         content = (f"{tip_time_range}比赛\n\n"
                    f"{info}")
 
-    await message.reply(content, modal_words=False)
+    message.reply(content, modal_words=False)
 
 
 @command(tokens=["qr", "qrcode", "二维码", "码"])
@@ -161,11 +162,18 @@ async def reply_qrcode(message: RobotMessage):
     content = re.sub(r'<@!\d+>', '', message.content).strip()
     content = re.sub(rf'{message.tokens[0]}', '', content, count=1).strip()
     if len(content) == 0:
-        await message.reply("请输入要转化为二维码的内容")
+        message.reply("请输入要转化为二维码的内容")
         return
 
     cached_prefix = get_cached_prefix('QRCode-Generator')
     qr_img = get_simple_qrcode(content)
     qr_img.save(f"{cached_prefix}.png")
 
-    await message.reply("生成了一个二维码", png2jpg(f"{cached_prefix}.png"))
+    message.reply("生成了一个二维码", png2jpg(f"{cached_prefix}.png"))
+
+
+@command(tokens=["卡住"])
+async def reply_qrcode(message: RobotMessage):
+    message.reply("OK，消息队列会卡住10秒")
+    await asyncio.sleep(10)
+    message.reply("卡完了，我活了")

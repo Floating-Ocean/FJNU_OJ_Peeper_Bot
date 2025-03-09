@@ -12,7 +12,7 @@ def register_module():
 
 @command(tokens=['alive'])
 async def alive(message: RobotMessage):
-    await message.reply("正在查询服务状态，请稍等")
+    message.reply("正在查询服务状态，请稍等")
     data = fetch_url_json("https://api.uptimerobot.com/v2/getMonitors",
                           payload={"api_key": _api_key})
 
@@ -35,7 +35,7 @@ async def alive(message: RobotMessage):
                 checker_results[checker_urls.index(url)] = 1 if monitor["status"] == 2 else 0  # 1 活着, 0 似了
 
     if min(checker_results) == -1:
-        await message.reply("[UptimeRobot Api] Api 异常")
+        message.reply("[UptimeRobot Api] Api 异常")
         return
 
     info = "[UptimeRobot Api] "
@@ -48,4 +48,4 @@ async def alive(message: RobotMessage):
         status_text = "正常" if checker_results[i] == 1 else "异常"
         info += f"\n[{checker_names[i]}] {status_text}"
 
-    await message.reply(info, modal_words=False)
+    message.reply(info, modal_words=False)
