@@ -3,7 +3,7 @@ import json
 import os
 import random
 
-from src.core.command import command
+from src.core.command import command, PermissionLevel
 from src.core.constants import Constants
 from src.core.tools import save_img, rand_str_len32, get_md5
 from src.module.message import RobotMessage
@@ -126,7 +126,7 @@ async def save_one(message: RobotMessage):
         message.reply(img_help)
 
 
-@command(tokens=["审核来只", "同意来只", "accept", "audit"], permission_level=1)
+@command(tokens=["审核来只", "同意来只", "accept", "audit"], permission_level=PermissionLevel.MOD)
 async def audit_accept(message: RobotMessage):
     load_pick_one_config()
 

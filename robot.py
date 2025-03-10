@@ -11,7 +11,7 @@ from apscheduler.schedulers.blocking import BlockingScheduler
 from botpy import BotAPI, Client, Intents
 from botpy.message import Message, GroupMessage, C2CMessage
 
-from src.core.command import command
+from src.core.command import command, PermissionLevel
 from src.core.constants import Constants
 from src.core.interact import RobotMessage, call_handle_message
 from src.module.peeper import daily_update_job, noon_report_job
@@ -34,7 +34,7 @@ def noon_sched_thread(api: BotAPI):
     noon_sched.start()
 
 
-@command(tokens=["去死", "重启", "restart", "reboot"], permission_level=2)
+@command(tokens=["去死", "重启", "restart", "reboot"], permission_level=PermissionLevel.ADMIN)
 async def reply_restart_bot(message: RobotMessage):
     message.reply("好的捏，捏？欸我怎么似了" if message.tokens[0] == '/去死' else "好的捏，正在重启bot")
     Constants.log.info(f"Restarting bot...")
@@ -58,7 +58,6 @@ async def join_in_message(message: RobotMessage):
         message.reply(f"已加入处理队列，前方还有 {size} 个请求")
     _count_queue.put(1)
     _query_queue.put(message)
-    print(message)
 
 
 class MyClient(Client):

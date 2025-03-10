@@ -11,7 +11,7 @@ from src.core.constants import Constants
 from src.core.exception import UnauthorizedError
 from src.core.output_cached import get_cached_prefix
 from src.core.tools import png2jpg, get_simple_qrcode, check_intersect, get_today_timestamp_range
-from src.module.message import RobotMessage, report_exception
+from src.module.message import RobotMessage, report_exception, MessageType
 from src.platform.cp.atcoder import AtCoder
 from src.platform.cp.codeforces import Codeforces
 from src.platform.cp.nowcoder import NowCoder
@@ -38,10 +38,11 @@ def match_key_words(content: str) -> str:
 
 
 async def call_handle_message(message: RobotMessage):
+    """分发消息处理"""
     try:
         content = message.tokens
 
-        if len(content) == 0 and not message.guild_public:
+        if len(content) == 0 and not message.is_guild_public():
             return message.reply(f"{match_key_words('')}")
 
         func = content[0].lower()
@@ -50,7 +51,7 @@ async def call_handle_message(message: RobotMessage):
             if starts_with or cmd == func:
                 original_command, execute_level, is_command, need_check_exclude = __commands__[cmd]
 
-                if not is_command and message.guild_public:
+                if not is_command and message.is_guild_public():
                     continue
 
                 if execute_level > 0:
@@ -59,8 +60,8 @@ async def call_handle_message(message: RobotMessage):
                         raise UnauthorizedError("权限不足，操作被拒绝" if func != "/去死" else "阿米诺斯")
 
                 if need_check_exclude:
-                    if (message.group_message is not None and
-                            message.group_message.group_openid in Constants.config['exclude_group_id']):
+                    if (message.message_type == MessageType.GROUP and
+                            message.message.group_openid in Constants.config['exclude_group_id']):
                         raise UnauthorizedError("榜单功能被禁用")
                 try:
                     if starts_with:
@@ -72,7 +73,8 @@ async def call_handle_message(message: RobotMessage):
                     await report_exception(message, f'Command<{original_command.__name__}>', traceback.format_exc(), e)
                 return
 
-        if message.guild_public:
+        # 如果是频道无at消息可能是发错了或者并非用户希望的处理对象
+        if message.is_guild_public():
             return
 
         if '/' in func:

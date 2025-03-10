@@ -1,6 +1,8 @@
 import base64
 import random
 import re
+from enum import Enum
+from typing import Optional, Union
 
 from botpy import BotAPI
 from botpy.message import Message, GroupMessage, C2CMessage
@@ -9,155 +11,194 @@ from src.core.constants import Constants
 from src.core.exception import handle_exception
 
 
+class MessageType(Enum):
+    GUILD = "guild"
+    GROUP = "group"
+    C2C = "c2c"
+
+
+class PermissionLevel(Enum):
+    USER = 0
+    MOD = 1
+    ADMIN = 2
+
+
 class RobotMessage:
+    """合并多种消息类型的操作"""
     def __init__(self, api: BotAPI):
         self.api = api
-        self.guild_public = False
-        self.guild_message = None
-        self.group_message = None
-        self.c2c_message = None
+        self.message_type: Optional[MessageType] = None
+        self.message: Optional[Union[Message, GroupMessage, C2CMessage]] = None
+        self.loop = None
+
         self.content = ""
-        self.tokens = ""
+        self.tokens = []
         self.author_id = ""
         self.attachments = []
         self.msg_seq = 0
-        self.user_permission_level = 0
-        self.loop = None
+        self.user_permission_level: PermissionLevel = PermissionLevel.USER
+        self._public = False  # Guild only
+
+    def is_guild_public(self):
+        return self._public
+
+    def _initial_setup(self, message: Message | GroupMessage | C2CMessage, author_id_path: str):
+        self.content = message.content
+        self.tokens = re.sub(r'<@!\d+>', '', message.content).strip().split()
+        self.author_id = getattr(message.author, author_id_path, "")
+        self.attachments = message.attachments
+        self._set_user_permission()
+
+    def _set_user_permission(self):
+        """统一设置用户权限等级"""
+        config = Constants.config
+        self.user_permission_level = (
+            PermissionLevel.ADMIN if self.author_id in config['admin_qq_id'] else
+            PermissionLevel.MOD if self.author_id in config['mod_qq_id'] else
+            PermissionLevel.USER
+        )
 
     def setup_guild_message(self, loop, message: Message, is_public: bool = False):
         self.loop = loop
-        self.guild_public = is_public
-        self.guild_message = message
-        self.content = message.content
-        self.tokens = re.sub(r'<@!\d+>', '', message.content).strip().split()
-        self.author_id = message.author.__dict__['id']
-        self.attachments = message.attachments
-        self.msg_seq = 0
-        self.user_permission_level = 2 if self.author_id in Constants.config['admin_qq_id'] else \
-            1 if self.author_id in Constants.config['mod_qq_id'] else 0
+        self.message_type = MessageType.GUILD
+        self.message = message
+        self._public = is_public
+        self._initial_setup(message, 'id')
 
     def setup_group_message(self, loop, message: GroupMessage):
         self.loop = loop
-        self.group_message = message
-        self.content = message.content
-        self.tokens = re.sub(r'<@!\d+>', '', message.content).strip().split()
-        self.author_id = message.author.__dict__['member_openid']
-        self.attachments = message.attachments
-        self.msg_seq = 0
-        self.user_permission_level = 2 if self.author_id in Constants.config['admin_qq_id'] else \
-            1 if self.author_id in Constants.config['mod_qq_id'] else 0
+        self.message_type = MessageType.GROUP
+        self.message = message
+        self._initial_setup(message, 'member_openid')
 
     def setup_c2c_message(self, loop, message: C2CMessage):
         self.loop = loop
-        self.c2c_message = message
-        self.content = message.content
-        self.tokens = re.sub(r'<@!\d+>', '', message.content).strip().split()
-        self.author_id = message.author.__dict__['user_openid']
-        self.attachments = message.attachments
-        self.msg_seq = 0
-        self.user_permission_level = 2 if self.author_id in Constants.config['admin_qq_id'] else \
-            1 if self.author_id in Constants.config['mod_qq_id'] else 0
+        self.message_type = MessageType.C2C
+        self.message = message
+        self._initial_setup(message, 'user_openid')
 
     def reply(self, content: str, img_path: str = None, img_url: str = None, modal_words: bool = True):
-        self.loop.create_task(self._reply_async(content, img_path, img_url, modal_words))
+        """异步发送回复的入口方法"""
+        if not self.loop:
+            raise RuntimeError("Event loop not initialized")
 
-    async def _reply_async(self, content: str, img_path: str, img_url: str, modal_words: bool):
-        if modal_words:  # 加点语气词
-            chosen_modal_word = random.choice(Constants.modal_words)
-            content += chosen_modal_word
+        friendly_content = content + random.choice(Constants.modal_words) if modal_words else content
+        self.loop.create_task(
+            self._send_message(friendly_content, img_path, img_url)
+        )
 
+    async def _send_message(self, content: str, img_path: str, img_url: str):
+        """统一消息发送入口"""
         self.msg_seq += 1
-        if self.guild_message:  # 频道消息
-            await self.api.post_message(
-                channel_id=self.guild_message.channel_id,
-                msg_id=self.guild_message.id,
-                content=f"<@{self.guild_message.author.id}>{content}",
-                file_image=img_path,
-                image=img_url)
-        elif self.group_message:  # 群消息
-            if img_path is not None or img_url is not None:
-                media = None
-                retry_times = 0
-                while media is None and retry_times < 3:
-                    if img_path is not None:
-                        with open(img_path, "rb") as img:
-                            file_image = img.read()
-                        media = await self.api.post_group_file(
-                            group_openid=self.group_message.group_openid,
-                            file_type=1,
-                            file_data=base64.b64encode(file_image).decode('UTF-8'))
-                    else:
-                        media = await self.api.post_group_file(
-                            group_openid=self.group_message.group_openid,
-                            file_type=1,
-                            url=img_url)
-                    retry_times += 1
 
-                if media is None:
-                    await self.api.post_group_message(
-                        group_openid=self.group_message.group_openid,
-                        msg_type=0,
-                        msg_id=self.group_message.id,
-                        content="发送图片失败，请稍后重试",
-                        msg_seq=self.msg_seq)
-                else:
-                    await self.api.post_group_message(
-                        group_openid=self.group_message.group_openid,
-                        msg_type=7,
-                        msg_id=self.group_message.id,
-                        content=content,
-                        media=media,
-                        msg_seq=self.msg_seq)
-            else:
-                await self.api.post_group_message(
-                    group_openid=self.group_message.group_openid,
-                    msg_type=0,
-                    msg_id=self.group_message.id,
-                    content=content,
-                    msg_seq=self.msg_seq)
-        elif self.c2c_message:  # 私聊消息
-            if img_path is not None or img_url is not None:
-                media = None
-                retry_times = 0
-                while media is None and retry_times < 3:
-                    if img_path is not None:
-                        with open(img_path, "rb") as img:
-                            file_image = img.read()
-                        media = await self.api.post_c2c_file(
-                            openid=self.author_id,
-                            file_type=1,
-                            file_data=base64.b64encode(file_image).decode('UTF-8'))
-                    else:
-                        media = await self.api.post_c2c_file(
-                            openid=self.author_id,
-                            file_type=1,
-                            url=img_url)
-                    retry_times += 1
+        # 处理媒体文件上传
+        media = await self._upload_media(img_path, img_url) \
+            if (img_path or img_url) and self.message_type != MessageType.GUILD else None
 
-                if media is None:
-                    await self.api.post_c2c_message(
-                        openid=self.author_id,
-                        msg_type=0,
-                        msg_id=self.c2c_message.id,
-                        content="发送图片失败，请稍后重试",
-                        msg_seq=self.msg_seq)
-                else:
-                    await self.api.post_c2c_message(
-                        openid=self.author_id,
-                        msg_type=7,
-                        msg_id=self.c2c_message.id,
-                        content=content,
-                        media=media,
-                        msg_seq=self.msg_seq)
-            else:
-                await self.api.post_c2c_message(
-                    openid=self.author_id,
-                    msg_type=0,
-                    msg_id=self.c2c_message.id,
-                    content=content,
-                    msg_seq=self.msg_seq)
-        else:  # 其他未支持的消息类型
+        # 构造消息参数
+        base_params = await self._pack_message_params(content, media)
+        if not base_params:
             return
+        params = base_params
+
+        # 频道api只需传递参数
+        if self.message_type == MessageType.GUILD:
+            params = {**base_params, 'file_image': img_path, 'image': img_url}
+
+        # 实际发送消息
+        await self._handle_send_request(params)
+
+    async def _upload_media(self, img_path: str, img_url: str) -> dict:
+        """带重试机制的媒体上传"""
+        for _ in range(3):  # 最多重试3次
+            try:
+                if img_path:
+                    with open(img_path, "rb") as f:
+                        file_data = base64.b64encode(f.read()).decode()
+                    received_media = await self._call_upload_api(file_data=file_data)
+                else:
+                    received_media = await self._call_upload_api(url=img_url)
+                if received_media['status'] == 'ok':
+                    return received_media
+            except Exception as e:
+                Constants.log.warn(f"Media upload failed: {e}")
+        return {'status': 'error', 'data': None}
+
+    async def _call_upload_api(self, **kwargs) -> dict:
+        """调用对应的文件上传API"""
+        if self.message_type == MessageType.GUILD:
+            raise TypeError("No need to upload images for guild messages.")
+
+        method_map = {
+            MessageType.GROUP: self.api.post_group_file,
+            MessageType.C2C: self.api.post_c2c_file
+        }
+        common_args = {
+            "file_type": 1,
+            **kwargs
+        }
+
+        if self.message_type == MessageType.GROUP:
+            common_args["group_openid"] = self.message.group_openid
+        elif self.message_type == MessageType.C2C:
+            common_args["openid"] = self.author_id
+
+        received_media = await method_map[self.message_type](**common_args)
+        if received_media:
+            return {'status': 'ok', 'data': received_media}
+        else:
+            return {'status': 'error', 'data': None}
+
+    async def _pack_message_params(self, content: str, media: Optional[dict]) -> Optional[dict]:
+        """构造消息发送参数"""
+        base_params = {
+            "original_content": content,
+            "msg_id": self.message.id,
+            "msg_seq": self.msg_seq
+        }
+
+        # 处理媒体消息
+        if media:
+            if media['status'] != 'ok':
+                await self._send_fallback_message("发送图片失败，请稍后重试")
+                return None
+            return {**base_params, "msg_type": 7, "media": media['data']}
+
+        # 文本消息
+        return {**base_params, "msg_type": 0}
+
+    async def _handle_send_request(self, params: dict):
+        """分发到具体的发送方法"""
+        intended_params_name = ['content', 'embed', 'ark', 'message_reference',
+                                'msg_id', 'event_id', 'markdown', 'keyboard']
+        if self.message_type == MessageType.GUILD:
+            params['content'] = f"<@{self.message.author.id}>{params['original_content']}"
+            params['channel_id'] = self.message.channel_id
+            intended_params_name.extend(['channel_id', 'image', 'file_image'])
+            api_method = self.api.post_message
+        elif self.message_type == MessageType.GROUP:
+            params['content'] = params['original_content']
+            params['group_openid'] = self.message.group_openid
+            intended_params_name.extend(['group_openid', 'msg_type', 'media', 'msg_seq'])
+            api_method = self.api.post_group_message
+        else:
+            params['content'] = params['original_content']
+            params['openid'] = self.author_id
+            intended_params_name.extend(['openid', 'msg_type', 'media', 'msg_seq'])
+            api_method = self.api.post_c2c_message
+
+        intended_params = {name: params[name] for name in intended_params_name if name in params}
+        await api_method(**intended_params)
+
+    async def _send_fallback_message(self, text: str):
+        """发送失败回退消息"""
+        fallback_params = {
+            "msg_type": 0,
+            "original_content": text,
+            "msg_id": self.message.id,
+            "msg_seq": self.msg_seq
+        }
+        await self._handle_send_request(fallback_params)
 
 
 async def report_exception(message: RobotMessage, module_name: str, trace: str, e: Exception):
