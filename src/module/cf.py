@@ -5,7 +5,7 @@ from src.core.command import command
 from src.core.constants import Constants
 from src.core.output_cached import get_cached_prefix
 from src.core.tools import check_is_int, get_simple_qrcode, png2jpg
-from src.module.message import RobotMessage, report_exception
+from src.module.message import RobotMessage
 from src.platform.cp.codeforces import Codeforces
 
 __cf_version__ = "v3.1.2"
@@ -222,4 +222,4 @@ async def reply_cf_request(message: RobotMessage):
             message.reply(f'[Codeforces]\n\n{Constants.help_contents["codeforces"]}', modal_words=False)
 
     except Exception as e:
-        await report_exception(message, 'Codeforces', traceback.format_exc(), e)
+        message.report_exception('Codeforces', traceback.format_exc(), e)

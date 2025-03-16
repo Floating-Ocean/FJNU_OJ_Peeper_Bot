@@ -8,7 +8,7 @@ from src.core.tools import check_is_int, fetch_url_json, fetch_url_text
 from src.module.atc import reply_atc_request
 from src.module.cf import reply_cf_request
 from src.module.color_rand import reply_color_rand
-from src.module.message import report_exception, RobotMessage
+from src.module.message import RobotMessage
 
 __rand_version__ = "v2.1.2"
 
@@ -112,7 +112,7 @@ async def reply_rand_request(message: RobotMessage):
             message.reply(f'[Random]\n\n{Constants.help_contents["random"]}', modal_words=False)
 
     except Exception as e:
-        await report_exception(message, 'Random', traceback.format_exc(), repr(e))
+        message.report_exception('Random', traceback.format_exc(), repr(e))
 
 
 @command(tokens=["hitokoto", "来句", "来一句", "来句话", "来一句话"])

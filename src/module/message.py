@@ -1,6 +1,8 @@
+import asyncio
 import base64
 import random
 import re
+from asyncio import AbstractEventLoop
 from enum import Enum
 from typing import Optional, Union
 
@@ -58,20 +60,20 @@ class RobotMessage:
             PermissionLevel.USER
         )
 
-    def setup_guild_message(self, loop, message: Message, is_public: bool = False):
+    def setup_guild_message(self, loop: AbstractEventLoop, message: Message, is_public: bool = False):
         self.loop = loop
         self.message_type = MessageType.GUILD
         self.message = message
         self._public = is_public
         self._initial_setup(message, 'id')
 
-    def setup_group_message(self, loop, message: GroupMessage):
+    def setup_group_message(self, loop: AbstractEventLoop, message: GroupMessage):
         self.loop = loop
         self.message_type = MessageType.GROUP
         self.message = message
         self._initial_setup(message, 'member_openid')
 
-    def setup_c2c_message(self, loop, message: C2CMessage):
+    def setup_c2c_message(self, loop: AbstractEventLoop, message: C2CMessage):
         self.loop = loop
         self.message_type = MessageType.C2C
         self.message = message
@@ -83,19 +85,21 @@ class RobotMessage:
             raise RuntimeError("Event loop not initialized")
 
         friendly_content = content + random.choice(Constants.modal_words) if modal_words else content
-        self.loop.create_task(
-            self._send_message(friendly_content, img_path, img_url)
+
+        asyncio.run_coroutine_threadsafe(  # 不能使用 loop.create_task，会造成资源竞争
+            self._send_message(friendly_content, img_path, img_url),
+            self.loop
         )
 
     async def _send_message(self, content: str, img_path: str, img_url: str):
         """统一消息发送入口"""
+        Constants.log.info(f"Initiated reply: {content}")
         self.msg_seq += 1
 
         # 处理媒体文件上传
         media = await self._upload_media(img_path, img_url) \
             if (img_path or img_url) and self.message_type != MessageType.GUILD else None
 
-        # 构造消息参数
         base_params = await self._pack_message_params(content, media)
         if not base_params:
             return
@@ -105,7 +109,6 @@ class RobotMessage:
         if self.message_type == MessageType.GUILD:
             params = {**base_params, 'file_image': img_path, 'image': img_url}
 
-        # 实际发送消息
         await self._handle_send_request(params)
 
     async def _upload_media(self, img_path: str, img_url: str) -> dict:
@@ -152,12 +155,12 @@ class RobotMessage:
     async def _pack_message_params(self, content: str, media: Optional[dict]) -> Optional[dict]:
         """构造消息发送参数"""
         base_params = {
-            "original_content": content,
+            "content": content,
             "msg_id": self.message.id,
             "msg_seq": self.msg_seq
         }
 
-        # 处理媒体消息
+        # 媒体消息
         if media:
             if media['status'] != 'ok':
                 await self._send_fallback_message("发送图片失败，请稍后重试")
@@ -172,17 +175,15 @@ class RobotMessage:
         intended_params_name = ['content', 'embed', 'ark', 'message_reference',
                                 'msg_id', 'event_id', 'markdown', 'keyboard']
         if self.message_type == MessageType.GUILD:
-            params['content'] = f"<@{self.message.author.id}>{params['original_content']}"
+            params['content'] = f"<@{self.message.author.id}>{params['content']}"
             params['channel_id'] = self.message.channel_id
             intended_params_name.extend(['channel_id', 'image', 'file_image'])
             api_method = self.api.post_message
         elif self.message_type == MessageType.GROUP:
-            params['content'] = params['original_content']
             params['group_openid'] = self.message.group_openid
             intended_params_name.extend(['group_openid', 'msg_type', 'media', 'msg_seq'])
             api_method = self.api.post_group_message
         else:
-            params['content'] = params['original_content']
             params['openid'] = self.author_id
             intended_params_name.extend(['openid', 'msg_type', 'media', 'msg_seq'])
             api_method = self.api.post_c2c_message
@@ -194,14 +195,13 @@ class RobotMessage:
         """发送失败回退消息"""
         fallback_params = {
             "msg_type": 0,
-            "original_content": text,
+            "content": text,
             "msg_id": self.message.id,
             "msg_seq": self.msg_seq
         }
         await self._handle_send_request(fallback_params)
 
-
-async def report_exception(message: RobotMessage, module_name: str, trace: str, e: Exception):
-    Constants.log.warn(f"[Operation failed] in module {module_name}.\n{repr(e)}")
-    Constants.log.error(trace)
-    message.reply(handle_exception(e), modal_words=False)
+    def report_exception(self, module_name: str, trace: str, e: Exception):
+        Constants.log.warn(f"[Operation failed] in module {module_name}.\n{repr(e)}")
+        Constants.log.error(trace)
+        self.reply(handle_exception(e), modal_words=False)

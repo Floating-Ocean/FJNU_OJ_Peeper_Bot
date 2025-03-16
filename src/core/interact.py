@@ -6,12 +6,12 @@ import traceback
 
 from pypinyin import pinyin, Style
 
-from src.core.command import command, __commands__
+from src.core.command import command, __commands__, PermissionLevel
 from src.core.constants import Constants
 from src.core.exception import UnauthorizedError
 from src.core.output_cached import get_cached_prefix
 from src.core.tools import png2jpg, get_simple_qrcode, check_intersect, get_today_timestamp_range
-from src.module.message import RobotMessage, report_exception, MessageType
+from src.module.message import RobotMessage, MessageType
 from src.platform.cp.atcoder import AtCoder
 from src.platform.cp.codeforces import Codeforces
 from src.platform.cp.nowcoder import NowCoder
@@ -54,9 +54,9 @@ async def call_handle_message(message: RobotMessage):
                 if not is_command and message.is_guild_public():
                     continue
 
-                if execute_level > 0:
+                if execute_level.value > PermissionLevel.USER.value:
                     Constants.log.info(f'{message.author_id} attempted {original_command.__name__}.')
-                    if execute_level > message.user_permission_level:
+                    if execute_level.value > message.user_permission_level.value:
                         raise UnauthorizedError("权限不足，操作被拒绝" if func != "/去死" else "阿米诺斯")
 
                 if need_check_exclude:
@@ -70,7 +70,7 @@ async def call_handle_message(message: RobotMessage):
                         message.tokens = [name] + ([replaced] if replaced else []) + message.tokens[1:]
                     await original_command(message)
                 except Exception as e:
-                    await report_exception(message, f'Command<{original_command.__name__}>', traceback.format_exc(), e)
+                    message.report_exception(f'Command<{original_command.__name__}>', traceback.format_exc(), e)
                 return
 
         # 如果是频道无at消息可能是发错了或者并非用户希望的处理对象
@@ -83,7 +83,7 @@ async def call_handle_message(message: RobotMessage):
             message.reply(f"{match_key_words(func)}")
 
     except Exception as e:
-        await report_exception(message, 'Core', traceback.format_exc(), e)
+        message.report_exception('Core', traceback.format_exc(), e)
 
 
 @command(tokens=list(_fixed_reply.keys()))

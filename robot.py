@@ -18,7 +18,6 @@ from src.module.peeper import daily_update_job, noon_report_job
 
 _query_queue = queue.Queue()
 _count_queue = queue.Queue()
-_event = asyncio.Event()
 
 daily_sched = BlockingScheduler()
 noon_sched = BlockingScheduler()
@@ -46,10 +45,6 @@ async def queue_up_handler():
         message = _query_queue.get()
         await call_handle_message(message)
         _count_queue.get()
-
-
-async def async_set_event():
-    _event.set()
 
 
 async def join_in_message(message: RobotMessage):
