@@ -46,7 +46,7 @@ def classify_verdicts(content: str) -> str:
     return full_to_alias[matches[0]].upper()
 
 
-async def execute_lib_method(prop: str, message: RobotMessage | None, no_id: bool) -> str | None:
+def execute_lib_method(prop: str, message: RobotMessage | None, no_id: bool) -> str | None:
     traceback = ""
     for _t in range(2):  # 尝试2次
         id_prop = "" if no_id else "--id hydro "
@@ -63,12 +63,12 @@ async def execute_lib_method(prop: str, message: RobotMessage | None, no_id: boo
     return None
 
 
-async def call_lib_method(message: RobotMessage, prop: str, no_id: bool = False) -> str | None:
-    return await execute_lib_method(prop, message, no_id)
+def call_lib_method(message: RobotMessage, prop: str, no_id: bool = False) -> str | None:
+    return execute_lib_method(prop, message, no_id)
 
 
-async def call_lib_method_directly(prop: str) -> str | None:
-    return await execute_lib_method(prop, None, False)
+def call_lib_method_directly(prop: str) -> str | None:
+    return execute_lib_method(prop, None, False)
 
 
 def daily_update_job():
@@ -80,35 +80,35 @@ def noon_report_job(api: BotAPI):
     asyncio.get_event_loop().create_task(call_noon_report(api))
 
 
-async def call_noon_report(api: BotAPI):
+def call_noon_report(api: BotAPI):
     today = datetime.datetime.now().strftime("%Y/%m/%d")
     oneday = datetime.timedelta(days=1)
     yesterday = (datetime.datetime.now() - oneday).strftime("%Y/%m/%d")
 
     cached_prefix = get_cached_prefix('Peeper-Board-Generator')
-    run = await call_lib_method_directly(f"--full --output {cached_prefix}.png")
+    run = call_lib_method_directly(f"--full --output {cached_prefix}.png")
     if run is None:
-        await api.post_message(channel_id=Constants.config['push_channel'], content="推送昨日卷王天梯榜失败")
+        api.post_message(channel_id=Constants.config['push_channel'], content="推送昨日卷王天梯榜失败")
     else:
-        await api.post_message(channel_id=Constants.config['push_channel'], content=f"{yesterday} 卷王天梯榜",
+        api.post_message(channel_id=Constants.config['push_channel'], content=f"{yesterday} 卷王天梯榜",
                                file_image=png2jpg(f"{cached_prefix}.png"))
 
     cached_prefix = get_cached_prefix('Peeper-Board-Generator')
-    run = await call_lib_method_directly(f"--now --output {cached_prefix}.png")
+    run = call_lib_method_directly(f"--now --output {cached_prefix}.png")
     if run is None:
-        await api.post_message(channel_id=Constants.config['push_channel'], content="推送今日题数失败")
+        api.post_message(channel_id=Constants.config['push_channel'], content="推送今日题数失败")
     else:
-        await api.post_message(channel_id=Constants.config['push_channel'], content=f"{today} 半天做题总榜",
+        api.post_message(channel_id=Constants.config['push_channel'], content=f"{today} 半天做题总榜",
                                file_image=png2jpg(f"{cached_prefix}.png"))
 
 
-async def send_user_info(message: RobotMessage, content: str, by_name: bool = False):
+def send_user_info(message: RobotMessage, content: str, by_name: bool = False):
     type_name = "用户名" if by_name else " uid "
     type_id = "name" if by_name else "uid"
     message.reply(f"正在查询{type_name}为 {content} 的用户数据，请稍等")
 
     cached_prefix = get_cached_prefix('Peeper-Board-Generator')
-    run = await call_lib_method(message, f"--query_{type_id} {content} --output {cached_prefix}.txt")
+    run = call_lib_method(message, f"--query_{type_id} {content} --output {cached_prefix}.txt")
     if run is None:
         return
 
@@ -118,7 +118,7 @@ async def send_user_info(message: RobotMessage, content: str, by_name: bool = Fa
 
 
 @command(tokens=['评测榜单', 'verdict'], need_check_exclude=True)
-async def send_now_board_with_verdict(message: RobotMessage):
+def send_now_board_with_verdict(message: RobotMessage):
     content = message.tokens[1] if len(message.tokens) == 2 else ""
     single_col = (message.tokens[2] == "single") if len(
         message.tokens) == 3 else False
@@ -131,7 +131,7 @@ async def send_now_board_with_verdict(message: RobotMessage):
 
     single_arg = "" if single_col else " --separate_cols"
     cached_prefix = get_cached_prefix('Peeper-Board-Generator')
-    run = await call_lib_method(message,
+    run = call_lib_method(message,
                                 f"--now {single_arg} --verdict {verdict} --output {cached_prefix}.png")
     if run is None:
         return
@@ -140,14 +140,14 @@ async def send_now_board_with_verdict(message: RobotMessage):
 
 
 @command(tokens=['今日题数', 'today'], need_check_exclude=True)
-async def send_today_board(message: RobotMessage):
+def send_today_board(message: RobotMessage):
     single_col = (message.tokens[1] == "single") \
         if len(message.tokens) == 2 else False
     message.reply(f"正在查询今日题数，请稍等")
 
     single_arg = "" if single_col else " --separate_cols"
     cached_prefix = get_cached_prefix('Peeper-Board-Generator')
-    run = await call_lib_method(message, f"--now {single_arg} --output {cached_prefix}.png")
+    run = call_lib_method(message, f"--now {single_arg} --output {cached_prefix}.png")
     if run is None:
         return
 
@@ -155,14 +155,14 @@ async def send_today_board(message: RobotMessage):
 
 
 @command(tokens=['昨日总榜', 'yesterday', 'full'], need_check_exclude=True)
-async def send_yesterday_board(message: RobotMessage):
+def send_yesterday_board(message: RobotMessage):
     single_col = (message.tokens[1] == "single") \
         if len(message.tokens) == 2 else False
     message.reply(f"正在查询昨日总榜，请稍等")
 
     single_arg = "" if single_col else " --separate_cols"
     cached_prefix = get_cached_prefix('Peeper-Board-Generator')
-    run = await call_lib_method(message, f"--full {single_arg} --output {cached_prefix}.png")
+    run = call_lib_method(message, f"--full {single_arg} --output {cached_prefix}.png")
     if run is None:
         return
 
@@ -170,11 +170,11 @@ async def send_yesterday_board(message: RobotMessage):
 
 
 @command(tokens=['api'])
-async def send_version_info(message: RobotMessage):
+def send_version_info(message: RobotMessage):
     message.reply(f"正在查询各模块版本，请稍等")
 
     cached_prefix = get_cached_prefix('Peeper-Board-Generator')
-    run = await call_lib_method(message, f"--version --output {cached_prefix}.txt", no_id=True)
+    run = call_lib_method(message, f"--version --output {cached_prefix}.txt", no_id=True)
     if run is None:
         return
 
@@ -191,7 +191,7 @@ async def send_version_info(message: RobotMessage):
 
 
 @command(tokens=['user'], need_check_exclude=True)
-async def oj_user(message: RobotMessage):
+def oj_user(message: RobotMessage):
     content = message.tokens
     if len(content) < 3:
         return message.reply("请输入三个参数，第三个参数前要加空格，比如说\"/user id 1\"，\"/user name Hydro\"")
@@ -200,6 +200,6 @@ async def oj_user(message: RobotMessage):
     if content[1] == "id" and (len(content[2]) > 9 or not check_is_int(content[2])):
         return message.reply("参数错误，id必须为整数")
     if content[1] == "id" or content[1] == "name":
-        await send_user_info(message, content[2], by_name=(content[1] == "name"))
+        send_user_info(message, content[2], by_name=(content[1] == "name"))
     else:
         message.reply("请输入正确的参数，如\"/user id ...\", \"/user name ...\"")

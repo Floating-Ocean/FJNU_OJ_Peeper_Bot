@@ -38,7 +38,7 @@ _what_dict = {
 
 
 @command(tokens=["来只*"] + list(_what_dict.keys()))
-async def pick_one(message: RobotMessage):
+def pick_one(message: RobotMessage):
     load_pick_one_config()
 
     func = message.tokens[0][1:]
@@ -72,7 +72,7 @@ async def pick_one(message: RobotMessage):
 
 
 @command(tokens=["添加来只*", "添加*"])
-async def save_one(message: RobotMessage):
+def save_one(message: RobotMessage):
     load_pick_one_config()
 
     if len(message.tokens) < 2:
@@ -94,7 +94,7 @@ async def save_one(message: RobotMessage):
                 continue  # 不是图片
 
             file_path = f"{dir_path}{rand_str_len32()}.gif"
-            response = await save_img(attach.__dict__['url'], file_path)
+            response = save_img(attach.__dict__['url'], file_path)
 
             if response:
                 md5 = get_md5(file_path)
@@ -127,7 +127,7 @@ async def save_one(message: RobotMessage):
 
 
 @command(tokens=["审核来只", "同意来只", "accept", "audit"], permission_level=PermissionLevel.MOD)
-async def audit_accept(message: RobotMessage):
+def audit_accept(message: RobotMessage):
     load_pick_one_config()
 
     dir_path = f"{_lib_path}\\"

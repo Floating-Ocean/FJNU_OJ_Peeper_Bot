@@ -34,20 +34,20 @@ def noon_sched_thread(api: BotAPI):
 
 
 @command(tokens=["去死", "重启", "restart", "reboot"], permission_level=PermissionLevel.ADMIN)
-async def reply_restart_bot(message: RobotMessage):
+def reply_restart_bot(message: RobotMessage):
     message.reply("好的捏，捏？欸我怎么似了" if message.tokens[0] == '/去死' else "好的捏，正在重启bot")
     Constants.log.info(f"Restarting bot...")
     os.execl(sys.executable, sys.executable, *sys.argv)
 
 
-async def queue_up_handler():
+def queue_up_handler():
     while True:
         message = _query_queue.get()
-        await call_handle_message(message)
+        call_handle_message(message)
         _count_queue.get()
 
 
-async def join_in_message(message: RobotMessage):
+def join_in_message(message: RobotMessage):
     size = _count_queue.qsize()
     if size > 0:
         message.reply(f"已加入处理队列，前方还有 {size} 个请求")
@@ -70,7 +70,7 @@ class MyClient(Client):
             f"from {message.channel_id}")
         packed_message = RobotMessage(self.api)
         packed_message.setup_guild_message(self.loop, message)
-        await join_in_message(packed_message)
+        join_in_message(packed_message)
 
     async def on_message_create(self, message: Message):
         Constants.log.info(
@@ -82,7 +82,7 @@ class MyClient(Client):
         packed_message.setup_guild_message(self.loop, message, is_public=True)
 
         if not re.search(r'<@!\d+>', content):
-            await join_in_message(packed_message)
+            join_in_message(packed_message)
 
     async def on_group_at_message_create(self, message: GroupMessage):
         Constants.log.info(
@@ -90,7 +90,7 @@ class MyClient(Client):
             f"from {message.group_openid}")
         packed_message = RobotMessage(self.api)
         packed_message.setup_group_message(self.loop, message)
-        await join_in_message(packed_message)
+        join_in_message(packed_message)
 
     async def on_c2c_message_create(self, message: C2CMessage):
         Constants.log.info(
@@ -98,17 +98,11 @@ class MyClient(Client):
             f"from {message.author.user_openid}")
         packed_message = RobotMessage(self.api)
         packed_message.setup_c2c_message(self.loop, message)
-        await join_in_message(packed_message)
-
-
-def run_loop(coro: any):
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    loop.run_until_complete(coro)
+        join_in_message(packed_message)
 
 
 def open_robot_session():
-    threading.Thread(target=run_loop, args=[queue_up_handler()]).start()
+    threading.Thread(target=queue_up_handler, args=[]).start()
 
     intents = botpy.Intents.default()  # 对目前已支持的所有事件进行监听
     client = MyClient(intents=intents, timeout=60)

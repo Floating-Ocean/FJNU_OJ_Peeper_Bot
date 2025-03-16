@@ -43,7 +43,7 @@ def get_rand_seq(range_max: int) -> str:
 
 
 @command(tokens=["选择", "rand", "shuffle", "打乱"])
-async def reply_rand_request(message: RobotMessage):
+def reply_rand_request(message: RobotMessage):
     try:
         content = message.tokens
         if len(content) < 2 and not content[0].startswith("/选择"):
@@ -97,16 +97,16 @@ async def reply_rand_request(message: RobotMessage):
             message.reply("参数错误，请输入 [1, 500] 内的数字")
 
         elif func == "word" or func == "hitokoto" or func == "sentence":
-            await reply_hitokoto(message)
+            reply_hitokoto(message)
 
         elif func == "color":
-            await reply_color_rand(message)
+            reply_color_rand(message)
 
         elif func == "cf":
-            await reply_cf_request(message)
+            reply_cf_request(message)
 
         elif func == "atc":
-            await reply_atc_request(message)
+            reply_atc_request(message)
 
         else:
             message.reply(f'[Random]\n\n{Constants.help_contents["random"]}', modal_words=False)
@@ -116,7 +116,7 @@ async def reply_rand_request(message: RobotMessage):
 
 
 @command(tokens=["hitokoto", "来句", "来一句", "来句话", "来一句话"])
-async def reply_hitokoto(message: RobotMessage):
+def reply_hitokoto(message: RobotMessage):
     json = fetch_url_json("https://v1.hitokoto.cn/")
     content = json['hitokoto']
     where = json['from']

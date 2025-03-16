@@ -37,7 +37,7 @@ def match_key_words(content: str) -> str:
     return random.choice(["你干嘛", "干什么", "咋了", "how", "what"])
 
 
-async def call_handle_message(message: RobotMessage):
+def call_handle_message(message: RobotMessage):
     """分发消息处理"""
     try:
         content = message.tokens
@@ -68,7 +68,7 @@ async def call_handle_message(message: RobotMessage):
                         name = cmd[:-1]
                         replaced = func.replace(name, '')
                         message.tokens = [name] + ([replaced] if replaced else []) + message.tokens[1:]
-                    await original_command(message)
+                    original_command(message)
                 except Exception as e:
                     message.report_exception(f'Command<{original_command.__name__}>', traceback.format_exc(), e)
                 return
@@ -87,12 +87,12 @@ async def call_handle_message(message: RobotMessage):
 
 
 @command(tokens=list(_fixed_reply.keys()))
-async def reply_fixed(message: RobotMessage):
+def reply_fixed(message: RobotMessage):
     message.reply(_fixed_reply.get(message.tokens[0][1:], ""), modal_words=False)
 
 
 @command(tokens=['contest', 'contests', '比赛', '近日比赛', '最近的比赛', '今天比赛', '今天的比赛', '今日比赛', '今日的比赛'])
-async def recent_contests(message: RobotMessage):
+def recent_contests(message: RobotMessage):
     query_today = message.tokens[0] in ['/今天比赛', '/今天的比赛', '/今日比赛', '/今日的比赛']
     if len(message.tokens) >= 3 and message.tokens[1] == 'today':
         query_today = True
@@ -160,7 +160,7 @@ async def recent_contests(message: RobotMessage):
 
 
 @command(tokens=["qr", "qrcode", "二维码", "码"])
-async def reply_qrcode(message: RobotMessage):
+def reply_qrcode(message: RobotMessage):
     content = re.sub(r'<@!\d+>', '', message.content).strip()
     content = re.sub(rf'{message.tokens[0]}', '', content, count=1).strip()
     if len(content) == 0:
@@ -172,10 +172,3 @@ async def reply_qrcode(message: RobotMessage):
     qr_img.save(f"{cached_prefix}.png")
 
     message.reply("生成了一个二维码", png2jpg(f"{cached_prefix}.png"))
-
-
-@command(tokens=["卡住"])
-async def reply_qrcode(message: RobotMessage):
-    message.reply("OK，消息队列会卡住10秒")
-    await asyncio.sleep(10)
-    message.reply("卡完了，我活了")

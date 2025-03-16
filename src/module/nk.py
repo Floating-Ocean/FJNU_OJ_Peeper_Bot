@@ -16,7 +16,7 @@ def register_module():
     pass
 
 
-async def send_user_id_card(message: RobotMessage, handle: str):
+def send_user_id_card(message: RobotMessage, handle: str):
     message.reply(f"正在查询 {handle} 的 NowCoder 基础信息，请稍等")
 
     id_card = NowCoder.get_user_id_card(handle)
@@ -31,7 +31,7 @@ async def send_user_id_card(message: RobotMessage, handle: str):
         message.reply(f"[NowCoder] {handle}", png2jpg(f"{cached_prefix}.png"), modal_words=False)
 
 
-async def send_user_info(message: RobotMessage, handle: str):
+def send_user_info(message: RobotMessage, handle: str):
     message.reply(f"正在查询 {handle} 的 NowCoder 平台信息，请稍等")
 
     info, avatar = NowCoder.get_user_info(handle)
@@ -48,7 +48,7 @@ async def send_user_info(message: RobotMessage, handle: str):
     message.reply(content, img_url=avatar, modal_words=False)
 
 
-async def send_contest(message: RobotMessage):
+def send_contest(message: RobotMessage):
     message.reply(f"正在查询近期 NowCoder 比赛，请稍等")
 
     info = NowCoder.get_recent_contests()
@@ -60,7 +60,7 @@ async def send_contest(message: RobotMessage):
 
 
 @command(tokens=['nk', 'nc', 'nowcoder'])
-async def reply_nk_request(message: RobotMessage):
+def reply_nk_request(message: RobotMessage):
     try:
         content = re.sub(r'<@!\d+>', '', message.content).strip().split()
         if len(content) < 2:
@@ -78,7 +78,7 @@ async def reply_nk_request(message: RobotMessage):
                 message.reply("暂不支持使用昵称检索用户，请使用uid")
                 return
 
-            await send_user_id_card(message, content[2])
+            send_user_id_card(message, content[2])
 
         elif func == "info" or func == "user":
             if len(content) != 3:
@@ -89,10 +89,10 @@ async def reply_nk_request(message: RobotMessage):
                 message.reply("暂不支持使用昵称检索用户，请使用uid")
                 return
 
-            await send_user_info(message, content[2])
+            send_user_info(message, content[2])
 
         elif func == "contest" or func == "contests":
-            await send_contest(message)
+            send_contest(message)
 
         else:
             message.reply(f'[NowCoder]\n\n{Constants.help_contents["nowcoder"]}', modal_words=False)

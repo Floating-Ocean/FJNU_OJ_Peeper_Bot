@@ -11,7 +11,7 @@ def register_module():
 
 
 @command(tokens=['alive'])
-async def alive(message: RobotMessage):
+def alive(message: RobotMessage):
     message.reply("正在查询服务状态，请稍等")
     data = fetch_url_json("https://api.uptimerobot.com/v2/getMonitors",
                           payload={"api_key": _api_key})

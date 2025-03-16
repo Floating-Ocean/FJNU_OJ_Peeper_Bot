@@ -85,7 +85,7 @@ def add_qrcode(target_path: str, color: dict):
 
 
 @command(tokens=["color", "颜色", "色", "来个颜色", "来个色卡", "色卡"])
-async def reply_color_rand(message: RobotMessage):
+def reply_color_rand(message: RobotMessage):
     cached_prefix = get_cached_prefix('Color-Rand')
     img_path = f"{cached_prefix}.png"
 
