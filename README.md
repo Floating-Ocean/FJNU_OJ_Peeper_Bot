@@ -8,6 +8,7 @@
   <a href="https://github.com/Floating-Ocean/FJNU_OJ_Peeper_Bot/commits"><img alt="GitHub Last Commit" src="https://img.shields.io/github/last-commit/Floating-Ocean/FJNU_OJ_Peeper_Bot?style=flat-square"></a>
   <a href="https://github.com/Floating-Ocean/FJNU_OJ_Peeper_Bot/graphs/contributors"><img alt="GitHub contributors" src="https://img.shields.io/github/contributors/Floating-Ocean/FJNU_OJ_Peeper_Bot?style=flat-square"></a>
   <a href="https://github.com/Floating-Ocean/FJNU_OJ_Peeper_Bot/commits"><img alt="GitHub commit activity" src="https://img.shields.io/github/commit-activity/y/Floating-Ocean/FJNU_OJ_Peeper_Bot?style=flat-square"></a>
+  <a href="https://img.shields.io/github/commit-activity/y/Floating-Ocean/FJNU_OJ_Peeper_Bot"><img alt="CodeRabbit Pull Request Reviews" src="https://img.shields.io/coderabbit/prs/github/Floating-Ocean/FJNU_OJ_Peeper_Bot?utm_source=oss&utm_medium=github&utm_campaign=Floating-Ocean%2FFJNU_OJ_Peeper_Bot&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews&style=flat-square"></a>
 </div>
 
 ## 开始之前
