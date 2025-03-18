@@ -28,8 +28,8 @@ def daily_sched_thread():
     daily_sched.start()
 
 
-def noon_sched_thread(api: BotAPI):
-    noon_sched.add_job(noon_report_job, "cron", hour=13, minute=0, args=[api])
+def noon_sched_thread(client: Client):
+    noon_sched.add_job(noon_report_job, "cron", hour=13, minute=0, args=[client])
     noon_sched.start()
 
 
@@ -111,6 +111,6 @@ def open_robot_session():
     threading.Thread(target=daily_sched_thread, args=[]).start()
     
     # 午间推送机制
-    threading.Thread(target=noon_sched_thread, args=[client.api]).start()
+    threading.Thread(target=noon_sched_thread, args=[client]).start()
 
     client.run(appid=Constants.config["appid"], secret=Constants.config["secret"])

@@ -2,7 +2,7 @@
 import datetime
 import difflib
 
-from botpy import BotAPI
+from botpy import BotAPI, Client
 
 from src.core.command import command
 from src.core.constants import Constants
@@ -73,14 +73,20 @@ def call_lib_method_directly(prop: str) -> str | None:
 
 def daily_update_job():
     cached_prefix = get_cached_prefix('Peeper-Board-Generator')
-    asyncio.get_event_loop().create_task(call_lib_method_directly(f"--full --output {cached_prefix}.png"))
+    call_lib_method_directly(f"--full --output {cached_prefix}.png")
 
 
-def noon_report_job(api: BotAPI):
-    asyncio.get_event_loop().create_task(call_noon_report(api))
+def noon_report_job(client: Client):
+    # 因为只有这里需要主动推送所以写函数里了
+    def push_message(content: str, file_image: str | None = None):
+        Constants.log.info(f"Initiated push: {content}")
+        asyncio.run_coroutine_threadsafe(
+            client.api.post_message(channel_id=Constants.config['push_channel'],
+                                    content=content,
+                                    file_image=file_image),
+            client.loop
+        )
 
-
-def call_noon_report(api: BotAPI):
     today = datetime.datetime.now().strftime("%Y/%m/%d")
     oneday = datetime.timedelta(days=1)
     yesterday = (datetime.datetime.now() - oneday).strftime("%Y/%m/%d")
@@ -88,18 +94,17 @@ def call_noon_report(api: BotAPI):
     cached_prefix = get_cached_prefix('Peeper-Board-Generator')
     run = call_lib_method_directly(f"--full --output {cached_prefix}.png")
     if run is None:
-        api.post_message(channel_id=Constants.config['push_channel'], content="推送昨日卷王天梯榜失败")
+        push_message(content="推送昨日卷王天梯榜失败")
     else:
-        api.post_message(channel_id=Constants.config['push_channel'], content=f"{yesterday} 卷王天梯榜",
-                               file_image=png2jpg(f"{cached_prefix}.png"))
+        push_message(content=f"{yesterday} 卷王天梯榜", file_image=png2jpg(f"{cached_prefix}.png"))
 
     cached_prefix = get_cached_prefix('Peeper-Board-Generator')
     run = call_lib_method_directly(f"--now --output {cached_prefix}.png")
     if run is None:
-        api.post_message(channel_id=Constants.config['push_channel'], content="推送今日题数失败")
+        push_message(content="推送今日题数失败")
     else:
-        api.post_message(channel_id=Constants.config['push_channel'], content=f"{today} 半天做题总榜",
-                               file_image=png2jpg(f"{cached_prefix}.png"))
+        push_message(content=f"{today} 半天做题总榜",
+                     file_image=png2jpg(f"{cached_prefix}.png"))
 
 
 def send_user_info(message: RobotMessage, content: str, by_name: bool = False):
