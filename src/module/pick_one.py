@@ -3,7 +3,7 @@ import json
 import os
 import random
 
-from src.core.command import command
+from src.core.command import command, PermissionLevel
 from src.core.constants import Constants
 from src.core.tools import save_img, rand_str_len32, get_md5
 from src.module.message import RobotMessage
@@ -38,7 +38,7 @@ _what_dict = {
 
 
 @command(tokens=["来只*"] + list(_what_dict.keys()))
-async def pick_one(message: RobotMessage):
+def pick_one(message: RobotMessage):
     load_pick_one_config()
 
     func = message.tokens[0][1:]
@@ -53,7 +53,7 @@ async def pick_one(message: RobotMessage):
         if len(matches) == 0:
             img_help = "目前可以来只:\n\n"
             img_help += ", ".join([_id for _id, _len in _ids])
-            await message.reply(img_help, modal_words=False)
+            message.reply(img_help, modal_words=False)
             return
         current_key = _match_dict[matches[0]]
 
@@ -63,20 +63,20 @@ async def pick_one(message: RobotMessage):
     img_len = len(img_list)
 
     if img_len == 0:
-        await message.reply(f"这里还没有 {current_config['_id']} 的图片")
+        message.reply(f"这里还没有 {current_config['_id']} 的图片")
     else:
         rnd_idx = random.randint(1, img_len) + random.randint(1, img_len) + random.randint(1, img_len)
         rnd_idx = (rnd_idx - 1) % img_len
-        await message.reply(f"来了一只{current_config['_id']}",
+        message.reply(f"来了一只{current_config['_id']}",
                             img_path=f"{dir_path}{img_list[rnd_idx]}")
 
 
 @command(tokens=["添加来只*", "添加*"])
-async def save_one(message: RobotMessage):
+def save_one(message: RobotMessage):
     load_pick_one_config()
 
     if len(message.tokens) < 2:
-        await message.reply("请指定需要添加的图片的关键词")
+        message.reply("请指定需要添加的图片的关键词")
         return
 
     audit = message.user_permission_level == 0
@@ -94,7 +94,7 @@ async def save_one(message: RobotMessage):
                 continue  # 不是图片
 
             file_path = f"{dir_path}{rand_str_len32()}.gif"
-            response = await save_img(attach.__dict__['url'], file_path)
+            response = save_img(attach.__dict__['url'], file_path)
 
             if response:
                 md5 = get_md5(file_path)
@@ -108,7 +108,7 @@ async def save_one(message: RobotMessage):
                 ok += 1
 
         if cnt == 0:
-            await message.reply(f"未识别到图片，请将图片和指令发送在同一条消息中")
+            message.reply(f"未识别到图片，请将图片和指令发送在同一条消息中")
         else:
             failed_info = ""
             if duplicate > 0:
@@ -119,15 +119,15 @@ async def save_one(message: RobotMessage):
             audit_suffix = "审核队列" if audit else ""
             main_info = "非Bot管理员添加的图片需要审核。\n" if audit else ""
             main_info += f"已添加 {ok} 张图片至 {current_key} {audit_suffix}中" if ok > 0 else "没有图片被添加"
-            await message.reply(f"{main_info}{failed_info}")
+            message.reply(f"{main_info}{failed_info}")
 
     else:
         img_help = f"关键词 {what} 未被记录，请联系bot管理员添加" if len(what) > 0 else "请指定需要添加的图片的关键词"
-        await message.reply(img_help)
+        message.reply(img_help)
 
 
-@command(tokens=["审核来只", "同意来只", "accept", "audit"], permission_level=1)
-async def audit_accept(message: RobotMessage):
+@command(tokens=["审核来只", "同意来只", "accept", "audit"], permission_level=PermissionLevel.MOD)
+def audit_accept(message: RobotMessage):
     load_pick_one_config()
 
     dir_path = f"{_lib_path}\\"
@@ -153,7 +153,7 @@ async def audit_accept(message: RobotMessage):
             ok_dict[tag] = ok_dict.get(tag, 0) + 1
 
     if cnt == 0:
-        await message.reply(f"没有需要审核的图片")
+        message.reply(f"没有需要审核的图片")
     else:
         failed_info = ""
         if cnt - ok > 0:
@@ -161,4 +161,4 @@ async def audit_accept(message: RobotMessage):
 
         audit_detail = '\n'.join([f"[{tag}] {ok_count} 张" for tag, ok_count in ok_dict.items()])
         info = f"已审核 {ok} 张图片{failed_info}\n\n{audit_detail}" if ok > 0 else f"没有图片被添加{failed_info}"
-        await message.reply(info, modal_words=False)
+        message.reply(info, modal_words=False)

@@ -381,7 +381,7 @@ class Codeforces(CompetitivePlatform):
         return tags
 
     @classmethod
-    async def get_prob_filtered(cls, tag_needed: str, limit: str = None, newer: bool = False,
+    def get_prob_filtered(cls, tag_needed: str, limit: str = None, newer: bool = False,
                                 on_tag_chosen=None) -> dict | int:
         min_point, max_point = 0, 0
         if limit is not None:
@@ -403,7 +403,7 @@ class Codeforces(CompetitivePlatform):
                     return -3
                 tag_needed = closet_tag[0]
                 if on_tag_chosen is not None:
-                    await on_tag_chosen(f"标签最佳匹配: {tag_needed}")
+                    on_tag_chosen(f"标签最佳匹配: {tag_needed}")
             problems = cls._api('problemset.problems', tags=tag_needed.replace("-", " "))
 
         if isinstance(problems, int) or len(problems) == 0:

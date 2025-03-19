@@ -1,8 +1,17 @@
+from enum import Enum
+
+
+class PermissionLevel(Enum):
+    USER = 0
+    MOD = 1
+    ADMIN = 2
+
+
 __commands__ = {}
 
 
-def command(tokens: list, permission_level: int = 0, is_command: bool = True,
-            need_check_exclude: bool = False):
+def command(tokens: list, permission_level: PermissionLevel = PermissionLevel.USER,
+            is_command: bool = True, need_check_exclude: bool = False):
     """
         创建一条命令。
 

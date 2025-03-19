@@ -190,7 +190,7 @@ class NowCoder(CompetitivePlatform):
                 _pack_contest(contest, '已结束', tag) for contest in js_end if
                 check_intersect(range1=get_today_timestamp_range(),
                                 range2=cls._merge_timestamp_range(cls._decode_contest_time_set(contest)))])
-            finished_contests_last.append(_pack_contest(js_end[0], '已结束', '高校比赛, '))
+            finished_contests_last.append(_pack_contest(js_end[0], '已结束', tag))
 
         finished_contests_last.sort(key=lambda c: -c.start_time)
         if len(finished_contests_today) == 0:

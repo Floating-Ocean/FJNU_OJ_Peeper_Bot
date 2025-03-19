@@ -1,3 +1,4 @@
+import asyncio
 import difflib
 import random
 import re
@@ -5,12 +6,12 @@ import traceback
 
 from pypinyin import pinyin, Style
 
-from src.core.command import command, __commands__
+from src.core.command import command, __commands__, PermissionLevel
 from src.core.constants import Constants
 from src.core.exception import UnauthorizedError
 from src.core.output_cached import get_cached_prefix
 from src.core.tools import png2jpg, get_simple_qrcode, check_intersect, get_today_timestamp_range
-from src.module.message import RobotMessage, report_exception
+from src.module.message import RobotMessage, MessageType
 from src.platform.cp.atcoder import AtCoder
 from src.platform.cp.codeforces import Codeforces
 from src.platform.cp.nowcoder import NowCoder
@@ -36,12 +37,13 @@ def match_key_words(content: str) -> str:
     return random.choice(["你干嘛", "干什么", "咋了", "how", "what"])
 
 
-async def call_handle_message(message: RobotMessage):
+def call_handle_message(message: RobotMessage):
+    """分发消息处理"""
     try:
         content = message.tokens
 
-        if len(content) == 0 and not message.guild_public:
-            return await message.reply(f"{match_key_words('')}")
+        if len(content) == 0 and not message.is_guild_public():
+            return message.reply(f"{match_key_words('')}")
 
         func = content[0].lower()
         for cmd in __commands__.keys():
@@ -49,47 +51,48 @@ async def call_handle_message(message: RobotMessage):
             if starts_with or cmd == func:
                 original_command, execute_level, is_command, need_check_exclude = __commands__[cmd]
 
-                if not is_command and message.guild_public:
+                if not is_command and message.is_guild_public():
                     continue
 
-                if execute_level > 0:
+                if execute_level.value > PermissionLevel.USER.value:
                     Constants.log.info(f'{message.author_id} attempted {original_command.__name__}.')
-                    if execute_level > message.user_permission_level:
+                    if execute_level.value > message.user_permission_level.value:
                         raise UnauthorizedError("权限不足，操作被拒绝" if func != "/去死" else "阿米诺斯")
 
                 if need_check_exclude:
-                    if (message.group_message is not None and
-                            message.group_message.group_openid in Constants.config['exclude_group_id']):
+                    if (message.message_type == MessageType.GROUP and
+                            message.message.group_openid in Constants.config['exclude_group_id']):
                         raise UnauthorizedError("榜单功能被禁用")
                 try:
                     if starts_with:
                         name = cmd[:-1]
                         replaced = func.replace(name, '')
                         message.tokens = [name] + ([replaced] if replaced else []) + message.tokens[1:]
-                    await original_command(message)
+                    original_command(message)
                 except Exception as e:
-                    await report_exception(message, f'Command<{original_command.__name__}>', traceback.format_exc(), e)
+                    message.report_exception(f'Command<{original_command.__name__}>', traceback.format_exc(), e)
                 return
 
-        if message.guild_public:
+        # 如果是频道无at消息可能是发错了或者并非用户希望的处理对象
+        if message.is_guild_public():
             return
 
         if '/' in func:
-            await message.reply(f"其他指令还在开发中")
+            message.reply(f"其他指令还在开发中")
         else:
-            await message.reply(f"{match_key_words(func)}")
+            message.reply(f"{match_key_words(func)}")
 
     except Exception as e:
-        await report_exception(message, 'Core', traceback.format_exc(), e)
+        message.report_exception('Core', traceback.format_exc(), e)
 
 
 @command(tokens=list(_fixed_reply.keys()))
-async def reply_fixed(message: RobotMessage):
-    await message.reply(_fixed_reply.get(message.tokens[0][1:], ""), modal_words=False)
+def reply_fixed(message: RobotMessage):
+    message.reply(_fixed_reply.get(message.tokens[0][1:], ""), modal_words=False)
 
 
 @command(tokens=['contest', 'contests', '比赛', '近日比赛', '最近的比赛', '今天比赛', '今天的比赛', '今日比赛', '今日的比赛'])
-async def recent_contests(message: RobotMessage):
+def recent_contests(message: RobotMessage):
     query_today = message.tokens[0] in ['/今天比赛', '/今天的比赛', '/今日比赛', '/今日的比赛']
     if len(message.tokens) >= 3 and message.tokens[1] == 'today':
         query_today = True
@@ -110,9 +113,9 @@ async def recent_contests(message: RobotMessage):
                     queries = [NowCoder]
     tip_time_range = '今日' if query_today else '近期'
     if len(queries) == 1:
-        await message.reply(f"正在查询{tip_time_range} {queries[0].platform_name} 比赛，请稍等")
+        message.reply(f"正在查询{tip_time_range} {queries[0].platform_name} 比赛，请稍等")
     else:
-        await message.reply(f"正在查询{tip_time_range}比赛，请稍等")
+        message.reply(f"正在查询{tip_time_range}比赛，请稍等")
 
     upcoming_contests, running_contests, finished_contests = [], [], []
     for platform in queries:
@@ -153,19 +156,19 @@ async def recent_contests(message: RobotMessage):
         content = (f"{tip_time_range}比赛\n\n"
                    f"{info}")
 
-    await message.reply(content, modal_words=False)
+    message.reply(content, modal_words=False)
 
 
 @command(tokens=["qr", "qrcode", "二维码", "码"])
-async def reply_qrcode(message: RobotMessage):
+def reply_qrcode(message: RobotMessage):
     content = re.sub(r'<@!\d+>', '', message.content).strip()
     content = re.sub(rf'{message.tokens[0]}', '', content, count=1).strip()
     if len(content) == 0:
-        await message.reply("请输入要转化为二维码的内容")
+        message.reply("请输入要转化为二维码的内容")
         return
 
     cached_prefix = get_cached_prefix('QRCode-Generator')
     qr_img = get_simple_qrcode(content)
     qr_img.save(f"{cached_prefix}.png")
 
-    await message.reply("生成了一个二维码", png2jpg(f"{cached_prefix}.png"))
+    message.reply("生成了一个二维码", png2jpg(f"{cached_prefix}.png"))
