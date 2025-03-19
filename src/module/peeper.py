@@ -2,6 +2,7 @@
 import datetime
 import difflib
 import os
+import shlex
 
 from botpy import Client
 
@@ -51,7 +52,8 @@ def execute_lib_method(prop: str, message: RobotMessage | None, no_id: bool) -> 
     traceback = ""
     for _t in range(2):  # 尝试2次
         id_prop = "" if no_id else "--id hydro "
-        result = run_shell(f"cd {_lib_path} & python main.py {id_prop}{prop}")
+        safe_prop = shlex.quote(prop)
+        result = run_shell(f"cd {_lib_path} & python main.py {id_prop}{safe_prop}")
 
         with open(os.path.join(_lib_path, "last_traceback.log"), "r", encoding='utf-8') as f:
             traceback = f.read()
