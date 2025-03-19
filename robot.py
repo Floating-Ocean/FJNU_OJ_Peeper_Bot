@@ -47,10 +47,10 @@ def queue_up_handler():
 
 
 def join_in_message(message: RobotMessage):
-    size = _count_queue.qsize()
-    if size > 0:
-        message.reply(f"已加入处理队列，前方还有 {size} 个请求")
     _count_queue.put(1)
+    size = _count_queue.qsize()
+    if size > 1:
+        message.reply(f"已加入处理队列，前方还有 {size - 1} 个请求")
     _query_queue.put(message)
 
 

@@ -47,7 +47,8 @@ def reply_rand_request(message: RobotMessage):
     try:
         content = message.tokens
         if len(content) < 2 and not content[0].startswith("/选择"):
-            return message.reply(f'[Random]\n\n{Constants.help_contents["random"]}', modal_words=False)
+            message.reply(f'[Random]\n\n{Constants.help_contents["random"]}', modal_words=False)
+            return
 
         if content[0] == "/shuffle" or content[0] == "/打乱":
             if len(content) != 2:
@@ -55,13 +56,15 @@ def reply_rand_request(message: RobotMessage):
             content_len = len(content[1])
             rnd_perm = get_rand_seq(content_len).split(", ")
             rnd_content = "".join([content[1][int(x) - 1] for x in rnd_perm])
-            return message.reply(f"[Random Shuffle]\n\n{rnd_content}", modal_words=False)
+            message.reply(f"[Random Shuffle]\n\n{rnd_content}", modal_words=False)
+            return
 
         func = content[0][3::].strip() if len(content) == 1 else content[1]
 
         if content[0].startswith("/选择"):
             if len(func) == 0:
-                return message.reply("请指定要选择范围，用 \"还是\" 或逗号分隔")
+                message.reply("请指定要选择范围，用 \"还是\" 或逗号分隔")
+                return
 
             select_from = re.split("还是|,|，", func)
             select_len = len(select_from)
@@ -71,7 +74,8 @@ def reply_rand_request(message: RobotMessage):
         elif func == "num" or func == "int":
             if (len(content) != 4 or
                     (not check_is_int(content[2])) or (not check_is_int(content[3]))):
-                return message.reply("请输入正确的指令格式，比如说\"/rand num 1 100\"")
+                message.reply("请输入正确的指令格式，比如说\"/rand num 1 100\"")
+                return
 
             if max(len(content[2]), len(content[3])) <= 10:
                 range_min, range_max = int(content[2]), int(content[3])
@@ -80,19 +84,22 @@ def reply_rand_request(message: RobotMessage):
                         range_min, range_max = range_max, range_min
                     result = get_rand_num(range_min, range_max)
                     split_str = "\n\n" if result >= 10_000 else " "
-                    return message.reply(f"[Rand Number]{split_str}{result}", modal_words=False)
+                    message.reply(f"[Rand Number]{split_str}{result}", modal_words=False)
+                    return
 
             message.reply("参数过大，请输入 [-1e9, 1e9] 内的整数")
 
         elif func == "seq":
             if len(content) != 3 or not check_is_int(content[2]):
-                return message.reply("请输入正确的指令格式，比如说\"/rand seq 10\"")
+                message.reply("请输入正确的指令格式，比如说\"/rand seq 10\"")
+                return
 
             if len(content[2]) <= 4:
                 range_max = int(content[2])
                 if 1 <= range_max <= 500:
                     result = get_rand_seq(range_max).replace("\n", "")
-                    return message.reply(f"[Rand Sequence]\n\n[{result}]", modal_words=False)
+                    message.reply(f"[Rand Sequence]\n\n[{result}]", modal_words=False)
+                    return
 
             message.reply("参数错误，请输入 [1, 500] 内的数字")
 
