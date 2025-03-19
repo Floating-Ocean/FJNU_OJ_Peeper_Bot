@@ -18,7 +18,7 @@ def register_module():
 
 
 def get_rand_num(range_min: int, range_max: int) -> int:
-    url = (f"https://www.random.org/integers/?num=1&"
+    url = ("https://www.random.org/integers/?num=1&"
            f"min={range_min}&max={range_max}&col=1&base=10&format=plain&rnd=new")
     data = fetch_url_text(url, throw=False, method='get')
 
@@ -30,9 +30,9 @@ def get_rand_num(range_min: int, range_max: int) -> int:
 
 
 def get_rand_seq(range_max: int) -> str:
-    url = (f"https://www.random.org/integer-sets/?sets=1&"
+    url = ("https://www.random.org/integer-sets/?sets=1&"
            f"num={range_max}&min=1&max={range_max}&seqnos=off&commas=on&order=index&"
-           f"format=plain&rnd=new")
+           "format=plain&rnd=new")
     data = fetch_url_text(url, throw=False, method='get')
 
     if isinstance(data, int):

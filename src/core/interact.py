@@ -1,4 +1,3 @@
-import asyncio
 import difflib
 import random
 import re
@@ -46,7 +45,7 @@ def call_handle_message(message: RobotMessage):
             return message.reply(f"{match_key_words('')}")
 
         func = content[0].lower()
-        for cmd in __commands__.keys():
+        for cmd in __commands__:
             starts_with = cmd[-1] == '*' and func.startswith(cmd[:-1])
             if starts_with or cmd == func:
                 original_command, execute_level, is_command, need_check_exclude = __commands__[cmd]
@@ -78,7 +77,7 @@ def call_handle_message(message: RobotMessage):
             return
 
         if '/' in func:
-            message.reply(f"其他指令还在开发中")
+            message.reply("其他指令还在开发中")
         else:
             message.reply(f"{match_key_words(func)}")
 
