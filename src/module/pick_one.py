@@ -8,7 +8,7 @@ from src.core.constants import Constants
 from src.core.tools import save_img, rand_str_len32, get_md5
 from src.module.message import RobotMessage
 
-_lib_path = Constants.config["lib_path"] + "\\Pick-One"
+_lib_path = os.path.join(Constants.config["lib_path"], "Pick-One")
 __pick_one_version__ = "v2.3.1"
 
 _lib_config, _match_dict, _ids = {}, {}, []
@@ -19,11 +19,11 @@ def register_module():
 
 
 def load_pick_one_config():
-    with open(_lib_path + "\\config.json", 'r', encoding="utf-8") as f:
+    with open(os.path.join(_lib_path, "config.json"), 'r', encoding="utf-8") as f:
         _lib_config.clear(), _ids.clear(), _match_dict.clear()
         _lib_config.update(json.load(f))
         for key, value in _lib_config.items():  # 方便匹配
-            _ids.append([value['_id'], len(os.listdir(f"{_lib_path}\\{key}\\"))])
+            _ids.append([value['_id'], len(os.listdir(os.path.join(_lib_path, key)))])
             for keys in value['key']:
                 _match_dict[keys] = key
         _ids.sort(key=lambda s: s[1], reverse=True)  # 按图片数量降序排序
@@ -58,7 +58,7 @@ def pick_one(message: RobotMessage):
         current_key = _match_dict[matches[0]]
 
     current_config = _lib_config[current_key]
-    dir_path = f"{_lib_path}\\{current_key}\\"
+    dir_path = os.path.join(_lib_path, current_key)
     img_list = os.listdir(dir_path)
     img_len = len(img_list)
 
@@ -84,9 +84,9 @@ def save_one(message: RobotMessage):
 
     if what in _match_dict.keys():
         current_key = _match_dict[what]
-        audit_prefix = "\\__AUDIT__" if audit else ""
-        dir_path = f"{_lib_path}{audit_prefix}\\{current_key}\\"
-        real_dir_path = f"{_lib_path}\\{current_key}\\"
+        dir_path = (os.path.join(_lib_path, "__AUDIT__", current_key) if audit else
+                    os.path.join(_lib_path, current_key))
+        real_dir_path = os.path.join(_lib_path, current_key)
         cnt, ok, duplicate = len(message.attachments), 0, 0
 
         for attach in message.attachments:
@@ -130,15 +130,14 @@ def save_one(message: RobotMessage):
 def audit_accept(message: RobotMessage):
     load_pick_one_config()
 
-    dir_path = f"{_lib_path}\\"
-    audit_dir_path = f"{dir_path}__AUDIT__\\"
+    audit_dir_path = os.path.join(_lib_path, "__AUDIT__")
     tags = [tag for tag in os.listdir(audit_dir_path)
             if os.path.isdir(os.path.join(audit_dir_path, tag))]  # 遍历文件夹
     cnt, ok = 0, 0
     ok_dict: dict[str, int] = {}
 
     for tag in tags:
-        if not os.path.exists(os.path.join(dir_path, tag)):
+        if not os.path.exists(os.path.join(_lib_path, tag)):
             continue
 
         img_list = [img for img in os.listdir(os.path.join(audit_dir_path, tag))
@@ -146,9 +145,9 @@ def audit_accept(message: RobotMessage):
 
         for img in img_list:
             cnt += 1
-            if os.path.exists(os.path.join(dir_path, tag, img)):
+            if os.path.exists(os.path.join(_lib_path, tag, img)):
                 continue  # 图片重复
-            os.rename(os.path.join(audit_dir_path, tag, img), os.path.join(dir_path, tag, img))
+            os.rename(os.path.join(audit_dir_path, tag, img), os.path.join(_lib_path, tag, img))
             ok += 1
             ok_dict[tag] = ok_dict.get(tag, 0) + 1
 

@@ -1,6 +1,7 @@
 ﻿import asyncio
 import datetime
 import difflib
+import os
 
 from botpy import Client
 
@@ -17,7 +18,7 @@ from src.module.nk import __nk_version__
 from src.module.pick_one import __pick_one_version__
 from src.module.rand import __rand_version__
 
-_lib_path = Constants.config["lib_path"] + "\\Peeper-Board-Generator"
+_lib_path = os.path.join(Constants.config["lib_path"], "Peeper-Board-Generator")
 
 
 def register_module():
@@ -52,7 +53,7 @@ def execute_lib_method(prop: str, message: RobotMessage | None, no_id: bool) -> 
         id_prop = "" if no_id else "--id hydro "
         result = run_shell(f"cd {_lib_path} & python main.py {id_prop}{prop}")
 
-        with open(f"{_lib_path}\\last_traceback.log", "r", encoding='utf-8') as f:
+        with open(os.path.join(_lib_path, "last_traceback.log"), "r", encoding='utf-8') as f:
             traceback = f.read()
             if traceback == "ok":
                 return result
