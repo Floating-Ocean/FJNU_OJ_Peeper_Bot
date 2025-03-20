@@ -1,8 +1,10 @@
 ﻿import asyncio
 import datetime
 import difflib
+import os
+import shlex
 
-from botpy import BotAPI, Client
+from botpy import Client
 
 from src.core.command import command
 from src.core.constants import Constants
@@ -17,7 +19,7 @@ from src.module.nk import __nk_version__
 from src.module.pick_one import __pick_one_version__
 from src.module.rand import __rand_version__
 
-_lib_path = Constants.config["lib_path"] + "\\Peeper-Board-Generator"
+_lib_path = os.path.join(Constants.config["lib_path"], "Peeper-Board-Generator")
 
 
 def register_module():
@@ -50,11 +52,13 @@ def execute_lib_method(prop: str, message: RobotMessage | None, no_id: bool) -> 
     traceback = ""
     for _t in range(2):  # 尝试2次
         id_prop = "" if no_id else "--id hydro "
-        result = run_shell(f"cd {_lib_path} & python main.py {id_prop}{prop}")
-        traceback = open(f"{_lib_path}\\last_traceback.log", "r", encoding='utf-8').read()
+        safe_prop = shlex.quote(prop)
+        result = run_shell(f"cd {_lib_path} & python main.py {id_prop}{safe_prop}")
 
-        if traceback == "ok":
-            return result
+        with open(os.path.join(_lib_path, "last_traceback.log"), "r", encoding='utf-8') as f:
+            traceback = f.read()
+            if traceback == "ok":
+                return result
 
     if message is not None:
         message.report_exception('Peeper-Board-Generator', traceback,
@@ -117,9 +121,9 @@ def send_user_info(message: RobotMessage, content: str, by_name: bool = False):
     if run is None:
         return
 
-    result = open(f"{cached_prefix}.txt", encoding="utf-8").read()
-    result = escape_mail_url(result)
-    message.reply(f"[{type_id.capitalize()} {content}]\n\n{result}", modal_words=False)
+    with open(f"{cached_prefix}.txt", encoding="utf-8") as f:
+        result = escape_mail_url(f.read())
+        message.reply(f"[{type_id.capitalize()} {content}]\n\n{result}", modal_words=False)
 
 
 @command(tokens=['评测榜单', 'verdict'], need_check_exclude=True)
@@ -183,16 +187,17 @@ def send_version_info(message: RobotMessage):
     if run is None:
         return
 
-    result = open(f"{cached_prefix}.txt", encoding="utf-8").read()
-    message.reply(f"[API Version]\n\n"
-                        f"Core {Constants.core_version}\n"
-                        f"AtCoder {__atc_version__}\n"
-                        f"Codeforces {__cf_version__}\n"
-                        f"Color-Rand {__color_rand_version__}"
-                        f"NowCoder {__nk_version__}\n"
-                        f"{result}\n"
-                        f"Pick-One {__pick_one_version__}\n"
-                        f"Random {__rand_version__}", modal_words=False)
+    with open(f"{cached_prefix}.txt", encoding="utf-8") as f:
+        result = f.read()
+        message.reply(f"[API Version]\n\n"
+                      f"Core {Constants.core_version}\n"
+                      f"AtCoder {__atc_version__}\n"
+                      f"Codeforces {__cf_version__}\n"
+                      f"Color-Rand {__color_rand_version__}\n"
+                      f"NowCoder {__nk_version__}\n"
+                      f"{result}\n"
+                      f"Pick-One {__pick_one_version__}\n"
+                      f"Random {__rand_version__}", modal_words=False)
 
 
 @command(tokens=['user'], need_check_exclude=True)

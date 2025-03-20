@@ -1,5 +1,4 @@
-﻿import asyncio
-import os
+﻿import os
 import queue
 import re
 import sys
@@ -8,7 +7,7 @@ from typing import Union, List
 
 import botpy
 from apscheduler.schedulers.blocking import BlockingScheduler
-from botpy import BotAPI, Client, Intents
+from botpy import Client, Intents
 from botpy.message import Message, GroupMessage, C2CMessage
 
 from src.core.command import command, PermissionLevel
@@ -36,7 +35,7 @@ def noon_sched_thread(client: Client):
 @command(tokens=["去死", "重启", "restart", "reboot"], permission_level=PermissionLevel.ADMIN)
 def reply_restart_bot(message: RobotMessage):
     message.reply("好的捏，捏？欸我怎么似了" if message.tokens[0] == '/去死' else "好的捏，正在重启bot")
-    Constants.log.info(f"Restarting bot...")
+    Constants.log.info("Restarting bot...")
     os.execl(sys.executable, sys.executable, *sys.argv)
 
 
@@ -48,10 +47,10 @@ def queue_up_handler():
 
 
 def join_in_message(message: RobotMessage):
-    size = _count_queue.qsize()
-    if size > 0:
-        message.reply(f"已加入处理队列，前方还有 {size} 个请求")
     _count_queue.put(1)
+    size = _count_queue.qsize()
+    if size > 1:
+        message.reply(f"已加入处理队列，前方还有 {size - 1} 个请求")
     _query_queue.put(message)
 
 

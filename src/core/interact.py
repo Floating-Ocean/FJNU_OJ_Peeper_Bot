@@ -1,4 +1,3 @@
-import asyncio
 import difflib
 import random
 import re
@@ -46,7 +45,7 @@ def call_handle_message(message: RobotMessage):
             return message.reply(f"{match_key_words('')}")
 
         func = content[0].lower()
-        for cmd in __commands__.keys():
+        for cmd in __commands__:
             starts_with = cmd[-1] == '*' and func.startswith(cmd[:-1])
             if starts_with or cmd == func:
                 original_command, execute_level, is_command, need_check_exclude = __commands__[cmd]
@@ -60,6 +59,7 @@ def call_handle_message(message: RobotMessage):
                         raise UnauthorizedError("权限不足，操作被拒绝" if func != "/去死" else "阿米诺斯")
 
                 if need_check_exclude:
+                    Constants.log.info(f'{message.message.group_openid} was banned to use {original_command.__name__}.')
                     if (message.message_type == MessageType.GROUP and
                             message.message.group_openid in Constants.config['exclude_group_id']):
                         raise UnauthorizedError("榜单功能被禁用")
@@ -78,7 +78,7 @@ def call_handle_message(message: RobotMessage):
             return
 
         if '/' in func:
-            message.reply(f"其他指令还在开发中")
+            message.reply("其他指令还在开发中")
         else:
             message.reply(f"{match_key_words(func)}")
 
