@@ -100,7 +100,16 @@ class MyClient(Client):
         join_in_message(packed_message)
 
 
+def check_path_in_config():
+    for path in ["lib_path", "output_path"]:
+        if not os.path.isdir(Constants.config[path]):
+            raise FileNotFoundError(Constants.config[path])
+
+
 def open_robot_session():
+    # 检查配置文件中的目录是否合法，防止错误配置和命令意外执行
+    check_path_in_config()
+
     threading.Thread(target=queue_up_handler, args=[]).start()
 
     intents = botpy.Intents.default()  # 对目前已支持的所有事件进行监听
