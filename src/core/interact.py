@@ -1,9 +1,9 @@
-import difflib
 import random
 import re
 import traceback
 
 from pypinyin import pinyin, Style
+from thefuzz import process
 
 from src.core.command import command, __commands__, PermissionLevel
 from src.core.constants import Constants
@@ -102,9 +102,9 @@ def recent_contests(message: RobotMessage):
         if message.tokens[1] == 'today':
             query_today = True
         else:
-            closest_type = difflib.get_close_matches(message.tokens[1].lower(), [
-                "cf", "codeforces", "atc", "atcoder", "牛客", "nk", "nc", "nowcoder"])
-            if len(closest_type) > 0:
+            closest_type = process.extract(message.tokens[1].lower(), [
+                "cf", "codeforces", "atc", "atcoder", "牛客", "nk", "nc", "nowcoder"], limit=1)[0]
+            if closest_type[1] >= 0.6:
                 if closest_type[0] in ["cf", "codeforces"]:
                     queries = [Codeforces]
                 elif closest_type[0] in ["atc", "atcoder"]:

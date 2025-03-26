@@ -1,17 +1,17 @@
-import difflib
 import json
 import os
 import random
 
 import easyocr
+from thefuzz import process
 
 from src.core.command import command, PermissionLevel
 from src.core.constants import Constants
-from src.core.tools import save_img, rand_str_len32, get_md5, fuzzy_match_key, read_image_with_opencv
+from src.core.tools import save_img, rand_str_len32, get_md5, read_image_with_opencv
 from src.module.message import RobotMessage
 
 _lib_path = os.path.join(Constants.config["lib_path"], "Pick-One")
-__pick_one_version__ = "v3.0.0"
+__pick_one_version__ = "v3.0.1"
 
 _lib_config, _match_dict, _ids = {}, {}, []
 
@@ -67,7 +67,7 @@ def pick_specified_img(img_key: str, query: str) -> str | None:
     else:
         Constants.log.warn("parser.json invalid")
         return None
-    return fuzzy_match_key(parsed, query)
+    return process.extract(query, parsed, limit=1)[0][2]  # 传递 dict 时会返回 tuple(value, ratio, key)
 
 
 _what_dict = {
@@ -91,8 +91,8 @@ def pick_one(message: RobotMessage):
     elif what in _match_dict.keys():
         current_key = _match_dict[what]
     else:  # 支持一下模糊匹配
-        matches = difflib.get_close_matches(what, _match_dict.keys())
-        if len(matches) == 0:
+        matches = process.extract(what, _match_dict.keys(), limit=1)[0]
+        if matches[1] < 0.6:
             img_help = "目前可以来只:\n\n"
             img_help += ", ".join([_id for _id, _len in _ids])
             message.reply(img_help, modal_words=False)

@@ -1,4 +1,3 @@
-import asyncio
 import datetime
 import hashlib
 import os
@@ -8,9 +7,6 @@ import ssl
 import string
 import subprocess
 import time
-from asyncio import AbstractEventLoop
-from difflib import SequenceMatcher
-from typing import Coroutine
 
 import cv2
 import numpy as np
@@ -309,17 +305,6 @@ def patch_https_url(url: str) -> str:
     if not url.startswith('https://'):
         return f'https://{url}'
     return url
-
-
-def fuzzy_match_key(d: dict, target: str) -> str | None:
-    best_score = 0
-    best_key = None
-    for key, value in d.items():
-        score = SequenceMatcher(None, value, target).ratio()
-        if score > best_score:
-            best_score = score
-            best_key = key
-    return best_key if best_score > 0 else None  # 若无匹配则返回 None
 
 
 def read_image_with_opencv(file_path: str, grayscale: bool = False) -> np.ndarray:
