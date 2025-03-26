@@ -20,6 +20,13 @@ def register_module():
     pass
 
 
+def _get_img_dir_path(img_key: str, audit: bool = False) -> str:
+    dir_path = os.path.join(_lib_path, "__AUDIT__", img_key) if audit else os.path.join(_lib_path, img_key)
+    if not os.path.exists(dir_path):  # 保证目录存在
+        os.makedirs(dir_path)
+    return dir_path
+
+
 def load_pick_one_config():
     with open(os.path.join(_lib_path, "config.json"), 'r', encoding="utf-8") as f:
         _lib_config.clear(), _ids.clear(), _match_dict.clear()
@@ -33,21 +40,22 @@ def load_pick_one_config():
 
 def parse_img(message: RobotMessage, img_key: str):
     """解析图片文字"""
-    dir_path = os.path.join(_lib_path, img_key)
+    dir_path = _get_img_dir_path(img_key)
     img_list = [img for img in os.listdir(dir_path) if img.endswith(".gif")]
 
     paser_path = os.path.join(dir_path, "parser.json")
     old_parsed = {}
     if os.path.exists(paser_path):
-        with open(paser_path, 'r', encoding="utf-8") as f:
-            try:
+        try:
+            with open(paser_path, 'r', encoding="utf-8") as f:
                 old_parsed = json.load(f)
-            except json.JSONDecodeError as e:
-                Constants.log.warn(f"parser.json invalid: {e}")
-                old_parsed = {}
+        except Exception as e:
+            Constants.log.error(f"parser.json invalid: {e}")
+            old_parsed = {}
 
     parsed = {}
     notified = False
+    ocr_reader = None
     for img in img_list:
         if img in old_parsed:
             parsed[img] = old_parsed[img]
@@ -55,18 +63,25 @@ def parse_img(message: RobotMessage, img_key: str):
             if not notified:
                 message.reply("图片处理中，请稍等\n若等待时间较长，可尝试重新发送消息")
                 notified = True
-            correct_img = read_image_with_opencv(os.path.join(dir_path, img))  # 修复全都修改为 gif 的兼容性问题
-            Constants.log.info(f"正在识别 {os.path.join(dir_path, img)}")
-            reader = easyocr.Reader(['en', 'ch_sim'])
-            ocr_result = ''.join(reader.readtext(correct_img, detail=0))
-            parsed[img] = ocr_result
+            try:
+                if ocr_reader is None:
+                    ocr_reader = easyocr.Reader(['en', 'ch_sim'])
+                correct_img = read_image_with_opencv(os.path.join(dir_path, img))  # 修复全都修改为 gif 的兼容性问题
+                Constants.log.info(f"正在识别 {os.path.join(dir_path, img)}")
+                ocr_result = ''.join(ocr_reader.readtext(correct_img, detail=0))
+                parsed[img] = ocr_result
+            except Exception as e:
+                Constants.log.error(f"OCR failed: {e}")
 
-    with open(paser_path, 'w', encoding="utf-8") as f:
-        f.write(json.dumps(parsed, ensure_ascii=False, indent=4))
+    try:
+        with open(paser_path, 'w', encoding="utf-8") as f:
+            f.write(json.dumps(parsed, ensure_ascii=False, indent=4))
+    except Exception as e:
+        Constants.log.error(f"Save parser.json failed: {e}")
 
 
 def pick_specified_img(img_key: str, query: str) -> tuple[str, bool] | None:
-    dir_path = os.path.join(_lib_path, img_key)
+    dir_path = _get_img_dir_path(img_key)
     paser_path = os.path.join(dir_path, "parser.json")
     parsed = None
     if os.path.exists(paser_path):
@@ -116,7 +131,7 @@ def pick_one(message: RobotMessage):
     parse_img(message, current_key)
 
     current_config = _lib_config[current_key]
-    dir_path = os.path.join(_lib_path, current_key)
+    dir_path = _get_img_dir_path(current_key)
     img_list = [img for img in os.listdir(dir_path) if img.endswith(".gif")]
     img_len = len(img_list)
 
@@ -149,18 +164,17 @@ def save_one(message: RobotMessage):
     need_audit = not message.user_permission_level.is_mod()
     what = message.tokens[1].lower()
 
-    if what in _match_dict.keys():
+    if what in _match_dict:
         current_key = _match_dict[what]
-        dir_path = (os.path.join(_lib_path, "__AUDIT__", current_key) if need_audit else
-                    os.path.join(_lib_path, current_key))
-        real_dir_path = os.path.join(_lib_path, current_key)
+        dir_path = _get_img_dir_path(current_key, need_audit)
+        real_dir_path = _get_img_dir_path(current_key, audit=False)
         cnt, ok, duplicate = len(message.attachments), 0, 0
 
         for attach in message.attachments:
             if not attach.__dict__['content_type'].startswith('image'):
                 continue  # 不是图片
 
-            file_path = f"{dir_path}{rand_str_len32()}.gif"
+            file_path = os.path.join(dir_path, f"{rand_str_len32()}.gif")
             response = save_img(attach.__dict__['url'], file_path)
 
             if response:
@@ -199,7 +213,7 @@ def save_one(message: RobotMessage):
 def audit_accept(message: RobotMessage):
     load_pick_one_config()
 
-    audit_dir_path = os.path.join(_lib_path, "__AUDIT__")
+    audit_dir_path = _get_img_dir_path("__AUDIT__")
     tags = [tag for tag in os.listdir(audit_dir_path)
             if os.path.isdir(os.path.join(audit_dir_path, tag))]  # 遍历文件夹
     cnt, ok = 0, 0
@@ -209,21 +223,22 @@ def audit_accept(message: RobotMessage):
         if not os.path.exists(os.path.join(_lib_path, tag)):
             continue
 
-        img_list = [img for img in os.listdir(os.path.join(audit_dir_path, tag))
-                    if os.path.isfile(os.path.join(audit_dir_path, tag, img))]
+        dir_path = _get_img_dir_path(tag, audit=True)
+        real_dir_path = _get_img_dir_path(tag, audit=False)
+        img_list = [img for img in os.listdir(dir_path) if os.path.isfile(os.path.join(dir_path, img))]
 
         for img in img_list:
             cnt += 1
-            if os.path.exists(os.path.join(_lib_path, tag, img)):
+            if os.path.exists(os.path.join(real_dir_path, img)):
                 continue  # 图片重复
-            os.rename(os.path.join(audit_dir_path, tag, img), os.path.join(_lib_path, tag, img))
+            os.rename(os.path.join(dir_path, img), os.path.join(real_dir_path, img))
             ok += 1
             ok_dict[tag] = ok_dict.get(tag, 0) + 1
 
         parse_img(message, tag)
 
     if cnt == 0:
-        message.reply(f"没有需要审核的图片")
+        message.reply("没有需要审核的图片")
     else:
         failed_info = ""
         if cnt - ok > 0:
