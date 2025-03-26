@@ -3,13 +3,15 @@ import json
 import os
 import random
 
+import easyocr
+
 from src.core.command import command, PermissionLevel
 from src.core.constants import Constants
-from src.core.tools import save_img, rand_str_len32, get_md5
+from src.core.tools import save_img, rand_str_len32, get_md5, fuzzy_match_key, read_image_with_opencv
 from src.module.message import RobotMessage
 
 _lib_path = os.path.join(Constants.config["lib_path"], "Pick-One")
-__pick_one_version__ = "v2.3.1"
+__pick_one_version__ = "v3.0.0"
 
 _lib_config, _match_dict, _ids = {}, {}, []
 
@@ -29,6 +31,45 @@ def load_pick_one_config():
         _ids.sort(key=lambda s: s[1], reverse=True)  # 按图片数量降序排序
 
 
+def parse_img(img_key: str):
+    """解析图片文字"""
+    dir_path = os.path.join(_lib_path, img_key)
+    img_list = [img for img in os.listdir(dir_path) if img.endswith(".gif")]
+
+    paser_path = os.path.join(dir_path, "parser.json")
+    old_parsed = {}
+    if os.path.exists(paser_path):
+        with open(paser_path, 'r', encoding="utf-8") as f:
+            old_parsed = json.load(f)
+
+    parsed = {}
+    for img in img_list:
+        if img in old_parsed:
+            parsed[img] = old_parsed[img]
+        else:
+            correct_img = read_image_with_opencv(os.path.join(dir_path, img))  # 修复全都修改为 gif 的兼容性问题
+            Constants.log.info(f"正在识别 {os.path.join(dir_path, img)}")
+            reader = easyocr.Reader(['en', 'ch_sim'])
+            ocr_result = ''.join(reader.readtext(correct_img, detail=0))
+            parsed[img] = ocr_result
+
+    with open(paser_path, 'w', encoding="utf-8") as f:
+        f.write(json.dumps(parsed, ensure_ascii=False, indent=4))
+
+
+def pick_specified_img(img_key: str, query: str) -> str | None:
+    dir_path = os.path.join(_lib_path, img_key)
+    paser_path = os.path.join(dir_path, "parser.json")
+    parsed = {}
+    if os.path.exists(paser_path):
+        with open(paser_path, 'r', encoding="utf-8") as f:
+            parsed = json.load(f)
+    else:
+        Constants.log.warn("parser.json invalid")
+        return None
+    return fuzzy_match_key(parsed, query)
+
+
 _what_dict = {
     '随机来只': 'rand',
     '随便来只': 'rand',
@@ -44,6 +85,7 @@ def pick_one(message: RobotMessage):
     func = message.tokens[0][1:]
     what = _what_dict[func] if func in _what_dict else (
         message.tokens[1].lower() if len(message.tokens) >= 2 else "")
+    query_idx = 1 if func in _what_dict else 2  # 查询指定表情包
     if what == "rand" or what == "随便" or what == "随机":
         current_key = random.choice(list(_lib_config.keys()))
     elif what in _match_dict.keys():
@@ -57,18 +99,27 @@ def pick_one(message: RobotMessage):
             return
         current_key = _match_dict[matches[0]]
 
+    parse_img(current_key)
+
     current_config = _lib_config[current_key]
     dir_path = os.path.join(_lib_path, current_key)
-    img_list = os.listdir(dir_path)
+    img_list = [img for img in os.listdir(dir_path) if img.endswith(".gif")]
     img_len = len(img_list)
 
     if img_len == 0:
         message.reply(f"这里还没有 {current_config['_id']} 的图片")
     else:
-        rnd_idx = random.randint(1, img_len) + random.randint(1, img_len) + random.randint(1, img_len)
-        rnd_idx = (rnd_idx - 1) % img_len
-        message.reply(f"来了一只{current_config['_id']}",
-                            img_path=f"{dir_path}{img_list[rnd_idx]}")
+        warning = ""
+        if len(message.tokens) > query_idx:
+            picked = pick_specified_img(current_key, message.tokens[query_idx])
+            if picked is None:
+                message.reply(f"这里还没有满足条件的 {current_config['_id']} 的图片")
+                return
+        else:
+            rnd_idx = random.randint(1, img_len) + random.randint(1, img_len) + random.randint(1, img_len)
+            rnd_idx = (rnd_idx - 1) % img_len
+            picked = img_list[rnd_idx]
+        message.reply(f"来了一只{current_config['_id']}", img_path=os.path.join(dir_path, picked))
 
 
 @command(tokens=["添加来只*", "添加*"])
@@ -99,17 +150,19 @@ def save_one(message: RobotMessage):
             if response:
                 md5 = get_md5(file_path)
 
-                if os.path.exists(f"{real_dir_path}{md5}.gif") or os.path.exists(f"{dir_path}{md5}.gif"):
+                if (os.path.exists(os.path.join(real_dir_path, f"{md5}.gif")) or
+                        os.path.exists(os.path.join(dir_path, f"{md5}.gif"))):
                     os.remove(file_path)
                     duplicate += 1  # 图片重复
                     continue
 
-                os.rename(file_path, f"{dir_path}{md5}.gif")
+                os.rename(file_path, os.path.join(dir_path, f"{md5}.gif"))
                 ok += 1
 
         if cnt == 0:
             message.reply(f"未识别到图片，请将图片和指令发送在同一条消息中")
         else:
+            parse_img(current_key)
             failed_info = ""
             if duplicate > 0:
                 failed_info += f"，重复 {duplicate} 张"
@@ -150,6 +203,8 @@ def audit_accept(message: RobotMessage):
             os.rename(os.path.join(audit_dir_path, tag, img), os.path.join(_lib_path, tag, img))
             ok += 1
             ok_dict[tag] = ok_dict.get(tag, 0) + 1
+
+        parse_img(tag)
 
     if cnt == 0:
         message.reply(f"没有需要审核的图片")

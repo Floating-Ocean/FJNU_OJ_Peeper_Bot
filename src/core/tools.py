@@ -9,8 +9,10 @@ import string
 import subprocess
 import time
 from asyncio import AbstractEventLoop
+from difflib import SequenceMatcher
 from typing import Coroutine
 
+import cv2
 import numpy as np
 import requests
 from PIL import Image
@@ -307,6 +309,42 @@ def patch_https_url(url: str) -> str:
     if not url.startswith('https://'):
         return f'https://{url}'
     return url
+
+
+def fuzzy_match_key(d: dict, target: str) -> str | None:
+    best_score = 0
+    best_key = None
+    for key, value in d.items():
+        score = SequenceMatcher(None, value, target).ratio()
+        if score > best_score:
+            best_score = score
+            best_key = key
+    return best_key if best_score > 0 else None  # 若无匹配则返回 None
+
+
+def read_image_with_opencv(file_path: str, grayscale: bool = False) -> np.ndarray:
+    """读取可能被篡改后缀的图片，并返回 OpenCV 兼容的 numpy 数组"""
+    try:
+        with Image.open(file_path) as img:
+            # GIF提取第一帧
+            if img.format == 'GIF':
+                img.seek(0)
+                if img.mode in ('P', 'L', 'RGBA'):
+                    img = img.convert('RGB')
+
+            elif img.mode == 'RGBA':
+                img = img.convert('RGB')  # 移除透明通道
+
+            if grayscale:
+                img = img.convert('L')  # 转换为灰度
+                cv_image = np.array(img)
+            else:
+                cv_image = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+
+            return cv_image
+
+    except Exception as e:
+        raise RuntimeError(f"读取图片失败: {e}")
 
 
 class SSLAdapter(HTTPAdapter):
