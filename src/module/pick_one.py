@@ -31,7 +31,7 @@ def load_pick_one_config():
         _ids.sort(key=lambda s: s[1], reverse=True)  # 按图片数量降序排序
 
 
-def parse_img(img_key: str):
+def parse_img(message: RobotMessage, img_key: str):
     """解析图片文字"""
     dir_path = os.path.join(_lib_path, img_key)
     img_list = [img for img in os.listdir(dir_path) if img.endswith(".gif")]
@@ -40,13 +40,21 @@ def parse_img(img_key: str):
     old_parsed = {}
     if os.path.exists(paser_path):
         with open(paser_path, 'r', encoding="utf-8") as f:
-            old_parsed = json.load(f)
+            try:
+                old_parsed = json.load(f)
+            except json.JSONDecodeError as e:
+                Constants.log.warn(f"parser.json invalid: {e}")
+                old_parsed = {}
 
     parsed = {}
+    notified = False
     for img in img_list:
         if img in old_parsed:
             parsed[img] = old_parsed[img]
         else:
+            if not notified:
+                message.reply("图片处理中，请稍等\n若等待时间较长，可尝试重新发送消息")
+                notified = True
             correct_img = read_image_with_opencv(os.path.join(dir_path, img))  # 修复全都修改为 gif 的兼容性问题
             Constants.log.info(f"正在识别 {os.path.join(dir_path, img)}")
             reader = easyocr.Reader(['en', 'ch_sim'])
@@ -57,17 +65,23 @@ def parse_img(img_key: str):
         f.write(json.dumps(parsed, ensure_ascii=False, indent=4))
 
 
-def pick_specified_img(img_key: str, query: str) -> str | None:
+def pick_specified_img(img_key: str, query: str) -> tuple[str, bool] | None:
     dir_path = os.path.join(_lib_path, img_key)
     paser_path = os.path.join(dir_path, "parser.json")
     parsed = None
     if os.path.exists(paser_path):
         with open(paser_path, 'r', encoding="utf-8") as f:
-            parsed = json.load(f)
+            try:
+                parsed = json.load(f)
+            except json.JSONDecodeError as e:
+                Constants.log.warn(f"parser.json invalid: {e}")
+                return None
     if not parsed:
         Constants.log.warn("parser.json invalid")
         return None
-    return process.extract(query, parsed, limit=1)[0][2]  # 传递 dict 时会返回 tuple(value, ratio, key)
+    # 传递 dict 时会返回 tuple(value, ratio, key)，返回 (key, 可信度)
+    match_results = process.extract(query, parsed, limit=1)[0]
+    return match_results[2], match_results[1] >= 50
 
 
 _what_dict = {
@@ -99,7 +113,7 @@ def pick_one(message: RobotMessage):
             return
         current_key = _match_dict[matches[0]]
 
-    parse_img(current_key)
+    parse_img(message, current_key)
 
     current_config = _lib_config[current_key]
     dir_path = os.path.join(_lib_path, current_key)
@@ -109,16 +123,18 @@ def pick_one(message: RobotMessage):
     if img_len == 0:
         message.reply(f"这里还没有 {current_config['_id']} 的图片")
     else:
+        query_tag = ""
         if len(message.tokens) > query_idx:
-            picked = pick_specified_img(current_key, message.tokens[query_idx])
-            if picked is None:
+            picked_tuple = pick_specified_img(current_key, message.tokens[query_idx])
+            if picked_tuple is None:
                 message.reply(f"这里还没有满足条件的 {current_config['_id']} 的图片")
                 return
+            picked, ratio = picked_tuple
+            query_tag = "满足条件的" if ratio else "可能不太满足条件的"
         else:
             rnd_idx = random.randint(1, img_len) + random.randint(1, img_len) + random.randint(1, img_len)
             rnd_idx = (rnd_idx - 1) % img_len
             picked = img_list[rnd_idx]
-        query_tag = "满足条件的" if len(message.tokens) > query_idx else ""
         message.reply(f"来了一只{query_tag}{current_config['_id']}", img_path=os.path.join(dir_path, picked))
 
 
@@ -162,7 +178,7 @@ def save_one(message: RobotMessage):
         if cnt == 0:
             message.reply("未识别到图片，请将图片和指令发送在同一条消息中")
         else:
-            parse_img(current_key)
+            parse_img(message, current_key)
             failed_info = ""
             if duplicate > 0:
                 failed_info += f"，重复 {duplicate} 张"
@@ -204,7 +220,7 @@ def audit_accept(message: RobotMessage):
             ok += 1
             ok_dict[tag] = ok_dict.get(tag, 0) + 1
 
-        parse_img(tag)
+        parse_img(message, tag)
 
     if cnt == 0:
         message.reply(f"没有需要审核的图片")
