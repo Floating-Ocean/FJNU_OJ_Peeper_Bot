@@ -60,11 +60,11 @@ def parse_img(img_key: str):
 def pick_specified_img(img_key: str, query: str) -> str | None:
     dir_path = os.path.join(_lib_path, img_key)
     paser_path = os.path.join(dir_path, "parser.json")
-    parsed = {}
+    parsed = None
     if os.path.exists(paser_path):
         with open(paser_path, 'r', encoding="utf-8") as f:
             parsed = json.load(f)
-    else:
+    if not parsed:
         Constants.log.warn("parser.json invalid")
         return None
     return process.extract(query, parsed, limit=1)[0][2]  # 传递 dict 时会返回 tuple(value, ratio, key)
@@ -88,7 +88,7 @@ def pick_one(message: RobotMessage):
     query_idx = 1 if func in _what_dict else 2  # 查询指定表情包
     if what == "rand" or what == "随便" or what == "随机":
         current_key = random.choice(list(_lib_config.keys()))
-    elif what in _match_dict.keys():
+    elif what in _match_dict:
         current_key = _match_dict[what]
     else:  # 支持一下模糊匹配
         matches = process.extract(what, _match_dict.keys(), limit=1)[0]
@@ -109,7 +109,6 @@ def pick_one(message: RobotMessage):
     if img_len == 0:
         message.reply(f"这里还没有 {current_config['_id']} 的图片")
     else:
-        warning = ""
         if len(message.tokens) > query_idx:
             picked = pick_specified_img(current_key, message.tokens[query_idx])
             if picked is None:
@@ -119,7 +118,8 @@ def pick_one(message: RobotMessage):
             rnd_idx = random.randint(1, img_len) + random.randint(1, img_len) + random.randint(1, img_len)
             rnd_idx = (rnd_idx - 1) % img_len
             picked = img_list[rnd_idx]
-        message.reply(f"来了一只{current_config['_id']}", img_path=os.path.join(dir_path, picked))
+        query_tag = "满足条件的" if len(message.tokens) > query_idx else ""
+        message.reply(f"来了一只{query_tag}{current_config['_id']}", img_path=os.path.join(dir_path, picked))
 
 
 @command(tokens=["添加来只*", "添加*"])
@@ -160,7 +160,7 @@ def save_one(message: RobotMessage):
                 ok += 1
 
         if cnt == 0:
-            message.reply(f"未识别到图片，请将图片和指令发送在同一条消息中")
+            message.reply("未识别到图片，请将图片和指令发送在同一条消息中")
         else:
             parse_img(current_key)
             failed_info = ""

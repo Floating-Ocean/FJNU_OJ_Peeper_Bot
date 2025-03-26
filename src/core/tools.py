@@ -81,7 +81,7 @@ def fetch_url(url: str, inject_headers: dict = None, payload: dict = None, throw
         return response
     except Exception as e:
         if throw:
-            raise e
+            raise RuntimeError(f"Filed to connect {url}: {e}") from e
         Constants.log.warn("A fetch exception ignored.")
         Constants.log.warn(e)
         return code
@@ -329,7 +329,7 @@ def read_image_with_opencv(file_path: str, grayscale: bool = False) -> np.ndarra
             return cv_image
 
     except Exception as e:
-        raise RuntimeError(f"读取图片失败: {e}")
+        raise RuntimeError(f"Filed to load cv image: {e}") from e
 
 
 class SSLAdapter(HTTPAdapter):
