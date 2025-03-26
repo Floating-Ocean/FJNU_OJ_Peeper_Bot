@@ -146,12 +146,12 @@ def save_one(message: RobotMessage):
         message.reply("请指定需要添加的图片的关键词")
         return
 
-    audit = message.user_permission_level == 0
+    need_audit = not message.user_permission_level.is_mod()
     what = message.tokens[1].lower()
 
     if what in _match_dict.keys():
         current_key = _match_dict[what]
-        dir_path = (os.path.join(_lib_path, "__AUDIT__", current_key) if audit else
+        dir_path = (os.path.join(_lib_path, "__AUDIT__", current_key) if need_audit else
                     os.path.join(_lib_path, current_key))
         real_dir_path = os.path.join(_lib_path, current_key)
         cnt, ok, duplicate = len(message.attachments), 0, 0
@@ -185,8 +185,8 @@ def save_one(message: RobotMessage):
             if cnt - ok - duplicate > 0:
                 failed_info += f"，失败 {cnt - ok - duplicate} 张"
 
-            audit_suffix = "审核队列" if audit else ""
-            main_info = "非Bot管理员添加的图片需要审核。\n" if audit else ""
+            audit_suffix = "审核队列" if need_audit else ""
+            main_info = "非Bot管理员添加的图片需要审核。\n" if need_audit else ""
             main_info += f"已添加 {ok} 张图片至 {current_key} {audit_suffix}中" if ok > 0 else "没有图片被添加"
             message.reply(f"{main_info}{failed_info}")
 

@@ -11,18 +11,13 @@ from botpy.message import Message, GroupMessage, C2CMessage
 
 from src.core.constants import Constants
 from src.core.exception import handle_exception
+from src.core.perm import PermissionLevel
 
 
 class MessageType(Enum):
     GUILD = "guild"
     GROUP = "group"
     C2C = "c2c"
-
-
-class PermissionLevel(Enum):
-    USER = 0
-    MOD = 1
-    ADMIN = 2
 
 
 class RobotMessage:
@@ -49,16 +44,7 @@ class RobotMessage:
         self.tokens = re.sub(r'<@!\d+>', '', message.content).strip().split()
         self.author_id = getattr(message.author, author_id_path, "")
         self.attachments = message.attachments
-        self._set_user_permission()
-
-    def _set_user_permission(self):
-        """统一设置用户权限等级"""
-        config = Constants.config
-        self.user_permission_level = (
-            PermissionLevel.ADMIN if self.author_id in config['admin_qq_id'] else
-            PermissionLevel.MOD if self.author_id in config['mod_qq_id'] else
-            PermissionLevel.USER
-        )
+        self.user_permission_level = PermissionLevel.distribute_permission(self.author_id)
 
     def setup_guild_message(self, loop: AbstractEventLoop, message: Message, is_public: bool = False):
         self.loop = loop

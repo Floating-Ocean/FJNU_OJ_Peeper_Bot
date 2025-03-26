@@ -1,11 +1,4 @@
-from enum import Enum
-
-
-class PermissionLevel(Enum):
-    USER = 0
-    MOD = 1
-    ADMIN = 2
-
+from src.core.perm import PermissionLevel
 
 __commands__ = {}
 

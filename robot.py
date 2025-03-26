@@ -3,6 +3,7 @@ import queue
 import re
 import sys
 import threading
+import time
 from typing import Union, List
 
 import botpy
@@ -35,6 +36,7 @@ def noon_sched_thread(client: Client):
 @command(tokens=["去死", "重启", "restart", "reboot"], permission_level=PermissionLevel.ADMIN)
 def reply_restart_bot(message: RobotMessage):
     message.reply("好的捏，捏？欸我怎么似了" if message.tokens[0] == '/去死' else "好的捏，正在重启bot")
+    time.sleep(1.5)  # 等待 message 通知消息线程发送回复
     Constants.log.info("Restarting bot...")
     os.execl(sys.executable, sys.executable, *sys.argv)
 
