@@ -1,6 +1,7 @@
 import json
 import os
 import random
+import secrets
 
 import easyocr
 from thefuzz import process
@@ -11,7 +12,7 @@ from src.core.tools import save_img, rand_str_len32, get_md5, read_image_with_op
 from src.module.message import RobotMessage
 
 _lib_path = os.path.join(Constants.config["lib_path"], "Pick-One")
-__pick_one_version__ = "v3.0.1"
+__pick_one_version__ = "v3.0.2"
 
 _lib_config, _match_dict, _ids = {}, {}, []
 
@@ -80,7 +81,7 @@ def parse_img(message: RobotMessage, img_key: str):
         Constants.log.error(f"Save parser.json failed: {e}")
 
 
-def pick_specified_img(img_key: str, query: str) -> tuple[str, bool] | None:
+def pick_specified_img(img_key: str, query: str) -> tuple[str, int] | None:
     dir_path = _get_img_dir_path(img_key)
     paser_path = os.path.join(dir_path, "parser.json")
     parsed = None
@@ -91,12 +92,12 @@ def pick_specified_img(img_key: str, query: str) -> tuple[str, bool] | None:
             except json.JSONDecodeError as e:
                 Constants.log.warn(f"parser.json invalid: {e}")
                 return None
-    if not parsed:
+    if not parsed or len(parsed) == 0:
         Constants.log.warn("parser.json invalid")
         return None
     # 传递 dict 时会返回 tuple(value, ratio, key)，返回 (key, 可信度)
     match_results = process.extract(query, parsed, limit=1)[0]
-    return match_results[2], match_results[1] >= 50
+    return match_results[2], match_results[1]
 
 
 _what_dict = {
@@ -145,10 +146,16 @@ def pick_one(message: RobotMessage):
                 message.reply(f"这里还没有满足条件的 {current_config['_id']} 的图片")
                 return
             picked, ratio = picked_tuple
-            query_tag = "满足条件的" if ratio else "可能不太满足条件的"
+            if ratio >= 95:  # 简单的评价反馈
+                query_tag = "完美满足条件的"
+            elif ratio >= 60:
+                query_tag = "满足条件的"
+            elif ratio >= 30:
+                query_tag = "比较满足条件的"
+            else:
+                query_tag = "可能不太满足条件的"
         else:
-            rnd_idx = random.randint(1, img_len) + random.randint(1, img_len) + random.randint(1, img_len)
-            rnd_idx = (rnd_idx - 1) % img_len
+            rnd_idx = secrets.randbelow(img_len)  # 加强随机性
             picked = img_list[rnd_idx]
         message.reply(f"来了一只{query_tag}{current_config['_id']}", img_path=os.path.join(dir_path, picked))
 
