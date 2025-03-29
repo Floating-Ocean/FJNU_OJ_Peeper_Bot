@@ -102,7 +102,7 @@ def recent_contests(message: RobotMessage):
         else:
             closest_type = process.extract(message.tokens[1].lower(), [
                 "cf", "codeforces", "atc", "atcoder", "牛客", "nk", "nc", "nowcoder"], limit=1)[0]
-            if closest_type[1] >= 0.6:
+            if closest_type[1] >= 60:
                 if closest_type[0] in ["cf", "codeforces"]:
                     queries = [Codeforces]
                 elif closest_type[0] in ["atc", "atcoder"]:

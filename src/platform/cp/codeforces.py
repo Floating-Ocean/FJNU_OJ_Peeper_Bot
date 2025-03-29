@@ -399,7 +399,7 @@ class Codeforces(CompetitivePlatform):
                 return -2
             if tag_needed not in all_tags:  # 模糊匹配
                 closet_tag = process.extract(tag_needed, all_tags, limit=1)[0]
-                if closet_tag[1] < 0.6:
+                if closet_tag[1] < 60:
                     return -3
                 tag_needed = closet_tag[0]
                 if on_tag_chosen is not None:

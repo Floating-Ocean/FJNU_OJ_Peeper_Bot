@@ -41,7 +41,7 @@ def classify_verdicts(content: str) -> str:
     full_to_alias = {val: key for key, alters in alias_to_full.items() for val in alters}
     # 模糊匹配
     matches = process.extract(content.lower(), full_to_alias.keys(), limit=1)[0]
-    if matches[1] < 0.6:
+    if matches[1] < 60:
         return ""
 
     return full_to_alias[matches[0]].upper()

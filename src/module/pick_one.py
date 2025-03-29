@@ -123,7 +123,7 @@ def pick_one(message: RobotMessage):
         current_key = _match_dict[what]
     else:  # 支持一下模糊匹配
         matches = process.extract(what, _match_dict.keys(), limit=1)[0]
-        if matches[1] < 0.6:
+        if matches[1] < 60:
             img_help = "目前可以来只:\n\n"
             img_help += ", ".join([_id for _id, _len in _ids])
             message.reply(img_help, modal_words=False)
@@ -156,7 +156,7 @@ def pick_one(message: RobotMessage):
                     return
                 pick_idx = int(message.tokens[query_idx + 1])
                 if pick_idx == 0:
-                    message.reply(f"从 1 开始编号呢，不是从 0 开始")
+                    message.reply("从 1 开始编号呢，不是从 0 开始")
                     return
 
             picked, ratio = picked_tuple[pick_idx - 1]
