@@ -1,4 +1,3 @@
-import asyncio
 import datetime
 import hashlib
 import os
@@ -8,9 +7,8 @@ import ssl
 import string
 import subprocess
 import time
-from asyncio import AbstractEventLoop
-from typing import Coroutine
 
+import cv2
 import numpy as np
 import requests
 from PIL import Image
@@ -83,7 +81,7 @@ def fetch_url(url: str, inject_headers: dict = None, payload: dict = None, throw
         return response
     except Exception as e:
         if throw:
-            raise e
+            raise RuntimeError(f"Filed to connect {url}: {e}") from e
         Constants.log.warn("A fetch exception ignored.")
         Constants.log.warn(e)
         return code
@@ -307,6 +305,31 @@ def patch_https_url(url: str) -> str:
     if not url.startswith('https://'):
         return f'https://{url}'
     return url
+
+
+def read_image_with_opencv(file_path: str, grayscale: bool = False) -> np.ndarray:
+    """读取可能被篡改后缀的图片，并返回 OpenCV 兼容的 numpy 数组"""
+    try:
+        with Image.open(file_path) as img:
+            # GIF提取第一帧
+            if img.format == 'GIF':
+                img.seek(0)
+                if img.mode in ('P', 'L', 'RGBA'):
+                    img = img.convert('RGB')
+
+            elif img.mode == 'RGBA':
+                img = img.convert('RGB')  # 移除透明通道
+
+            if grayscale:
+                img = img.convert('L')  # 转换为灰度
+                cv_image = np.array(img)
+            else:
+                cv_image = cv2.cvtColor(np.array(img), cv2.COLOR_RGB2BGR)
+
+            return cv_image
+
+    except Exception as e:
+        raise RuntimeError(f"Filed to load cv image: {e}") from e
 
 
 class SSLAdapter(HTTPAdapter):

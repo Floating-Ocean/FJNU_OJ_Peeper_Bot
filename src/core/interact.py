@@ -1,9 +1,9 @@
-import difflib
 import random
 import re
 import traceback
 
 from pypinyin import pinyin, Style
+from thefuzz import process
 
 from src.core.command import command, __commands__, PermissionLevel
 from src.core.constants import Constants
@@ -48,21 +48,19 @@ def call_handle_message(message: RobotMessage):
         for cmd in __commands__:
             starts_with = cmd[-1] == '*' and func.startswith(cmd[:-1])
             if starts_with or cmd == func:
-                original_command, execute_level, is_command, need_check_exclude = __commands__[cmd]
+                original_command, execute_level, is_command, need_to_check_exclude = __commands__[cmd]
 
                 if not is_command and message.is_guild_public():
                     continue
 
-                if execute_level.value > PermissionLevel.USER.value:
-                    Constants.log.info(f'{message.author_id} attempted {original_command.__name__}.')
-                    if execute_level.value > message.user_permission_level.value:
-                        raise UnauthorizedError("权限不足，操作被拒绝" if func != "/去死" else "阿米诺斯")
+                if message.user_permission_level < execute_level:
+                    Constants.log.info(f'{message.author_id} attempted to call {original_command.__name__} but failed.')
+                    raise UnauthorizedError("权限不足，操作被拒绝" if func != "/去死" else "阿米诺斯")
 
-                if need_check_exclude:
-                    Constants.log.info(f'{message.message.group_openid} was banned to use {original_command.__name__}.')
-                    if (message.message_type == MessageType.GROUP and
-                            message.message.group_openid in Constants.config['exclude_group_id']):
-                        raise UnauthorizedError("榜单功能被禁用")
+                if need_to_check_exclude and (message.message_type == MessageType.GROUP and
+                                              message.message.group_openid in Constants.config['exclude_group_id']):
+                    Constants.log.info(f'{message.message.group_openid} was banned to call {original_command.__name__}.')
+                    raise UnauthorizedError("榜单功能被禁用")
                 try:
                     if starts_with:
                         name = cmd[:-1]
@@ -102,9 +100,9 @@ def recent_contests(message: RobotMessage):
         if message.tokens[1] == 'today':
             query_today = True
         else:
-            closest_type = difflib.get_close_matches(message.tokens[1].lower(), [
-                "cf", "codeforces", "atc", "atcoder", "牛客", "nk", "nc", "nowcoder"])
-            if len(closest_type) > 0:
+            closest_type = process.extract(message.tokens[1].lower(), [
+                "cf", "codeforces", "atc", "atcoder", "牛客", "nk", "nc", "nowcoder"], limit=1)[0]
+            if closest_type[1] >= 60:
                 if closest_type[0] in ["cf", "codeforces"]:
                     queries = [Codeforces]
                 elif closest_type[0] in ["atc", "atcoder"]:

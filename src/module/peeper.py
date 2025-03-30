@@ -1,10 +1,9 @@
 ﻿import asyncio
 import datetime
-import difflib
 import os
-import shlex
 
 from botpy import Client
+from thefuzz import process
 
 from src.core.command import command
 from src.core.constants import Constants
@@ -41,8 +40,8 @@ def classify_verdicts(content: str) -> str:
     }
     full_to_alias = {val: key for key, alters in alias_to_full.items() for val in alters}
     # 模糊匹配
-    matches = difflib.get_close_matches(content.lower(), full_to_alias.keys())
-    if len(matches) == 0:
+    matches = process.extract(content.lower(), full_to_alias.keys(), limit=1)[0]
+    if matches[1] < 60:
         return ""
 
     return full_to_alias[matches[0]].upper()

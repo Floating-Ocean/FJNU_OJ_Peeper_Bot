@@ -3,6 +3,7 @@ import queue
 import re
 import sys
 import threading
+import time
 from typing import Union, List
 
 import botpy
@@ -17,6 +18,8 @@ from src.module.peeper import daily_update_job, noon_report_job
 
 _query_queue = queue.Queue()
 _count_queue = queue.Queue()
+_terminate_lock = threading.Lock()
+_terminate_signal = False
 
 daily_sched = BlockingScheduler()
 noon_sched = BlockingScheduler()
@@ -35,13 +38,33 @@ def noon_sched_thread(client: Client):
 @command(tokens=["去死", "重启", "restart", "reboot"], permission_level=PermissionLevel.ADMIN)
 def reply_restart_bot(message: RobotMessage):
     message.reply("好的捏，捏？欸我怎么似了" if message.tokens[0] == '/去死' else "好的捏，正在重启bot")
+    Constants.log.info("Clearing message queue...")
+    clear_message_queue()
+    time.sleep(2)  # 等待 message 通知消息线程发送回复
     Constants.log.info("Restarting bot...")
     os.execl(sys.executable, sys.executable, *sys.argv)
 
 
+def clear_message_queue():
+    global _terminate_signal
+    with _terminate_lock:
+        _terminate_signal = True
+    while not _query_queue.empty():
+        try:
+            message: RobotMessage = _query_queue.get_nowait()
+        except queue.Empty:
+            break
+        message.reply("O宝被爆了！等待一段时间后再试试")
+
+
 def queue_up_handler():
+    global _terminate_signal
     while True:
-        message = _query_queue.get()
+        with _terminate_lock:
+            is_terminate = _terminate_signal
+        if is_terminate:
+            break
+        message: RobotMessage = _query_queue.get()
         call_handle_message(message)
         _count_queue.get()
 

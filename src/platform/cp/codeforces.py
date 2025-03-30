@@ -1,9 +1,9 @@
-import difflib
 import random
 import re
 import time
 
 import pixie
+from thefuzz import process
 
 from src.core.tools import fetch_url_json, format_timestamp, get_week_start_timestamp, get_today_start_timestamp, \
     format_timestamp_diff, format_seconds, format_int_delta, decode_range, check_intersect, get_today_timestamp_range
@@ -398,8 +398,8 @@ class Codeforces(CompetitivePlatform):
             if all_tags is None:
                 return -2
             if tag_needed not in all_tags:  # 模糊匹配
-                closet_tag = difflib.get_close_matches(tag_needed, all_tags)
-                if len(closet_tag) == 0:
+                closet_tag = process.extract(tag_needed, all_tags, limit=1)[0]
+                if closet_tag[1] < 60:
                     return -3
                 tag_needed = closet_tag[0]
                 if on_tag_chosen is not None:
