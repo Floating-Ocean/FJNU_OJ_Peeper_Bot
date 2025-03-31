@@ -12,6 +12,7 @@ from botpy.message import Message, GroupMessage, C2CMessage
 from src.core.constants import Constants
 from src.core.exception import handle_exception
 from src.core.perm import PermissionLevel
+from src.core.tools import april_fool_magic
 
 
 class MessageType(Enum):
@@ -71,6 +72,7 @@ class RobotMessage:
             raise RuntimeError("Event loop not initialized")
 
         friendly_content = content + random.choice(Constants.modal_words) if modal_words else content
+        friendly_content = april_fool_magic(friendly_content)
 
         asyncio.run_coroutine_threadsafe(  # 不能使用 loop.create_task，会造成资源竞争
             self._send_message(friendly_content, img_path, img_url),

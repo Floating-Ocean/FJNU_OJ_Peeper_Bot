@@ -332,6 +332,20 @@ def read_image_with_opencv(file_path: str, grayscale: bool = False) -> np.ndarra
         raise RuntimeError(f"Filed to load cv image: {e}") from e
 
 
+def reverse_str_by_line(original_str: str) -> str:
+    mirrored = original_str.translate(str.maketrans(
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+        "∀qƆpƎℲפHIſʞ˥WNOԀQɹS┴∩ΛMX⅄Zɐqɔpǝɟƃɥᴉɾʞlɯuodbɹsʇnʌʍxʎz"
+    ))
+    return '\n'.join([line[::-1] for line in mirrored.split('\n')])
+
+
+def april_fool_magic(original_str: str) -> str:
+    if datetime.datetime.today().month == 4 and datetime.datetime.today().day == 1:
+        return reverse_str_by_line(original_str)
+    return original_str
+
+
 class SSLAdapter(HTTPAdapter):
     def init_poolmanager(self, *args, **kwargs):
         """
