@@ -3,8 +3,10 @@ import time
 from dataclasses import dataclass
 
 import pixie
+from easy_pixie import draw_gradient_rect, GradientDirection, draw_mask_rect, darken_color, draw_img, draw_text, \
+    StyledString, GradientColor, Loc
 
-from src.core.painter import get_gradient_paint, draw_round_rect, darken_color, draw_img, draw_text
+from src.core.painter import get_img_path
 from src.core.tools import format_timestamp_diff, format_seconds, format_timestamp
 
 
@@ -47,22 +49,27 @@ class CompetitivePlatform(abc.ABC):
         img.fill(pixie.Color(0, 0, 0, 1))
 
         rk_color = cls.rks_color[rank_alias]
-        paint_bg = get_gradient_paint(1600, 976, ["#fcfcfc", rk_color], [0.0, 1.0])
-        draw_round_rect(img, paint_bg, 32, 32, 1600, 976, 96)
-
-        bg_mask = pixie.Paint(pixie.SOLID_PAINT)
-        bg_mask.color = pixie.Color(1, 1, 1, 0.6)
-        mask_img = pixie.Image(1664, 1040)
-        draw_round_rect(mask_img, bg_mask, 32, 32, 1600, 976, 96)
-        img.draw(mask_img, blend_mode=pixie.NORMAL_BLEND)
+        draw_gradient_rect(img, Loc(32, 32, 1600, 976), GradientColor(["#fcfcfc", rk_color], [0.0, 1.0], ''),
+                           GradientDirection.DIAGONAL_LEFT_TO_RIGHT, 96)
+        draw_mask_rect(img, Loc(32, 32, 1600, 976), pixie.Color(1, 1, 1, 0.6), 96)
 
         text_color = darken_color(pixie.parse_color(rk_color), 0.2)
-        draw_img(img, cls.platform_name, 144 + 32, 120 + 6 + 32, (48, 48), text_color)
-        draw_text(img, f"{cls.platform_name} ID", 144 + 48 + 18 + 32, 120 + 32, 'H', 44, text_color)
-        draw_text(img, handle, 144 + 32, 208 + 32, 'H', 96, text_color)
-        draw_text(img, social, 144 + 32, 354 + 32, 'B', 28, text_color)
-        draw_text(img, rank, 144 + 32, 520 + 32, 'H', 44, text_color)
-        draw_text(img, f"{rating}", 144 - 10 + 32, 558 + 32, 'H', 256, text_color)
+        pf_raw_text = f"{cls.platform_name} ID"
+        draw_img(img, get_img_path(cls.platform_name), Loc(144 + 32, 120 + 6 + 32, 48, 48), text_color)
+
+        pf_text = StyledString(pf_raw_text, 'H', 44, font_color=text_color, padding_bottom=30)
+        handle_text = StyledString(handle, 'H', 96, font_color=text_color, padding_bottom=20)
+        social_text = StyledString(social, 'B', 28, font_color=text_color, padding_bottom=112)
+        rank_text = StyledString(rank, 'H', 44, font_color=text_color, padding_bottom=-6)
+        rating_text = StyledString(f"{rating}", 'H', 256, font_color=text_color, padding_bottom=44)
+
+        current_x, current_y = 144 + 32, 120 + 32
+        current_y = draw_text(img, pf_text, current_x + 48 + 18, current_y)
+        current_y = draw_text(img, handle_text, current_x, current_y)
+        current_y = draw_text(img, social_text, current_x, current_y)
+        current_y = draw_text(img, rank_text, current_x, current_y)
+        draw_text(img, rating_text, current_x - 10, current_y)
+
         return img
 
     @classmethod
