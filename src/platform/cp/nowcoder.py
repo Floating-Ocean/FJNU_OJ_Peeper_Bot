@@ -30,6 +30,23 @@ class NowCoder(CompetitivePlatform):
         '#橙': '#ff8800',
         '#红': '#ff020a'
     }
+    contest_category = {
+        (13, 1): '提高训练营',
+        (13, 2): '挑战赛',
+        (13, 3): 'OI赛前训练营',
+        (13, 4): '提高组',
+        (13, 5): '普及组',
+        (13, 6): '练习赛',
+        (13, 7): '基础训练营',
+        (13, 10): '小白月赛',
+        (13, 19): '周赛',
+        (13, 20): '暑期多校',
+        (13, 21): '寒假集训营',
+        (13, 22): '比赛真题',
+        (13, 23): '课程配套题',
+        (13, 24): '娱乐赛',
+        (14, -1): '高校比赛',
+    }
 
     @classmethod
     def _api(cls, url: str) -> list[dict] | int:
@@ -160,38 +177,41 @@ class NowCoder(CompetitivePlatform):
         return social_info
 
     @classmethod
-    def get_contest_list(cls, overwrite_tag: bool = False) -> tuple[list[Contest], list[Contest], list[Contest]] | None:
+    def get_contest_list(cls) -> tuple[list[Contest], list[Contest], list[Contest]] | None:
         upcoming_contests: list[Contest] = []
         running_contests: list[Contest] = []
         finished_contests_today: list[Contest] = []
         finished_contests_last: list[Contest] = []
 
-        def _pack_contest(contest: Element, phase: str, supplement: str) -> Contest:
+        def _pack_contest(contest: Element, phase: str, current_category_name: str) -> Contest:
             return Contest(
-                start_time=cls._extract_timestamp(cls._decode_contest_time_set(contest)[1]),
-                phase=phase,
-                duration=cls._extract_duration(cls._decode_contest_time_set(contest)[4]),
-                tag=cls.platform_name if overwrite_tag else None,
+                platform=cls.platform_name,
+                abbr=current_category_name,
                 name=contest.xpath(".//a/text()")[0],
-                supplement=supplement + cls._decode_rated(contest)
+                phase=phase,
+                start_time=cls._extract_timestamp(cls._decode_contest_time_set(contest)[1]),
+                duration=cls._extract_duration(cls._decode_contest_time_set(contest)[4]),
+                supplement=cls._decode_rated(contest)
             )
 
-        for category_id in [13, 14]:
-            html = fetch_url_element(f"https://ac.nowcoder.com/acm/contest/vip-index?topCategoryFilter={category_id}")
+        for category, category_name in cls.contest_category.items():
+            top_category_id, category_id = category
+            html = fetch_url_element(f"https://ac.nowcoder.com/acm/contest/vip-index?"
+                                     f"topCategoryFilter={top_category_id}&"
+                                     f"categoryFilter={category_id}")
             js_current = html.xpath("//div[@class='platform-mod js-current']//div[@class='platform-item-cont']")
             js_end = html.xpath("//div[@class='platform-mod js-end']//div[@class='platform-item-cont']")
-            tag = '高校比赛, ' if category_id == 14 else ''
             upcoming_contests.extend([
-                _pack_contest(contest, '即将开始', tag) for contest in js_current
+                _pack_contest(contest, '即将开始', category_name) for contest in js_current
                 if contest.xpath(".//span[contains(@class, 'match-status')]/text()")[0].strip() == '报名中'])
             running_contests.extend([
-                _pack_contest(contest, '正在比赛中', tag) for contest in js_current
+                _pack_contest(contest, '正在比赛中', category_name) for contest in js_current
                 if contest.xpath(".//span[contains(@class, 'match-status')]/text()")[0].strip() == '比赛中'])
             finished_contests_today.extend([
-                _pack_contest(contest, '已结束', tag) for contest in js_end if
+                _pack_contest(contest, '已结束', category_name) for contest in js_end if
                 check_intersect(range1=get_today_timestamp_range(),
                                 range2=cls._merge_timestamp_range(cls._decode_contest_time_set(contest)))])
-            finished_contests_last.append(_pack_contest(js_end[0], '已结束', tag))
+            finished_contests_last.append(_pack_contest(js_end[0], '已结束', category_name))
 
         finished_contests_last.sort(key=lambda c: -c.start_time)
         if len(finished_contests_today) == 0:

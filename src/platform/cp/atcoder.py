@@ -70,7 +70,7 @@ class AtCoder(CompetitivePlatform):
         return social_info
 
     @classmethod
-    def get_contest_list(cls, overwrite_tag: bool = False) -> tuple[list[Contest], list[Contest], list[Contest]] | None:
+    def get_contest_list(cls) -> tuple[list[Contest], list[Contest], list[Contest]] | None:
         html = fetch_url_element("https://atcoder.jp/contests/")
         contest_table_upcoming = html.xpath("//div[@id='contest-table-upcoming']//tbody/tr")
         contest_table_active = html.xpath("//div[@id='contest-table-active']//tbody/tr")
@@ -78,11 +78,12 @@ class AtCoder(CompetitivePlatform):
 
         def _pack_contest(contest: Element, phase: str) -> Contest:
             return Contest(
-                start_time=cls._extract_timestamp(contest.xpath(".//td[1]/a/time/text()")[0]),
-                phase=phase,
-                duration=cls._extract_duration(contest.xpath(".//td[3]/text()")[0]),
-                tag=cls.platform_name if overwrite_tag else contest.xpath(".//td[2]/a/@href")[0].split('/')[-1],
+                platform=cls.platform_name,
+                abbr=contest.xpath(".//td[2]/a/@href")[0].split('/')[-1].upper(),
                 name=contest.xpath(".//td[2]/a/text()")[0],
+                phase=phase,
+                start_time=cls._extract_timestamp(contest.xpath(".//td[1]/a/time/text()")[0]),
+                duration=cls._extract_duration(contest.xpath(".//td[3]/text()")[0]),
                 supplement=cls._format_rated_range(contest.xpath(".//td[4]/text()")[0])
             )
 

@@ -9,11 +9,12 @@ from src.core.tools import format_timestamp_diff, format_seconds, format_timesta
 
 @dataclass
 class Contest:
-    start_time: int
-    phase: str
-    duration: int
-    tag: str | None
+    platform: str
+    abbr: str
     name: str
+    phase: str
+    start_time: int
+    duration: int
     supplement: str
 
     def format(self) -> str:
@@ -25,10 +26,10 @@ class Contest:
             status = self.phase  # 用于展示"比赛中"，或者诸如 Codeforces 平台的 "正在重测中"
         else:
             status = format_timestamp_diff(int(time.time()) - self.start_time)
-        return ((f"[{self.tag}] " if self.tag is not None else "") +
-                (f"{self.name}\n"
-                 f"{status}, {format_timestamp(self.start_time)}\n"
-                 f"持续 {format_seconds(self.duration)}, {self.supplement}"))
+        return (f"[{self.platform} · {self.abbr}] "
+                f"{self.name}\n"
+                f"{status}, {format_timestamp(self.start_time)}\n"
+                f"持续 {format_seconds(self.duration)}, {self.supplement}")
 
 
 class CompetitivePlatform(abc.ABC):
@@ -36,7 +37,7 @@ class CompetitivePlatform(abc.ABC):
     rks_color: dict[str, str]
 
     @classmethod
-    def get_contest_list(cls, overwrite_tag: bool = False) -> tuple[list[Contest], list[Contest], list[Contest]] | None:
+    def get_contest_list(cls) -> tuple[list[Contest], list[Contest], list[Contest]] | None:
         """
         指定平台分类比赛列表
         其中，已结束的比赛为 上一个已结束的比赛 与 当天所有已结束的比赛 的并集

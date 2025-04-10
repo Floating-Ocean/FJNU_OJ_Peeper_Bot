@@ -117,7 +117,7 @@ def recent_contests(message: RobotMessage):
 
     upcoming_contests, running_contests, finished_contests = [], [], []
     for platform in queries:
-        upcoming, running, finished = platform.get_contest_list(overwrite_tag=len(queries) > 1)
+        upcoming, running, finished = platform.get_contest_list()
         upcoming_contests.extend(upcoming)
         running_contests.extend(running)
         finished_contests.extend(finished)

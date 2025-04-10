@@ -335,7 +335,7 @@ class Codeforces(CompetitivePlatform):
         return social_info
 
     @classmethod
-    def get_contest_list(cls, overwrite_tag: bool = False) -> tuple[list[Contest], list[Contest], list[Contest]] | None:
+    def get_contest_list(cls) -> tuple[list[Contest], list[Contest], list[Contest]] | None:
         contest_list = cls._fetch_contest_list_all()
 
         if contest_list is None:
@@ -343,11 +343,12 @@ class Codeforces(CompetitivePlatform):
 
         def _pack_contest(contest: dict) -> Contest:
             return Contest(
-                start_time=contest['startTimeSeconds'],
-                phase=cls._format_phase(contest['phase']),
-                duration=contest['durationSeconds'],
-                tag=cls.platform_name if overwrite_tag else contest['id'],
+                platform=cls.platform_name,
+                abbr=f"CF{contest['id']}",
                 name=contest['name'],
+                phase=cls._format_phase(contest['phase']),
+                start_time=contest['startTimeSeconds'],
+                duration=contest['durationSeconds'],
                 supplement=f"{contest['type']} 赛制"
             )
 
