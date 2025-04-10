@@ -6,6 +6,8 @@ from colorsys import rgb_to_hsv
 import pixie
 import qrcode
 from PIL import Image
+from easy_pixie import choose_text_color, draw_rect, draw_text, StyledString, color_to_tuple, calculate_string_width, \
+    Loc
 from qrcode.image.styledpil import StyledPilImage
 from qrcode.image.styles.colormasks import SolidFillColorMask
 from qrcode.image.styles.moduledrawers import RoundedModuleDrawer
@@ -14,7 +16,6 @@ from qrcode.main import QRCode
 from src.core.command import command
 from src.core.constants import Constants
 from src.core.output_cached import get_cached_prefix
-from src.core.painter import draw_round_rect, draw_text, choose_text_color
 from src.core.tools import png2jpg
 from src.module.message import RobotMessage
 
@@ -43,26 +44,39 @@ def transform_color(color: dict) -> tuple[str, str, str]:
 
 
 def render_color_card(color: dict) -> pixie.Image:
-    hex_text, rgb_text, hsv_text = transform_color(color)
+    hex_raw_text, rgb_raw_text, hsv_raw_text = transform_color(color)
 
     img = pixie.Image(1664, 1040)
     img.fill(pixie.Color(0, 0, 0, 1))
 
     paint_bg = pixie.Paint(pixie.SOLID_PAINT)
-    paint_bg.color = pixie.Color(color["RGB"][0] / 255, color["RGB"][1] / 255, color["RGB"][2] / 255, 1)
-    draw_round_rect(img, paint_bg, 32, 32, 1600, 976, 96)
+    paint_bg.color = pixie.parse_color(color["hex"])
+    draw_rect(img, paint_bg, Loc(32, 32, 1600, 976), 96)
 
-    text_color_dict = choose_text_color(color)
-    text_color = pixie.Color(text_color_dict[0] / 255, text_color_dict[1] / 255, text_color_dict[2] / 255, 1)
+    text_color = choose_text_color(paint_bg.color)
+    title_raw_text = f"Color Collect - {color['pinyin']}"
 
-    draw_text(img, f"Color Collect - {color['pinyin']}", 144 + 32, 120 + 32, 'H', 48, text_color)
-    draw_text(img, color['name'], 144 + 32, 232 + 32, 'H', 144, text_color)
-    hex_width = draw_text(img, hex_text, 144 + 32, 472 + 32, 'M', 72, text_color)
-    rgb_width = draw_text(img, rgb_text, 144 + 32, 616 + 32, 'M', 72, text_color)
-    hsv_width = draw_text(img, hsv_text, 144 + 32, 760 + 32, 'M', 72, text_color)
-    draw_text(img, "HEX", 144 + hex_width + 32 + 32, 472 + 32 + 24, 'R', 48, text_color)
-    draw_text(img, "RGB", 144 + rgb_width + 32 + 32, 616 + 32 + 24, 'R', 48, text_color)
-    draw_text(img, "HSV", 144 + hsv_width + 32 + 32, 760 + 32 + 24, 'R', 48, text_color)
+    title_text = StyledString(title_raw_text, 'H', 48, font_color=text_color, padding_bottom=52)
+    name_text = StyledString(color['name'], 'H', 144, font_color=text_color, padding_bottom=60)
+    hex_text = StyledString(hex_raw_text, 'M', 72, font_color=text_color, padding_bottom=80)
+    rgb_text = StyledString(rgb_raw_text, 'M', 72, font_color=text_color, padding_bottom=80)
+    hsv_text = StyledString(hsv_raw_text, 'M', 72, font_color=text_color, padding_bottom=80)
+    hex_tag = StyledString("HEX", 'R', 48, font_color=text_color, padding_bottom=56)
+    rgb_tag = StyledString("RGB", 'R', 48, font_color=text_color, padding_bottom=56)
+    hsv_tag = StyledString("HSV", 'R', 48, font_color=text_color, padding_bottom=56)
+
+    current_x, current_y = 144 + 32, 120 + 32
+    current_y = draw_text(img, title_text, current_x, current_y)
+    current_y = draw_text(img, name_text, current_x, current_y)
+    draw_text(img, hex_text, current_x, current_y)
+    current_y += 24
+    current_y = draw_text(img, hex_tag, current_x + calculate_string_width(hex_text) + 32, current_y)
+    draw_text(img, rgb_text, current_x, current_y)
+    current_y += 24
+    current_y = draw_text(img, rgb_tag, current_x + calculate_string_width(rgb_text) + 32, current_y)
+    draw_text(img, hsv_text, current_x, current_y)
+    current_y += 24
+    draw_text(img, hsv_tag, current_x + calculate_string_width(hsv_text) + 32, current_y)
 
     return img
 
@@ -73,11 +87,12 @@ def add_qrcode(target_path: str, color: dict):
     hex_clean = color["hex"][1:].lower()
     qr.add_data(f"https://gradients.app/zh/color/{hex_clean}")
 
-    font_color = choose_text_color(color)
+    font_color = choose_text_color(pixie.parse_color(color["hex"]))
+    font_transparent_color = pixie.Color(font_color.r, font_color.g, font_color.b, 0)
     qrcode_img = qr.make_image(image_factory=StyledPilImage,
                                module_drawer=RoundedModuleDrawer(), eye_drawer=RoundedModuleDrawer(),
-                               color_mask=SolidFillColorMask((font_color[0], font_color[1], font_color[2], 0),
-                                                             (font_color[0], font_color[1], font_color[2], 255)))
+                               color_mask=SolidFillColorMask(color_to_tuple(font_transparent_color),
+                                                             color_to_tuple(font_color)))
 
     target_img = Image.open(target_path)
     target_img.paste(qrcode_img, (1215, 618), qrcode_img)
