@@ -9,6 +9,7 @@ from src.core.tools import fetch_url_element, fetch_url_json, format_int_delta, 
 from src.platform.cp.codeforces import Codeforces
 from src.platform.it.clist import Clist
 from src.platform.model import CompetitivePlatform, Contest
+from src.render.render_user_card import UserCardRenderer
 
 
 class AtCoder(CompetitivePlatform):
@@ -146,8 +147,8 @@ class AtCoder(CompetitivePlatform):
 
         rating = rated_dict['Rating'][0]
         rank = rated_dict['Highest Rating'][4]
-        return cls._render_user_card(handle=html.xpath("//a[@class='username']//text()")[0],
-                                     social=social, rank=rank, rank_alias=rank, rating=rating)
+        return UserCardRenderer(handle=html.xpath("//a[@class='username']//text()")[0],
+                                social=social, rank=rank, rank_alias=rank, rating=rating, platform=cls).render()
 
     @classmethod
     def get_user_info(cls, handle: str) -> tuple[str, str | None]:

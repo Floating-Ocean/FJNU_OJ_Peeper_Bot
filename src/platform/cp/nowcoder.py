@@ -7,6 +7,7 @@ from lxml.etree import Element
 from src.core.tools import fetch_url_element, fetch_url_json, format_int_delta, check_intersect, \
     get_today_timestamp_range
 from src.platform.model import CompetitivePlatform, Contest
+from src.render.render_user_card import UserCardRenderer
 
 
 class NowCoder(CompetitivePlatform):
@@ -216,8 +217,8 @@ class NowCoder(CompetitivePlatform):
 
         rating = int(html.xpath("//div[contains(@class, 'state-num rate-score')]/text()")[0])
         rank = next((rk for (l, r), rk in cls.rated_rks.items() if l <= rating < r), '#灰')
-        return cls._render_user_card(handle=html.xpath("//a[contains(@class, 'coder-name')]/text()")[0].strip(),
-                                     social=social, rank=rank, rank_alias=rank, rating=rating)
+        return UserCardRenderer(handle=html.xpath("//a[contains(@class, 'coder-name')]/text()")[0].strip(),
+                                social=social, rank=rank, rank_alias=rank, rating=rating, platform=cls).render()
 
     @classmethod
     def get_user_info(cls, handle: str) -> tuple[str, str | None]:

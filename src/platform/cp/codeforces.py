@@ -9,6 +9,7 @@ from src.core.tools import fetch_url_json, format_timestamp, get_week_start_time
     format_timestamp_diff, format_seconds, format_int_delta, decode_range, check_intersect, get_today_timestamp_range
 from src.lib.cf_rating_calc import PredictResult, Contestant, predict
 from src.platform.model import CompetitivePlatform, Contest
+from src.render.render_user_card import UserCardRenderer
 
 
 class Codeforces(CompetitivePlatform):
@@ -454,7 +455,8 @@ class Codeforces(CompetitivePlatform):
             rank = info['rank'].title()
 
         rank_alias = next((rk for (l, r), rk in cls.rated_rks.items() if l <= rating < r), 'N')
-        return cls._render_user_card(info['handle'], social, rank, rank_alias, rating)
+        return UserCardRenderer(handle=info['handle'], social=social,
+                                rank=rank, rank_alias=rank_alias, rating=rating, platform=cls).render()
 
     @classmethod
     def get_user_info(cls, handle: str) -> tuple[str, str | None]:
