@@ -245,6 +245,10 @@ def get_today_timestamp_range() -> tuple[int, int]:
     return get_today_start_timestamp(), get_today_start_timestamp() + 24 * 60 * 60
 
 
+def get_a_month_timestamp_range() -> tuple[int, int]:
+    return get_today_start_timestamp(), get_today_start_timestamp() + 31 * 24 * 60 * 60
+
+
 def get_simple_qrcode(content: str) -> Image:
     qr = QRCode()
     qr.add_data(content)

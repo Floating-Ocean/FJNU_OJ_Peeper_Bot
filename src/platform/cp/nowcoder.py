@@ -178,7 +178,7 @@ class NowCoder(CompetitivePlatform):
         return social_info
 
     @classmethod
-    def get_contest_list(cls) -> tuple[list[Contest], list[Contest], list[Contest]] | None:
+    def _get_contest_list(cls) -> tuple[list[Contest], list[Contest], list[Contest]] | None:
         running_contests: list[Contest] = []
         upcoming_contests: list[Contest] = []
         finished_contests_today: list[Contest] = []

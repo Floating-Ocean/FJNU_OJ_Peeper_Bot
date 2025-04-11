@@ -335,7 +335,7 @@ class Codeforces(CompetitivePlatform):
         return social_info
 
     @classmethod
-    def get_contest_list(cls) -> tuple[list[Contest], list[Contest], list[Contest]] | None:
+    def _get_contest_list(cls) -> tuple[list[Contest], list[Contest], list[Contest]] | None:
         contest_list = cls._fetch_contest_list_all()
 
         if contest_list is None:

@@ -70,7 +70,7 @@ class AtCoder(CompetitivePlatform):
         return social_info
 
     @classmethod
-    def get_contest_list(cls) -> tuple[list[Contest], list[Contest], list[Contest]] | None:
+    def _get_contest_list(cls) -> tuple[list[Contest], list[Contest], list[Contest]] | None:
         html = fetch_url_element("https://atcoder.jp/contests/")
         contest_table_active = html.xpath("//div[@id='contest-table-active']//tbody/tr")
         contest_table_upcoming = html.xpath("//div[@id='contest-table-upcoming']//tbody/tr")

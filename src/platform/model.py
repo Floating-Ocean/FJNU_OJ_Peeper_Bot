@@ -4,7 +4,8 @@ from dataclasses import dataclass
 
 import pixie
 
-from src.core.tools import format_timestamp_diff, format_seconds, format_timestamp
+from src.core.tools import format_timestamp_diff, format_seconds, format_timestamp, check_intersect, \
+    get_a_month_timestamp_range
 
 
 @dataclass
@@ -37,13 +38,36 @@ class CompetitivePlatform(abc.ABC):
     rks_color: dict[str, str]
 
     @classmethod
-    def get_contest_list(cls) -> tuple[list[Contest], list[Contest], list[Contest]] | None:
+    def _get_contest_list(cls) -> tuple[list[Contest], list[Contest], list[Contest]] | None:
         """
+        需被重载。
         指定平台分类比赛列表
         其中，已结束的比赛为 上一个已结束的比赛 与 当天所有已结束的比赛 的并集
         :return: tuple[正在进行的比赛, 待举行的比赛，已结束的比赛] | None
         """
         pass
+
+    @classmethod
+    def get_contest_list(cls) -> tuple[list[Contest], list[Contest], list[Contest]] | None:
+        """
+        指定平台分类比赛列表，限定一个月内
+        其中，已结束的比赛为 上一个已结束的比赛 与 当天所有已结束的比赛 的并集
+        :return: tuple[正在进行的比赛, 待举行的比赛，已结束的比赛] | None
+        """
+        contests = cls._get_contest_list()
+        if contests is None:
+            return None
+
+        running_full_contests, upcoming_full_contests, finished_full_contests = contests
+        running_contests = [contest for contest in running_full_contests
+                            if check_intersect((contest.start_time, contest.start_time + contest.duration),
+                                               get_a_month_timestamp_range())]
+        upcoming_contests = [contest for contest in upcoming_full_contests
+                             if check_intersect((contest.start_time, contest.start_time + contest.duration),
+                                                get_a_month_timestamp_range())]
+        finished_contests = finished_full_contests
+
+        return running_contests, upcoming_contests, finished_contests
 
     @classmethod
     def get_recent_contests(cls) -> str:

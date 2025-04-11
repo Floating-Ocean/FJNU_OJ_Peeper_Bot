@@ -5,7 +5,7 @@ import traceback
 from pypinyin import pinyin, Style
 from thefuzz import process
 
-from src.core.command import command, __commands__, PermissionLevel
+from src.core.command import command, __commands__
 from src.core.constants import Constants
 from src.core.exception import UnauthorizedError
 from src.core.output_cached import get_cached_prefix
@@ -14,6 +14,7 @@ from src.module.message import RobotMessage, MessageType
 from src.platform.cp.atcoder import AtCoder
 from src.platform.cp.codeforces import Codeforces
 from src.platform.cp.nowcoder import NowCoder
+from src.render.render_contest_list import ContestListRenderer
 
 _fixed_reply = {
     "ping": "pong",
@@ -140,21 +141,11 @@ def recent_contests(message: RobotMessage):
             range2=(contest.start_time, contest.start_time + contest.duration)
         )]
 
-    if len(running_contests) == 0 and len(upcoming_contests) == 0 and len(finished_contests) == 0:
-        content = f"{tip_time_range}无比赛"
-    else:
-        sections = []
-        if len(running_contests) > 0:
-            sections.append(">> 正在进行的比赛 >>\n\n" + ('\n\n'.join([contest.format() for contest in running_contests])))
-        if len(upcoming_contests) > 0:
-            sections.append(">> 即将开始的比赛 >>\n\n" + ('\n\n'.join([contest.format() for contest in upcoming_contests])))
-        if len(finished_contests) > 0:
-            sections.append(">> 已结束的比赛 >>\n\n" + ('\n\n'.join([contest.format() for contest in finished_contests])))
-        info = '\n\n'.join(sections)
-        content = (f"{tip_time_range}比赛\n\n"
-                   f"{info}")
+    cached_prefix = get_cached_prefix('Contest-List-Renderer')
+    contest_list_img = ContestListRenderer(running_contests, upcoming_contests, finished_contests).render()
+    contest_list_img.write_file(f"{cached_prefix}.png")
 
-    message.reply(content, modal_words=False)
+    message.reply(f"{tip_time_range}比赛", png2jpg(f"{cached_prefix}.png"))
 
 
 @command(tokens=["qr", "qrcode", "二维码", "码"])
