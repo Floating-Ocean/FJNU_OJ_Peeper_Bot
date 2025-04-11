@@ -1,5 +1,5 @@
 import pixie
-from easy_pixie import draw_rect, Loc, choose_text_color, StyledString, draw_text, calculate_string_width
+from easy_pixie import draw_rect, Loc, choose_text_color, StyledString, draw_text, calculate_width
 
 from src.render.model import Renderer
 
@@ -38,12 +38,12 @@ class ColorCardRenderer(Renderer):
         current_y = draw_text(img, name_text, current_x, current_y)
         draw_text(img, hex_text, current_x, current_y)
         current_y += 24
-        current_y = draw_text(img, hex_tag, current_x + calculate_string_width(hex_text) + 32, current_y)
+        current_y = draw_text(img, hex_tag, current_x + calculate_width(hex_text) + 32, current_y)
         draw_text(img, rgb_text, current_x, current_y)
         current_y += 24
-        current_y = draw_text(img, rgb_tag, current_x + calculate_string_width(rgb_text) + 32, current_y)
+        current_y = draw_text(img, rgb_tag, current_x + calculate_width(rgb_text) + 32, current_y)
         draw_text(img, hsv_text, current_x, current_y)
         current_y += 24
-        draw_text(img, hsv_tag, current_x + calculate_string_width(hsv_text) + 32, current_y)
+        draw_text(img, hsv_tag, current_x + calculate_width(hsv_text) + 32, current_y)
 
         return img

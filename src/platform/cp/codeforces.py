@@ -352,11 +352,11 @@ class Codeforces(CompetitivePlatform):
                 supplement=f"{contest['type']} 赛制"
             )
 
-        upcoming_contests = [_pack_contest(contest) for contest in contest_list if contest['phase'] == 'BEFORE']
         running_contests = [_pack_contest(contest) for contest in contest_list
                             if contest['phase'] not in ['BEFORE', 'FINISHED']
                             and contest['startTimeSeconds'] + contest['durationSeconds']
                             >= get_today_start_timestamp() - 7 * 24 * 60 * 60]  # 不考虑结束后一周还不重测的比赛
+        upcoming_contests = [_pack_contest(contest) for contest in contest_list if contest['phase'] == 'BEFORE']
         finished_contests = [_pack_contest(contest) for contest in contest_list if contest['phase'] == 'FINISHED'
                              and check_intersect(range1=get_today_timestamp_range(),
                                                  range2=(contest['startTimeSeconds'],
@@ -367,7 +367,7 @@ class Codeforces(CompetitivePlatform):
             finished_contests = [_pack_contest(next(contest for contest in contest_list
                                                     if contest['phase'] == 'FINISHED'))]
 
-        return upcoming_contests, running_contests, finished_contests
+        return running_contests, upcoming_contests, finished_contests
 
     @classmethod
     def get_prob_tags_all(cls) -> list[str] | None:

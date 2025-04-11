@@ -115,23 +115,23 @@ def recent_contests(message: RobotMessage):
     else:
         message.reply(f"正在查询{tip_time_range}比赛，请稍等")
 
-    upcoming_contests, running_contests, finished_contests = [], [], []
+    running_contests, upcoming_contests, finished_contests = [], [], []
     for platform in queries:
-        upcoming, running, finished = platform.get_contest_list()
-        upcoming_contests.extend(upcoming)
+        running, upcoming, finished = platform.get_contest_list()
         running_contests.extend(running)
+        upcoming_contests.extend(upcoming)
         finished_contests.extend(finished)
 
-    upcoming_contests.sort(key=lambda c: c.start_time)
     running_contests.sort(key=lambda c: c.start_time)
+    upcoming_contests.sort(key=lambda c: c.start_time)
     finished_contests.sort(key=lambda c: c.start_time)
 
     if query_today:
-        upcoming_contests = [contest for contest in upcoming_contests if check_intersect(
+        running_contests = [contest for contest in running_contests if check_intersect(
             range1=get_today_timestamp_range(),
             range2=(contest.start_time, contest.start_time + contest.duration)
         )]
-        running_contests = [contest for contest in running_contests if check_intersect(
+        upcoming_contests = [contest for contest in upcoming_contests if check_intersect(
             range1=get_today_timestamp_range(),
             range2=(contest.start_time, contest.start_time + contest.duration)
         )]
@@ -140,7 +140,7 @@ def recent_contests(message: RobotMessage):
             range2=(contest.start_time, contest.start_time + contest.duration)
         )]
 
-    if len(upcoming_contests) == 0 and len(running_contests) == 0 and len(finished_contests) == 0:
+    if len(running_contests) == 0 and len(upcoming_contests) == 0 and len(finished_contests) == 0:
         content = f"{tip_time_range}无比赛"
     else:
         sections = []

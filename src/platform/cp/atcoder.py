@@ -72,8 +72,8 @@ class AtCoder(CompetitivePlatform):
     @classmethod
     def get_contest_list(cls) -> tuple[list[Contest], list[Contest], list[Contest]] | None:
         html = fetch_url_element("https://atcoder.jp/contests/")
-        contest_table_upcoming = html.xpath("//div[@id='contest-table-upcoming']//tbody/tr")
         contest_table_active = html.xpath("//div[@id='contest-table-active']//tbody/tr")
+        contest_table_upcoming = html.xpath("//div[@id='contest-table-upcoming']//tbody/tr")
         contest_table_recent = html.xpath("//div[@id='contest-table-recent']//tbody/tr")
 
         def _pack_contest(contest: Element, phase: str) -> Contest:
@@ -87,8 +87,8 @@ class AtCoder(CompetitivePlatform):
                 supplement=cls._format_rated_range(contest.xpath(".//td[4]/text()")[0])
             )
 
-        upcoming_contests = [_pack_contest(contest, '即将开始') for contest in contest_table_upcoming]
         running_contests = [_pack_contest(contest, '正在比赛中') for contest in contest_table_active]
+        upcoming_contests = [_pack_contest(contest, '即将开始') for contest in contest_table_upcoming]
         finished_contests = [_pack_contest(contest, '已结束') for contest in contest_table_recent if
                              check_intersect(range1=get_today_timestamp_range(),
                                              range2=cls._merge_timestamp_range([
@@ -99,7 +99,7 @@ class AtCoder(CompetitivePlatform):
         if len(finished_contests) == 0:
             finished_contests = [_pack_contest(contest_table_recent[0], '已结束')]
 
-        return upcoming_contests, running_contests, finished_contests
+        return running_contests, upcoming_contests, finished_contests
 
     @classmethod
     def get_prob_filtered(cls, contest_type: str = 'common', limit: str = None) -> dict | int:

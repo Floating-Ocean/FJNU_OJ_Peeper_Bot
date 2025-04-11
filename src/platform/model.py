@@ -41,7 +41,7 @@ class CompetitivePlatform(abc.ABC):
         """
         指定平台分类比赛列表
         其中，已结束的比赛为 上一个已结束的比赛 与 当天所有已结束的比赛 的并集
-        :return: tuple[待举行的比赛，正在进行的比赛, 已结束的比赛] | None
+        :return: tuple[正在进行的比赛, 待举行的比赛，已结束的比赛] | None
         """
         pass
 
@@ -56,9 +56,9 @@ class CompetitivePlatform(abc.ABC):
         if contest_list is None:
             return "查询异常"
 
-        upcoming_contests, running_contests, finished_contests = contest_list
-        upcoming_contests.sort(key=lambda c: c.start_time)
+        running_contests, upcoming_contests, finished_contests = contest_list
         running_contests.sort(key=lambda c: c.start_time)
+        upcoming_contests.sort(key=lambda c: c.start_time)
         finished_contests.sort(key=lambda c: c.start_time)
 
         info = ""

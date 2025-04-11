@@ -38,7 +38,8 @@ class NowCoder(CompetitivePlatform):
         (13, 5): '普及组',
         (13, 6): '练习赛',
         (13, 7): '基础训练营',
-        (13, 10): '小白月赛',
+        (13, 9): '小白月赛',
+        (13, 10): '其他',
         (13, 19): '周赛',
         (13, 20): '暑期多校',
         (13, 21): '寒假集训营',
@@ -178,8 +179,8 @@ class NowCoder(CompetitivePlatform):
 
     @classmethod
     def get_contest_list(cls) -> tuple[list[Contest], list[Contest], list[Contest]] | None:
-        upcoming_contests: list[Contest] = []
         running_contests: list[Contest] = []
+        upcoming_contests: list[Contest] = []
         finished_contests_today: list[Contest] = []
         finished_contests_last: list[Contest] = []
 
@@ -201,12 +202,12 @@ class NowCoder(CompetitivePlatform):
                                      f"categoryFilter={category_id}")
             js_current = html.xpath("//div[@class='platform-mod js-current']//div[@class='platform-item-cont']")
             js_end = html.xpath("//div[@class='platform-mod js-end']//div[@class='platform-item-cont']")
-            upcoming_contests.extend([
-                _pack_contest(contest, '即将开始', category_name) for contest in js_current
-                if contest.xpath(".//span[contains(@class, 'match-status')]/text()")[0].strip() == '报名中'])
             running_contests.extend([
                 _pack_contest(contest, '正在比赛中', category_name) for contest in js_current
                 if contest.xpath(".//span[contains(@class, 'match-status')]/text()")[0].strip() == '比赛中'])
+            upcoming_contests.extend([
+                _pack_contest(contest, '即将开始', category_name) for contest in js_current
+                if contest.xpath(".//span[contains(@class, 'match-status')]/text()")[0].strip() == '报名中'])
             finished_contests_today.extend([
                 _pack_contest(contest, '已结束', category_name) for contest in js_end if
                 check_intersect(range1=get_today_timestamp_range(),
@@ -219,7 +220,7 @@ class NowCoder(CompetitivePlatform):
         else:
             finished_contests = finished_contests_today
 
-        return upcoming_contests, running_contests, finished_contests
+        return running_contests, upcoming_contests, finished_contests
 
     @classmethod
     def get_user_id_card(cls, handle: str) -> pixie.Image | str:
