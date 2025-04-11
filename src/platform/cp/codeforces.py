@@ -9,6 +9,7 @@ from src.core.tools import fetch_url_json, format_timestamp, get_week_start_time
     format_timestamp_diff, format_seconds, format_int_delta, decode_range, check_intersect, get_today_timestamp_range
 from src.lib.cf_rating_calc import PredictResult, Contestant, predict
 from src.platform.model import CompetitivePlatform, Contest
+from src.render.render_user_card import UserCardRenderer
 
 
 class Codeforces(CompetitivePlatform):
@@ -334,7 +335,7 @@ class Codeforces(CompetitivePlatform):
         return social_info
 
     @classmethod
-    def get_contest_list(cls, overwrite_tag: bool = False) -> tuple[list[Contest], list[Contest], list[Contest]] | None:
+    def _get_contest_list(cls) -> tuple[list[Contest], list[Contest], list[Contest]] | None:
         contest_list = cls._fetch_contest_list_all()
 
         if contest_list is None:
@@ -342,19 +343,20 @@ class Codeforces(CompetitivePlatform):
 
         def _pack_contest(contest: dict) -> Contest:
             return Contest(
-                start_time=contest['startTimeSeconds'],
-                phase=cls._format_phase(contest['phase']),
-                duration=contest['durationSeconds'],
-                tag=cls.platform_name if overwrite_tag else contest['id'],
+                platform=cls.platform_name,
+                abbr=f"CF{contest['id']}",
                 name=contest['name'],
+                phase=cls._format_phase(contest['phase']),
+                start_time=contest['startTimeSeconds'],
+                duration=contest['durationSeconds'],
                 supplement=f"{contest['type']} 赛制"
             )
 
-        upcoming_contests = [_pack_contest(contest) for contest in contest_list if contest['phase'] == 'BEFORE']
         running_contests = [_pack_contest(contest) for contest in contest_list
                             if contest['phase'] not in ['BEFORE', 'FINISHED']
                             and contest['startTimeSeconds'] + contest['durationSeconds']
                             >= get_today_start_timestamp() - 7 * 24 * 60 * 60]  # 不考虑结束后一周还不重测的比赛
+        upcoming_contests = [_pack_contest(contest) for contest in contest_list if contest['phase'] == 'BEFORE']
         finished_contests = [_pack_contest(contest) for contest in contest_list if contest['phase'] == 'FINISHED'
                              and check_intersect(range1=get_today_timestamp_range(),
                                                  range2=(contest['startTimeSeconds'],
@@ -365,7 +367,7 @@ class Codeforces(CompetitivePlatform):
             finished_contests = [_pack_contest(next(contest for contest in contest_list
                                                     if contest['phase'] == 'FINISHED'))]
 
-        return upcoming_contests, running_contests, finished_contests
+        return running_contests, upcoming_contests, finished_contests
 
     @classmethod
     def get_prob_tags_all(cls) -> list[str] | None:
@@ -454,7 +456,8 @@ class Codeforces(CompetitivePlatform):
             rank = info['rank'].title()
 
         rank_alias = next((rk for (l, r), rk in cls.rated_rks.items() if l <= rating < r), 'N')
-        return cls._render_user_card(info['handle'], social, rank, rank_alias, rating)
+        return UserCardRenderer(handle=info['handle'], social=social,
+                                rank=rank, rank_alias=rank_alias, rating=rating, platform=cls).render()
 
     @classmethod
     def get_user_info(cls, handle: str) -> tuple[str, str | None]:
