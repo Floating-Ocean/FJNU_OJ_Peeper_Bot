@@ -18,4 +18,8 @@ class Renderer(abc.ABC):
 
     @classmethod
     def _get_img_path(cls, img_name: str) -> str:
-        return os.path.join(_lib_path, f"{img_name}.png")
+        img_path = os.path.join(_lib_path, f"{img_name}.png")
+        if os.path.exists(img_path):
+            return img_path
+        else:
+            return os.path.join(_lib_path, "Unknown.png")

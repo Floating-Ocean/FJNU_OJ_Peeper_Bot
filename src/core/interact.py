@@ -11,9 +11,10 @@ from src.core.exception import UnauthorizedError
 from src.core.output_cached import get_cached_prefix
 from src.core.tools import png2jpg, get_simple_qrcode, check_intersect, get_today_timestamp_range
 from src.module.message import RobotMessage, MessageType
-from src.platform.cp.atcoder import AtCoder
-from src.platform.cp.codeforces import Codeforces
-from src.platform.cp.nowcoder import NowCoder
+from src.platform.manual.manual import ManualPlatform
+from src.platform.online.atcoder import AtCoder
+from src.platform.online.codeforces import Codeforces
+from src.platform.online.nowcoder import NowCoder
 from src.render.render_contest_list import ContestListRenderer
 
 _fixed_reply = {
@@ -96,18 +97,21 @@ def recent_contests(message: RobotMessage):
     if len(message.tokens) >= 3 and message.tokens[1] == 'today':
         query_today = True
         message.tokens[1] = message.tokens[2]
-    queries = [AtCoder, Codeforces, NowCoder]
+    queries = [AtCoder, Codeforces, NowCoder, ManualPlatform]
     if len(message.tokens) >= 2:
         if message.tokens[1] == 'today':
             query_today = True
         else:
             closest_type = process.extract(message.tokens[1].lower(), [
-                "cf", "codeforces", "atc", "atcoder", "牛客", "nk", "nc", "nowcoder"], limit=1)[0]
+                "cf", "codeforces", "atc", "atcoder", "牛客", "nk", "nc", "nowcoder",
+                "ccpc", "icpc", "other", "其他", "misc", "杂项", "manual", "手动"], limit=1)[0]
             if closest_type[1] >= 60:
                 if closest_type[0] in ["cf", "codeforces"]:
                     queries = [Codeforces]
                 elif closest_type[0] in ["atc", "atcoder"]:
                     queries = [AtCoder]
+                elif closest_type[0] in ["ccpc", "icpc", "other", "其他", "misc", "杂项", "manual", "手动"]:
+                    queries = [ManualPlatform]
                 else:
                     queries = [NowCoder]
     tip_time_range = '今日' if query_today else '近期'

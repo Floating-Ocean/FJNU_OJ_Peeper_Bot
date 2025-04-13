@@ -3,9 +3,10 @@ import unittest
 
 from src.core.tools import png2jpg
 from src.module.color_rand import load_colors, _colors, transform_color, add_qrcode
-from src.platform.cp.atcoder import AtCoder
-from src.platform.cp.codeforces import Codeforces
-from src.platform.cp.nowcoder import NowCoder
+from src.platform.manual.manual import ManualPlatform
+from src.platform.online.atcoder import AtCoder
+from src.platform.online.codeforces import Codeforces
+from src.platform.online.nowcoder import NowCoder
 from src.render.render_color_card import ColorCardRenderer
 from src.render.render_contest_list import ContestListRenderer
 
@@ -30,7 +31,7 @@ class Render(unittest.TestCase):
 
     def test_contest_list(self):
         upcoming_contests, running_contests, finished_contests = [], [], []
-        for platform in [Codeforces, AtCoder, NowCoder]:
+        for platform in [Codeforces, AtCoder, NowCoder, ManualPlatform]:
             upcoming, running, finished = platform.get_contest_list()
             upcoming_contests.extend(upcoming)
             running_contests.extend(running)

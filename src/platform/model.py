@@ -1,6 +1,9 @@
 import abc
 import time
+from abc import abstractmethod
 from dataclasses import dataclass
+from datetime import datetime
+from enum import Enum
 
 import pixie
 
@@ -33,11 +36,47 @@ class Contest:
                 f"持续 {format_seconds(self.duration)}, {self.supplement}")
 
 
+class DynamicContestPhase(Enum):
+    UPCOMING = 0
+    RUNNING = 1
+    ENDED = 2
+
+
+@dataclass
+class DynamicContest(Contest):
+    """根据当前时间确定phase，需要传递除phase外的所有参数"""
+
+    def get_phase(self) -> DynamicContestPhase:
+        current_tick = int(datetime.now().timestamp())
+        start_tick, end_tick = self.start_time, self.start_time + self.duration
+        if current_tick < start_tick:
+            return DynamicContestPhase.UPCOMING
+        elif current_tick > end_tick:
+            return DynamicContestPhase.ENDED
+        else:
+            return DynamicContestPhase.RUNNING
+
+    def __init__(self, **kwargs):
+        self.platform = kwargs['platform']
+        self.abbr = kwargs['abbr']
+        self.name = kwargs['name']
+        self.start_time = kwargs['start_time']
+        self.duration = kwargs['duration']
+        self.supplement = kwargs['supplement']
+        current_phase = self.get_phase()
+        if current_phase != DynamicContestPhase.RUNNING:
+            current_tick = int(datetime.now().timestamp())
+            self.phase = format_timestamp_diff(current_tick - self.start_time)
+        else:
+            self.phase = "正在比赛中"
+
+
 class CompetitivePlatform(abc.ABC):
     platform_name: str
     rks_color: dict[str, str]
 
     @classmethod
+    @abstractmethod
     def _get_contest_list(cls) -> tuple[list[Contest], list[Contest], list[Contest]] | None:
         """
         需被重载。
@@ -104,6 +143,7 @@ class CompetitivePlatform(abc.ABC):
         return info
 
     @classmethod
+    @abstractmethod
     def get_user_id_card(cls, handle: str) -> pixie.Image | str:
         """
         获取指定用户的基础信息卡片
@@ -112,6 +152,7 @@ class CompetitivePlatform(abc.ABC):
         pass
 
     @classmethod
+    @abstractmethod
     def get_user_info(cls, handle: str) -> tuple[str, str | None]:
         """
         获取指定用户的详细信息

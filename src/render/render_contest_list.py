@@ -77,6 +77,8 @@ class ContestListRenderer(Renderer):
         gradient_color = pick_gradient_color()
         accent_dark_color = darken_color(pixie.parse_color(gradient_color.color_list[-1]), 0.3)
         accent_dark_color_tran = pixie.Color(accent_dark_color.r, accent_dark_color.g, accent_dark_color.b, 136 / 255)
+        mild_text_color = pixie.Color(0, 0, 0, 136 / 255)
+        mild_ext_text_color = pixie.Color(0.2, 0.2, 0.2, 1)
 
         title_text = StyledString("近日算法竞赛", 'H', 96, padding_bottom=4,
                                   font_color=accent_dark_color)
@@ -87,14 +89,14 @@ class ContestListRenderer(Renderer):
         generation_info_text = StyledString(f'Generated at {datetime.now().strftime("%Y/%m/%d %H:%M:%S")}.\n'
                                             f'Initiated by OBot {Constants.core_version}.\n'
                                             f'{gradient_color.name}.', 'B', 20,
-                                            line_multiplier=1.32, font_color=(0, 0, 0, 136))
+                                            line_multiplier=1.32, font_color=mild_text_color)
         none_title_text = StyledString("最近没有比赛，放松一下吧", 'H', 52, padding_bottom=72)
         running_title_text = StyledString("RUNNING 正在进行", 'H', 52, padding_bottom=72,
-                                          font_color=accent_dark_color)
+                                          font_color=mild_ext_text_color)
         upcoming_title_text = StyledString("PENDING 即将进行", 'H', 52, padding_bottom=72,
-                                           font_color=accent_dark_color)
+                                           font_color=mild_ext_text_color)
         finished_title_text = StyledString("ENDED 已结束", 'H', 52, padding_bottom=72,
-                                           font_color=accent_dark_color)
+                                           font_color=mild_ext_text_color)
 
         width, height = self._CONTENT_WIDTH, calculate_height([title_text, subtitle_text,
                                                                generator_text, generation_info_text]) + 264
@@ -117,8 +119,8 @@ class ContestListRenderer(Renderer):
         draw_mask_rect(img, Loc(32, 32, self._CONTENT_WIDTH, height), pixie.Color(1, 1, 1, 0.7), 96)
 
         current_x, current_y = 108, 168
-        draw_img(img, logo_path, Loc(108, 184, 96, 96), accent_dark_color)
-        current_y = draw_text(img, title_text, 230, current_y)
+        draw_img(img, logo_path, Loc(106, 181, 102, 102), accent_dark_color)
+        current_y = draw_text(img, title_text, 232, current_y)
         current_y = draw_text(img, subtitle_text, current_x, current_y)
 
         if len(self._running_contests) == 0 and len(self._upcoming_contests) == 0 and len(self._finished_contests) == 0:
@@ -128,7 +130,7 @@ class ContestListRenderer(Renderer):
                                                                  (self._upcoming_contests, upcoming_logo_path, upcoming_title_text),
                                                                  (self._finished_contests, finished_logo_path, finished_title_text)]:
                 if len(_contests) > 0:
-                    draw_img(img, _type_logo_path, Loc(current_x, current_y + 10, 50, 50), accent_dark_color)
+                    draw_img(img, _type_logo_path, Loc(current_x, current_y + 10, 50, 50), mild_ext_text_color)
                     current_y = draw_text(img, _type_title_text, current_x + 50 + 28, current_y)
                     current_y -= self._CONTEST_PADDING
                     for contest in _contests:

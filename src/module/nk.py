@@ -9,7 +9,7 @@ from src.module.message import RobotMessage
 
 __nk_version__ = "v1.2.1"
 
-from src.platform.cp.nowcoder import NowCoder
+from src.platform.online.nowcoder import NowCoder
 
 
 def register_module():
