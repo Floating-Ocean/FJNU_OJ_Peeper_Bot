@@ -133,7 +133,7 @@ def format_timestamp_diff(diff: int) -> str:
         elif days >= 30:
             months = days // 30
             info = f"{months}个月"
-        elif days >= 7:
+        elif days >= 14:
             weeks = days // 7
             info = f"{weeks}周"
         else:
