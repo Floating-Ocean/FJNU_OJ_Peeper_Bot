@@ -13,6 +13,7 @@ class ManualPlatform(CompetitivePlatform):
     本类平台用于手动配置的比赛列表获取
     注意其他方法和成员均未被实现
     """
+    platform_name = "手动配置的"
 
     @classmethod
     def _get_contest_list(cls) -> tuple[list[Contest], list[Contest], list[Contest]] | None:
