@@ -40,6 +40,10 @@ def reply_manual_add_contest(message: RobotMessage):
                       f"{help_content}")
         return
     duration = int(duration_raw)
+    if duration <= 0:
+        message.reply("duration必须为正整数\n\n"
+                      f"{help_content}")
+        return
 
     contest = {
         "platform": platform,
