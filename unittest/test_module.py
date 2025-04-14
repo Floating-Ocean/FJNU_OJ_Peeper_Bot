@@ -59,7 +59,7 @@ class Module(unittest.TestCase):
             platform='ICPC',
             abbr='武汉邀请赛',
             name='2025年ICPC国际大学生程序设计竞赛全国邀请赛（武汉）',
-            start_time=int(datetime.strptime("2025-04-27T10:00:00.000Z", "%Y-%m-%dT%H:%M:%S.%fZ").timestamp()),
+            start_time=int(datetime.strptime("250427100000", "%y%m%d%H%M%S").timestamp()),
             duration=60*60*5,
             supplement='华中科技大学'
         )

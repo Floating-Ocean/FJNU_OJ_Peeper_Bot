@@ -1,0 +1,62 @@
+import json
+import os
+from datetime import datetime
+
+from src.core.command import command
+from src.core.constants import Constants
+from src.core.perm import PermissionLevel
+from src.core.tools import is_valid_date, check_is_int
+from src.module.message import RobotMessage
+
+_lib_path = os.path.join(Constants.config["lib_path"], "Contest-List-Renderer")
+__contest_list_renderer_version__ = "v1.0.0"
+
+
+def register_module():
+    pass
+
+
+@command(tokens=["导入比赛"], permission_level=PermissionLevel.MOD)
+def reply_manual_add_contest(message: RobotMessage):
+    help_content = ("/导入比赛 [platform] [abbr] [name] [start_time] [duration] [supplement]\n\n"
+                    "示例：/导入比赛 ICPC 武汉邀请赛 2025年ICPC国际大学生程序设计竞赛全国邀请赛（武汉） 250427100000 18000 华中科技大学\n\n"
+                    "注意，start_time包含年月日时分秒，且均为两位，duration单位为秒")
+    if len(message.tokens) != 7:
+        message.reply("参数数量有误\n\n"
+                      f"{help_content}")
+        return
+
+    platform, abbr, name, start_time_raw, duration_raw, supplement = message.tokens[1:]
+
+    date_format = "%y%m%d%H%M%S"
+    if not is_valid_date(start_time_raw, date_format):
+        message.reply("start_time格式错误\n\n"
+                      f"{help_content}")
+        return
+    start_time = int(datetime.strptime(start_time_raw, date_format).timestamp())
+
+    if not check_is_int(duration_raw):
+        message.reply("duration必须为整数\n\n"
+                      f"{help_content}")
+        return
+    duration = int(duration_raw)
+
+    contest = {
+        "platform": platform,
+        "abbr": abbr,
+        "name": name,
+        "start_time": start_time,
+        "duration": duration,
+        "supplement": supplement,
+    }
+
+    manual_contests_path = os.path.join(_lib_path, 'manual_contests.json')
+    with open(manual_contests_path, 'r+', encoding='utf-8') as f:
+        manual_contests = json.load(f)
+
+    manual_contests.append(contest)
+
+    with open(manual_contests_path, 'w', encoding='utf-8') as f:
+        json.dump(manual_contests, f, ensure_ascii=False, indent=4)
+
+    message.reply("导入比赛成功")

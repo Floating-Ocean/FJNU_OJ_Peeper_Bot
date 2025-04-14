@@ -350,6 +350,14 @@ def april_fool_magic(original_str: str) -> str:
     return original_str
 
 
+def is_valid_date(date_str: str, fmt: str) -> bool:
+    try:
+        datetime.datetime.strptime(date_str, fmt)
+        return True
+    except ValueError:
+        return False
+
+
 class SSLAdapter(HTTPAdapter):
     def init_poolmanager(self, *args, **kwargs):
         """

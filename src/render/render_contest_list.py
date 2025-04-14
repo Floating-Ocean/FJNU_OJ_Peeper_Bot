@@ -84,6 +84,11 @@ class ContestListRenderer(Renderer):
                                   font_color=accent_dark_color)
         subtitle_text = StyledString("Recent Competitive Programming Competitions", 'H', 28, padding_bottom=108,
                                      font_color=accent_dark_color_tran)
+        tips_title_text = StyledString("Tips:", 'H', 36, padding_bottom=64)
+        tips_detail_text = StyledString("数据源于平台数据爬取/API调用/手动填写，仅供参考", 'M', 28,
+                                        line_multiplier=1.32, padding_bottom=64,
+                                        max_width=(self._CONTENT_WIDTH - 108 - # 考虑右边界，不然画出去了
+                                                   calculate_width(tips_title_text) - 12 - 48))
         generator_text = StyledString("Contest List Renderer", 'H', 36,
                                             font_color=(0, 0, 0, 208), padding_bottom=16)
         generation_info_text = StyledString(f'Generated at {datetime.now().strftime("%Y/%m/%d %H:%M:%S")}.\n'
@@ -98,7 +103,7 @@ class ContestListRenderer(Renderer):
         finished_title_text = StyledString("ENDED 已结束", 'H', 52, padding_bottom=72,
                                            font_color=mild_ext_text_color)
 
-        width, height = self._CONTENT_WIDTH, calculate_height([title_text, subtitle_text,
+        width, height = self._CONTENT_WIDTH, calculate_height([title_text, subtitle_text, tips_title_text,
                                                                generator_text, generation_info_text]) + 264
         if len(self._upcoming_contests) == 0 and len(self._running_contests) == 0 and len(self._finished_contests) == 0:
             height += calculate_height(none_title_text)
@@ -138,6 +143,8 @@ class ContestListRenderer(Renderer):
                         current_y = contest.render_item(img, current_y)
                     current_y += self._TYPE_PADDING
 
+        draw_text(img, tips_title_text, current_x, current_y)
+        current_y = draw_text(img, tips_detail_text, current_x + calculate_width(tips_title_text) + 12, current_y + 8)
         current_y = draw_text(img, generator_text, current_x, current_y)
         draw_text(img, generation_info_text, current_x, current_y)
 
