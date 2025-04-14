@@ -14,6 +14,7 @@ class ManualPlatform(CompetitivePlatform):
     注意其他方法和成员均未被实现
     """
     platform_name = "手动配置的"
+    rks_color = {}
 
     @classmethod
     def _get_contest_list(cls) -> tuple[list[Contest], list[Contest], list[Contest]] | None:
@@ -23,25 +24,29 @@ class ManualPlatform(CompetitivePlatform):
         if not os.path.exists(manual_contests_path):
             return [], [], []
 
-        with open(manual_contests_path, 'r', encoding='utf-8') as f:
-            manual_contests = json.load(f)
-            for raw_contest in manual_contests:
-                contest = DynamicContest(**raw_contest)
-                current_phase = contest.get_phase()
-                if current_phase == DynamicContestPhase.RUNNING:
-                    running_contests.append(contest)
-                elif current_phase == DynamicContestPhase.UPCOMING:
-                    upcoming_contests.append(contest)
-                else:
-                    finished_contests.append(contest)
+        try:
+            with open(manual_contests_path, 'r', encoding='utf-8') as f:
+                manual_contests = json.load(f)
+                for raw_contest in manual_contests:
+                    contest = DynamicContest(**raw_contest)
+                    current_phase = contest.get_phase()
+                    if current_phase == DynamicContestPhase.RUNNING:
+                        running_contests.append(contest)
+                    elif current_phase == DynamicContestPhase.UPCOMING:
+                        upcoming_contests.append(contest)
+                    else:
+                        finished_contests.append(contest)
+        except (json.JSONDecodeError, KeyError) as e:
+            Constants.log.error(f"Decode manual_contests.json failed: {e}")
+            return [], [], []
 
         return running_contests, upcoming_contests, finished_contests
 
 
     @classmethod
     def get_user_id_card(cls, handle: str) -> pixie.Image | str:
-        raise NotImplementedError()
+        return "手动配置平台不支持此操作"
 
     @classmethod
     def get_user_info(cls, handle: str) -> tuple[str, str | None]:
-        raise NotImplementedError()
+        return "手动配置平台不支持此操作", None

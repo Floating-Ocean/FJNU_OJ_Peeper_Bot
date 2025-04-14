@@ -51,12 +51,29 @@ def reply_manual_add_contest(message: RobotMessage):
     }
 
     manual_contests_path = os.path.join(_lib_path, 'manual_contests.json')
-    with open(manual_contests_path, 'r+', encoding='utf-8') as f:
-        manual_contests = json.load(f)
+    try:
+        # 检查文件是否存在，不存在则创建
+        if not os.path.exists(manual_contests_path):
+            with open(manual_contests_path, 'w', encoding='utf-8') as f:
+                json.dump([], f)
+        with open(manual_contests_path, 'r+', encoding='utf-8') as f:
+            manual_contests = json.load(f)
 
-    manual_contests.append(contest)
+        # 检查比赛是否已存在
+        for existing_contest in manual_contests:
+            if (existing_contest.get('platform') == platform and
+                    existing_contest.get('name') == name and
+                    existing_contest.get('start_time') == start_time):
+                message.reply("该比赛已存在，导入失败")
+                return
 
-    with open(manual_contests_path, 'w', encoding='utf-8') as f:
-        json.dump(manual_contests, f, ensure_ascii=False, indent=4)
+        manual_contests.append(contest)
 
-    message.reply("导入比赛成功")
+        with open(manual_contests_path, 'w', encoding='utf-8') as f:
+            json.dump(manual_contests, f, ensure_ascii=False, indent=4)
+
+        message.reply("导入比赛成功")
+
+    except Exception as e:
+        message.reply("出现错误，导入比赛失败")
+        Constants.log.error(f"Import custom contest failed: {e}")

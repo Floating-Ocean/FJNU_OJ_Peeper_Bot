@@ -1,5 +1,4 @@
 import json
-import random
 import unittest
 from dataclasses import asdict
 from datetime import datetime
@@ -8,11 +7,10 @@ from aiohttp import ClientConnectorSSLError
 from botpy.errors import ServerError
 
 from src.core.exception import handle_exception, UnauthorizedError, ModuleRuntimeError
-from src.core.tools import png2jpg, decode_range
-from src.module.color_rand import load_colors, _colors, add_qrcode
+from src.core.tools import decode_range
+from src.platform.model import DynamicContest
 from src.platform.online.atcoder import AtCoder
 from src.platform.online.codeforces import Codeforces
-from src.platform.model import Contest, DynamicContest
 
 
 class Module(unittest.TestCase):
