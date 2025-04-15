@@ -1,3 +1,4 @@
+import math
 import time
 from datetime import datetime
 
@@ -15,6 +16,7 @@ _CONTENT_WIDTH = 1024
 _TOP_PADDING = 168
 _BOTTOM_PADDING = 128
 _SIDE_PADDING = 108
+_COLUMN_PADDING = 52
 _CONTEST_PADDING = 108
 _SECTION_PADDING = 108
 _TYPE_PADDING = 128
@@ -53,7 +55,7 @@ class _ContestItem(RenderableSection):
         current_x, current_y = self._begin_x - _SIDE_PADDING + x - calculate_width(self._idx_text) - 48, y
 
         draw_text(img, self._idx_text, current_x, current_y - 14)
-        current_x = self._begin_x
+        current_x = self._begin_x - _SIDE_PADDING + x
 
         draw_img(img, ContestListRenderer.get_img_path(self._contest.platform), Loc(current_x, current_y + 4, 20, 20),
                  pixie.Color(0, 0, 0, 1))
@@ -108,6 +110,18 @@ class _ContestsSection(RenderableSection):
                                                 font_color=self.mild_ext_text_color)
         self.finished_title_text = StyledString("ENDED 已结束", 'H', 52, padding_bottom=72,
                                                 font_color=self.mild_ext_text_color)
+        self.column = self.get_columns()
+
+    def get_columns(self):
+        max_column = 0
+        for contest_len in [len(self.running_contests), len(self.upcoming_contests), len(self.finished_contests)]:
+            if contest_len > 12:
+                max_column = max(max_column, 3)
+            elif contest_len > 5:
+                max_column = max(max_column, 2)
+            else:
+                max_column = max(max_column, 1)
+        return max_column
 
     def render(self, img: pixie.Image, x: int, y: int) -> int:
         current_x, current_y = x, y
@@ -124,10 +138,19 @@ class _ContestsSection(RenderableSection):
                     current_y += _TYPE_PADDING
                     draw_img(img, _type_logo_path, Loc(current_x, current_y + 10, 50, 50), self.mild_ext_text_color)
                     current_y = draw_text(img, _type_title_text, current_x + 50 + 28, current_y)
+                    column_count = math.ceil(len(_contests) / self.column)  # 其实不一定合理，因为item高度不固定
                     current_y -= _CONTEST_PADDING
-                    for contest in _contests:
+                    start_y, max_y, current_col = current_y, current_y, 0
+                    for idx, contest in enumerate(_contests):
                         current_y += _CONTEST_PADDING
-                        current_y = contest.render(img, current_x, current_y)
+                        current_y = contest.render(img,
+                                                   current_x + (_CONTENT_WIDTH + _COLUMN_PADDING) * current_col,
+                                                   current_y)
+                        max_y = max(max_y, current_y)
+                        if (idx + 1) % column_count == 0:  # 分栏
+                            current_col += 1
+                            current_y = start_y
+                    current_y = max_y
 
         return current_y
 
@@ -142,8 +165,11 @@ class _ContestsSection(RenderableSection):
                                                 (self.finished_contests, self.finished_title_text)]:
                 if len(_contests) > 0:
                     height += calculate_height(_type_title_text)
-                    height += sum([contest.get_height() for contest in _contests]) + _TYPE_PADDING
-                    height += _CONTEST_PADDING * (len(_contests) - 1)  # 各比赛间的 padding
+                    column_count = math.ceil(len(_contests) / self.column)
+                    column_split = [_contests[i:i+column_count] for i in range(0, len(_contests), column_count)]
+                    height += max(sum(contest.get_height() for contest in column)
+                                  for column in column_split) + _TYPE_PADDING
+                    height += _CONTEST_PADDING * (column_count - 1)  # 各比赛间的 padding
         return height
 
 
@@ -196,17 +222,18 @@ class ContestListRenderer(Renderer):
         copyright_section = _CopyrightSection(gradient_color.name)
 
         render_sections = [title_section, contests_section, copyright_section]
+        max_column = max(section.get_columns() for section in render_sections)
 
-        width, height = (_CONTENT_WIDTH,
-                         sum([section.get_height() for section in render_sections]) +
+        width, height = (_CONTENT_WIDTH * max_column + _SECTION_PADDING * (max_column - 1),
+                         sum(section.get_height() for section in render_sections) +
                          _SECTION_PADDING * (len(render_sections) - 1) + _TOP_PADDING + _BOTTOM_PADDING)
 
         img = pixie.Image(width + 64, height + 64)
         img.fill(pixie.Color(0, 0, 0, 1))  # 填充黑色背景
 
-        draw_gradient_rect(img, Loc(32, 32, _CONTENT_WIDTH, height), gradient_color,
+        draw_gradient_rect(img, Loc(32, 32, width, height), gradient_color,
                            GradientDirection.DIAGONAL_RIGHT_TO_LEFT, 96)
-        draw_mask_rect(img, Loc(32, 32, _CONTENT_WIDTH, height), pixie.Color(1, 1, 1, 0.7), 96)
+        draw_mask_rect(img, Loc(32, 32, width, height), pixie.Color(1, 1, 1, 0.7), 96)
 
         current_x, current_y = _SIDE_PADDING, _TOP_PADDING - _SECTION_PADDING
 
