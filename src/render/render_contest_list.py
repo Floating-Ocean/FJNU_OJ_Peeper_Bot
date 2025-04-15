@@ -36,6 +36,8 @@ class _ContestItem(RenderableSection):
         self._begin_x = _SIDE_PADDING + calculate_width(self._00_idx_text) + 48
         max_width = _CONTENT_WIDTH + 32 - self._begin_x - 48 - _SIDE_PADDING
 
+        self._time_logo_path = ContestListRenderer.get_img_path("Time")
+        self._info_logo_path = ContestListRenderer.get_img_path("Info")
         self._idx_text = StyledString(f"{self._idx:02d}",
                                       'H', 78,
                                       font_color=(0, 0, 0, 30), padding_bottom=12)
@@ -61,8 +63,11 @@ class _ContestItem(RenderableSection):
                  pixie.Color(0, 0, 0, 1))
         current_y = draw_text(img, self._subtitle_text, current_x + 28, current_y)
         current_y = draw_text(img, self._title_text, current_x, current_y)
-        current_y = draw_text(img, self._time_text, current_x, current_y)
-        current_y = draw_text(img, self._status_text, current_x, current_y)
+
+        draw_img(img, self._time_logo_path, Loc(current_x, current_y + 6, 32, 32), pixie.Color(0, 0, 0, 1))
+        current_y = draw_text(img, self._time_text, current_x + 38, current_y)
+        draw_img(img, self._info_logo_path, Loc(current_x, current_y + 6, 32, 32), pixie.Color(0, 0, 0, 1))
+        current_y = draw_text(img, self._status_text, current_x + 38, current_y)
 
         return current_y
 

@@ -1,5 +1,6 @@
 import datetime
 import hashlib
+import locale
 import os
 import random
 import re
@@ -143,7 +144,8 @@ def format_timestamp_diff(diff: int) -> str:
 
 
 def format_timestamp(timestamp: int) -> str:
-    return time.strftime('%y/%m/%d %H:%M:%S', time.localtime(timestamp))
+    locale.setlocale(locale.LC_ALL, 'zh_CN.UTF-8')  # 使 %a 输出 周x
+    return time.strftime('%y/%m/%d %a %H:%M:%S', time.localtime(timestamp))
 
 
 def format_seconds(seconds: int) -> str:
