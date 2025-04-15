@@ -17,9 +17,25 @@ class Renderer(abc.ABC):
         pass
 
     @classmethod
-    def _get_img_path(cls, img_name: str) -> str:
+    def get_img_path(cls, img_name: str) -> str:
         img_path = os.path.join(_lib_path, f"{img_name}.png")
         if os.path.exists(img_path):
             return img_path
         else:
             return os.path.join(_lib_path, "Unknown.png")
+
+
+class RenderableSection(abc.ABC):
+    """图片渲染分块基类"""
+
+    def get_columns(self):
+        """占几列，重写本方法以实现多列"""
+        return 1
+
+    @abstractmethod
+    def render(self, img: pixie.Image, x: int, y: int) -> int:
+        pass
+
+    @abstractmethod
+    def get_height(self):
+        pass

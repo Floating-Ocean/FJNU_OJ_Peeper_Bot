@@ -29,7 +29,7 @@ class UserCardRenderer(Renderer):
 
         text_color = darken_color(pixie.parse_color(rk_color), 0.2)
         pf_raw_text = f"{self._platform.platform_name} ID"
-        draw_img(img, self._get_img_path(self._platform.platform_name), Loc(144 + 32, 120 + 6 + 32, 48, 48), text_color)
+        draw_img(img, self.get_img_path(self._platform.platform_name), Loc(144 + 32, 120 + 6 + 32, 48, 48), text_color)
 
         pf_text = StyledString(pf_raw_text, 'H', 44, font_color=text_color, padding_bottom=30)
         handle_text = StyledString(self._handle, 'H', 96, font_color=text_color, padding_bottom=20)
