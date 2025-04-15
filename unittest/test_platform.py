@@ -3,10 +3,10 @@ import unittest
 
 from dataclasses import asdict
 
-from src.platform.cp.atcoder import AtCoder
-from src.platform.cp.codeforces import Codeforces
-from src.platform.cp.nowcoder import NowCoder
-from src.platform.it.clist import Clist
+from src.platform.online.atcoder import AtCoder
+from src.platform.online.codeforces import Codeforces
+from src.platform.online.nowcoder import NowCoder
+from src.platform.collect.clist import Clist
 
 
 class Platform(unittest.TestCase):

@@ -1,32 +1,19 @@
 import json
-import random
 import unittest
 from dataclasses import asdict
+from datetime import datetime
 
 from aiohttp import ClientConnectorSSLError
 from botpy.errors import ServerError
 
 from src.core.exception import handle_exception, UnauthorizedError, ModuleRuntimeError
-from src.core.tools import png2jpg, decode_range
-from src.module.color_rand import load_colors, _colors, render_color_card, add_qrcode
-from src.platform.cp.atcoder import AtCoder
-from src.platform.cp.codeforces import Codeforces
+from src.core.tools import decode_range
+from src.platform.model import DynamicContest
+from src.platform.online.atcoder import AtCoder
+from src.platform.online.codeforces import Codeforces
 
 
 class Module(unittest.TestCase):
-    def test_color_rand(self):
-        load_colors()
-        picked_color = random.choice(_colors)
-        color_card = render_color_card(picked_color)
-        color_card.write_file("test.png")
-
-    def test_color_qrcode(self):
-        load_colors()
-        picked_color = random.choice(_colors)
-        color_card = render_color_card(picked_color)
-        color_card.write_file("test.png")
-        add_qrcode("test.png", picked_color)
-        png2jpg("test.png")
 
     def test_cf_user_standings(self):
         handle = "FloatingOcean"
@@ -64,6 +51,17 @@ class Module(unittest.TestCase):
         print(handle_exception(ClientConnectorSSLError(None, OSError('This is a test client connector ssl error.'))))
         print(handle_exception(UnauthorizedError('阿弥诺斯')))
         print(handle_exception(ModuleRuntimeError('IndexError(...)')))
+
+    def test_contest_json(self):
+        contest = DynamicContest(
+            platform='ICPC',
+            abbr='武汉邀请赛',
+            name='2025年ICPC国际大学生程序设计竞赛全国邀请赛（武汉）',
+            start_time=int(datetime.strptime("250427100000", "%y%m%d%H%M%S").timestamp()),
+            duration=60*60*5,
+            supplement='华中科技大学'
+        )
+        print(json.dumps(asdict(contest), ensure_ascii=False, indent=4))
 
 
 if __name__ == '__main__':

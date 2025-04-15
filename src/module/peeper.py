@@ -13,6 +13,7 @@ from src.core.tools import run_shell, escape_mail_url, png2jpg, check_is_int
 from src.module.atc import __atc_version__
 from src.module.cf import __cf_version__
 from src.module.color_rand import __color_rand_version__
+from src.module.contest_manual import __contest_list_renderer_version__
 from src.module.message import RobotMessage
 from src.module.nk import __nk_version__
 from src.module.pick_one import __pick_one_version__
@@ -193,6 +194,7 @@ def send_version_info(message: RobotMessage):
                       f"AtCoder {__atc_version__}\n"
                       f"Codeforces {__cf_version__}\n"
                       f"Color-Rand {__color_rand_version__}\n"
+                      f"Contest-List-Renderer {__contest_list_renderer_version__}\n"
                       f"NowCoder {__nk_version__}\n"
                       f"{result}\n"
                       f"Pick-One {__pick_one_version__}\n"

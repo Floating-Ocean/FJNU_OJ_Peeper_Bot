@@ -6,7 +6,7 @@ from src.core.constants import Constants
 from src.core.output_cached import get_cached_prefix
 from src.core.tools import check_is_int, get_simple_qrcode, png2jpg
 from src.module.message import RobotMessage
-from src.platform.cp.codeforces import Codeforces
+from src.platform.online.codeforces import Codeforces
 
 __cf_version__ = "v3.1.2"
 

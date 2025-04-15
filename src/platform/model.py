@@ -1,22 +1,24 @@
 import abc
 import time
+from abc import abstractmethod
 from dataclasses import dataclass
+from datetime import datetime
+from enum import Enum
 
 import pixie
-from easy_pixie import draw_gradient_rect, GradientDirection, draw_mask_rect, darken_color, draw_img, draw_text, \
-    StyledString, GradientColor, Loc
 
-from src.core.painter import get_img_path
-from src.core.tools import format_timestamp_diff, format_seconds, format_timestamp
+from src.core.tools import format_timestamp_diff, format_seconds, format_timestamp, check_intersect, \
+    get_a_month_timestamp_range
 
 
 @dataclass
 class Contest:
-    start_time: int
-    phase: str
-    duration: int
-    tag: str | None
+    platform: str
+    abbr: str
     name: str
+    phase: str
+    start_time: int
+    duration: int
     supplement: str
 
     def format(self) -> str:
@@ -28,10 +30,45 @@ class Contest:
             status = self.phase  # 用于展示"比赛中"，或者诸如 Codeforces 平台的 "正在重测中"
         else:
             status = format_timestamp_diff(int(time.time()) - self.start_time)
-        return ((f"[{self.tag}] " if self.tag is not None else "") +
-                (f"{self.name}\n"
-                 f"{status}, {format_timestamp(self.start_time)}\n"
-                 f"持续 {format_seconds(self.duration)}, {self.supplement}"))
+        return (f"[{self.platform} · {self.abbr}] "
+                f"{self.name}\n"
+                f"{status}, {format_timestamp(self.start_time)}\n"
+                f"持续 {format_seconds(self.duration)}, {self.supplement}")
+
+
+class DynamicContestPhase(Enum):
+    UPCOMING = 0
+    RUNNING = 1
+    ENDED = 2
+
+
+@dataclass
+class DynamicContest(Contest):
+    """根据当前时间确定phase，需要传递除phase外的所有参数"""
+
+    def get_phase(self) -> DynamicContestPhase:
+        current_tick = int(datetime.now().timestamp())
+        start_tick, end_tick = self.start_time, self.start_time + self.duration
+        if current_tick < start_tick:
+            return DynamicContestPhase.UPCOMING
+        elif current_tick > end_tick:
+            return DynamicContestPhase.ENDED
+        else:
+            return DynamicContestPhase.RUNNING
+
+    def __init__(self, **kwargs):
+        self.platform = kwargs['platform']
+        self.abbr = kwargs['abbr']
+        self.name = kwargs['name']
+        self.start_time = kwargs['start_time']
+        self.duration = kwargs['duration']
+        self.supplement = kwargs['supplement']
+        current_phase = self.get_phase()
+        if current_phase != DynamicContestPhase.RUNNING:
+            current_tick = int(datetime.now().timestamp())
+            self.phase = format_timestamp_diff(current_tick - self.start_time)
+        else:
+            self.phase = "正在比赛中"
 
 
 class CompetitivePlatform(abc.ABC):
@@ -39,47 +76,37 @@ class CompetitivePlatform(abc.ABC):
     rks_color: dict[str, str]
 
     @classmethod
-    def _render_user_card(cls, handle: str, social: str,
-                          rank: str, rank_alias: str, rating: int | str) -> pixie.Image:
+    @abstractmethod
+    def _get_contest_list(cls) -> tuple[list[Contest], list[Contest], list[Contest]] | None:
         """
-        渲染用户基础信息卡片
-        :return: 绘制完成的图片对象
-        """
-        img = pixie.Image(1664, 1040)
-        img.fill(pixie.Color(0, 0, 0, 1))
-
-        rk_color = cls.rks_color[rank_alias]
-        draw_gradient_rect(img, Loc(32, 32, 1600, 976), GradientColor(["#fcfcfc", rk_color], [0.0, 1.0], ''),
-                           GradientDirection.DIAGONAL_LEFT_TO_RIGHT, 96)
-        draw_mask_rect(img, Loc(32, 32, 1600, 976), pixie.Color(1, 1, 1, 0.6), 96)
-
-        text_color = darken_color(pixie.parse_color(rk_color), 0.2)
-        pf_raw_text = f"{cls.platform_name} ID"
-        draw_img(img, get_img_path(cls.platform_name), Loc(144 + 32, 120 + 6 + 32, 48, 48), text_color)
-
-        pf_text = StyledString(pf_raw_text, 'H', 44, font_color=text_color, padding_bottom=30)
-        handle_text = StyledString(handle, 'H', 96, font_color=text_color, padding_bottom=20)
-        social_text = StyledString(social, 'B', 28, font_color=text_color, padding_bottom=112)
-        rank_text = StyledString(rank, 'H', 44, font_color=text_color, padding_bottom=-6)
-        rating_text = StyledString(f"{rating}", 'H', 256, font_color=text_color, padding_bottom=44)
-
-        current_x, current_y = 144 + 32, 120 + 32
-        current_y = draw_text(img, pf_text, current_x + 48 + 18, current_y)
-        current_y = draw_text(img, handle_text, current_x, current_y)
-        current_y = draw_text(img, social_text, current_x, current_y)
-        current_y = draw_text(img, rank_text, current_x, current_y)
-        draw_text(img, rating_text, current_x - 10, current_y)
-
-        return img
-
-    @classmethod
-    def get_contest_list(cls, overwrite_tag: bool = False) -> tuple[list[Contest], list[Contest], list[Contest]] | None:
-        """
+        需被重载。
         指定平台分类比赛列表
         其中，已结束的比赛为 上一个已结束的比赛 与 当天所有已结束的比赛 的并集
-        :return: tuple[待举行的比赛，正在进行的比赛, 已结束的比赛] | None
+        :return: tuple[正在进行的比赛, 待举行的比赛，已结束的比赛] | None
         """
         pass
+
+    @classmethod
+    def get_contest_list(cls) -> tuple[list[Contest], list[Contest], list[Contest]] | None:
+        """
+        指定平台分类比赛列表，限定一个月内
+        其中，已结束的比赛为 上一个已结束的比赛 与 当天所有已结束的比赛 的并集
+        :return: tuple[正在进行的比赛, 待举行的比赛，已结束的比赛] | None
+        """
+        contests = cls._get_contest_list()
+        if contests is None:
+            return None
+
+        running_full_contests, upcoming_full_contests, finished_full_contests = contests
+        running_contests = [contest for contest in running_full_contests
+                            if check_intersect((contest.start_time, contest.start_time + contest.duration),
+                                               get_a_month_timestamp_range())]
+        upcoming_contests = [contest for contest in upcoming_full_contests
+                             if check_intersect((contest.start_time, contest.start_time + contest.duration),
+                                                get_a_month_timestamp_range())]
+        finished_contests = finished_full_contests
+
+        return running_contests, upcoming_contests, finished_contests
 
     @classmethod
     def get_recent_contests(cls) -> str:
@@ -92,9 +119,9 @@ class CompetitivePlatform(abc.ABC):
         if contest_list is None:
             return "查询异常"
 
-        upcoming_contests, running_contests, finished_contests = contest_list
-        upcoming_contests.sort(key=lambda c: c.start_time)
+        running_contests, upcoming_contests, finished_contests = contest_list
         running_contests.sort(key=lambda c: c.start_time)
+        upcoming_contests.sort(key=lambda c: c.start_time)
         finished_contests.sort(key=lambda c: c.start_time)
 
         info = ""
@@ -116,6 +143,7 @@ class CompetitivePlatform(abc.ABC):
         return info
 
     @classmethod
+    @abstractmethod
     def get_user_id_card(cls, handle: str) -> pixie.Image | str:
         """
         获取指定用户的基础信息卡片
@@ -124,6 +152,7 @@ class CompetitivePlatform(abc.ABC):
         pass
 
     @classmethod
+    @abstractmethod
     def get_user_info(cls, handle: str) -> tuple[str, str | None]:
         """
         获取指定用户的详细信息

@@ -1,14 +1,14 @@
-<h1 align="center">FJNU_OJ_Peeper_Bot</h1>
+<h1 align="center">OBot's ACM</h1>
 <div align="center">
   <strong>基于PBG项目和官方接口的QQ机器人</strong><br>
 </div><br>
 
 <div align="center">
+  <a href="https://github.com/qwedc001/Peeper-Board-Generator/blob/master/requirements.txt"><img alt="Supported Python Version" src="https://img.shields.io/badge/Python-3.10+-teal?style=flat-square"></a>
   <a href="https://github.com/Floating-Ocean/FJNU_OJ_Peeper_Bot/actions/workflows/codeql.yml"><img alt="CodeQL Scan" src="https://img.shields.io/github/actions/workflow/status/Floating-Ocean/FJNU_OJ_Peeper_Bot/codeql.yml?style=flat-square"></a>
   <a href="https://github.com/Floating-Ocean/FJNU_OJ_Peeper_Bot/commits"><img alt="GitHub Last Commit" src="https://img.shields.io/github/last-commit/Floating-Ocean/FJNU_OJ_Peeper_Bot?style=flat-square"></a>
   <a href="https://github.com/Floating-Ocean/FJNU_OJ_Peeper_Bot/graphs/contributors"><img alt="GitHub contributors" src="https://img.shields.io/github/contributors/Floating-Ocean/FJNU_OJ_Peeper_Bot?style=flat-square"></a>
   <a href="https://github.com/Floating-Ocean/FJNU_OJ_Peeper_Bot/commits"><img alt="GitHub commit activity" src="https://img.shields.io/github/commit-activity/y/Floating-Ocean/FJNU_OJ_Peeper_Bot?style=flat-square"></a>
-  <a href="https://img.shields.io/github/commit-activity/y/Floating-Ocean/FJNU_OJ_Peeper_Bot"><img alt="CodeRabbit Pull Request Reviews" src="https://img.shields.io/coderabbit/prs/github/Floating-Ocean/FJNU_OJ_Peeper_Bot?utm_source=oss&utm_medium=github&utm_campaign=Floating-Ocean%2FFJNU_OJ_Peeper_Bot&color=FF570A&link=https%3A%2F%2Fcoderabbit.ai&label=CodeRabbit+Reviews&style=flat-square"></a>
 </div>
 
 ## 开始之前
@@ -33,7 +33,7 @@
 
 - 表情包的分类管理、添加、审核、随机；
 - 在中国传统颜色中随机色卡；
-- 给定指令生成二维码图片；
+- 给定文本生成二维码图片；
 
 <br>
 

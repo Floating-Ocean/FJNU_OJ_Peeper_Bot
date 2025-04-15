@@ -1,5 +1,6 @@
 import datetime
 import hashlib
+import locale
 import os
 import random
 import re
@@ -133,7 +134,7 @@ def format_timestamp_diff(diff: int) -> str:
         elif days >= 30:
             months = days // 30
             info = f"{months}个月"
-        elif days >= 7:
+        elif days >= 14:
             weeks = days // 7
             info = f"{weeks}周"
         else:
@@ -143,7 +144,8 @@ def format_timestamp_diff(diff: int) -> str:
 
 
 def format_timestamp(timestamp: int) -> str:
-    return time.strftime('%y/%m/%d %H:%M:%S', time.localtime(timestamp))
+    locale.setlocale(locale.LC_ALL, 'zh_CN.UTF-8')  # 使 %a 输出 周x
+    return time.strftime('%y/%m/%d %a %H:%M:%S', time.localtime(timestamp))
 
 
 def format_seconds(seconds: int) -> str:
@@ -245,6 +247,10 @@ def get_today_timestamp_range() -> tuple[int, int]:
     return get_today_start_timestamp(), get_today_start_timestamp() + 24 * 60 * 60
 
 
+def get_a_month_timestamp_range() -> tuple[int, int]:
+    return get_today_start_timestamp(), get_today_start_timestamp() + 31 * 24 * 60 * 60
+
+
 def get_simple_qrcode(content: str) -> Image:
     qr = QRCode()
     qr.add_data(content)
@@ -344,6 +350,14 @@ def april_fool_magic(original_str: str) -> str:
     if datetime.datetime.today().month == 4 and datetime.datetime.today().day == 1:
         return reverse_str_by_line(original_str)
     return original_str
+
+
+def is_valid_date(date_str: str, fmt: str) -> bool:
+    try:
+        datetime.datetime.strptime(date_str, fmt)
+        return True
+    except ValueError:
+        return False
 
 
 class SSLAdapter(HTTPAdapter):
