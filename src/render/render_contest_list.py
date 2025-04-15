@@ -92,7 +92,7 @@ class ContestListRenderer(Renderer):
         generator_text = StyledString("Contest List Renderer", 'H', 36,
                                             font_color=(0, 0, 0, 208), padding_bottom=16)
         generation_info_text = StyledString(f'Generated at {datetime.now().strftime("%Y/%m/%d %H:%M:%S")}.\n'
-                                            f'Initiated by OBot {Constants.core_version}.\n'
+                                            f'Initiated by OBot\'s ACM {Constants.core_version}.\n'
                                             f'{gradient_color.name}.', 'B', 20,
                                             line_multiplier=1.32, font_color=mild_text_color)
         none_title_text = StyledString("最近没有比赛，放松一下吧", 'H', 52, padding_bottom=72)
