@@ -144,8 +144,11 @@ def format_timestamp_diff(diff: int) -> str:
 
 
 def format_timestamp(timestamp: int) -> str:
-    locale.setlocale(locale.LC_ALL, 'zh_CN.UTF-8')  # 使 %a 输出 周x
-    return time.strftime('%y/%m/%d %a %H:%M:%S', time.localtime(timestamp))
+    # fix: 修复在 windows 上设置 locale 导致的堆异常
+    weekdays = ['周一', '周二', '周三', '周四', '周五', '周六', '周日']
+    tm = time.localtime(timestamp)
+    weekday = weekdays[tm.tm_wday]
+    return time.strftime('%y/%m/%d ', tm) + f'{weekday} ' + time.strftime('%H:%M:%S', tm)
 
 
 def format_seconds(seconds: int) -> str:

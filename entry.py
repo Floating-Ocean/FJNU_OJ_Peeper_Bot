@@ -1,4 +1,5 @@
 import base64
+import faulthandler
 import importlib
 import os
 
@@ -10,6 +11,7 @@ from robot import open_robot_session
 
 nest_asyncio.apply()
 urllib3.disable_warnings()
+faulthandler.enable()
 
 # 加载模块
 importlib.import_module("src.module")
