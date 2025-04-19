@@ -8,9 +8,9 @@ from easy_pixie import StyledString, calculate_height, draw_text, calculate_widt
     change_alpha
 
 from src.core.constants import Constants
-from src.core.tools import format_timestamp, format_timestamp_diff, format_seconds
+from src.core.util.tools import format_timestamp, format_timestamp_diff, format_seconds
 from src.platform.model import Contest
-from src.render.model import Renderer, RenderableSection
+from src.render.pixie.model import Renderer, RenderableSection
 
 
 _CONTENT_WIDTH = 1024

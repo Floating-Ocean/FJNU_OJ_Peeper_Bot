@@ -2,10 +2,10 @@ import json
 import os
 from datetime import datetime
 
-from src.core.command import command
+from src.core.bot.command import command
 from src.core.constants import Constants
-from src.core.perm import PermissionLevel
-from src.core.tools import is_valid_date, check_is_int
+from src.core.bot.perm import PermissionLevel
+from src.core.util.tools import is_valid_date, check_is_int
 from src.module.message import RobotMessage
 
 _lib_path = os.path.join(Constants.config["lib_path"], "Contest-List-Renderer")

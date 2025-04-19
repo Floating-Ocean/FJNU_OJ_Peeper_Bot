@@ -6,9 +6,9 @@ import secrets
 import easyocr
 from thefuzz import process
 
-from src.core.command import command, PermissionLevel
+from src.core.bot.command import command, PermissionLevel
 from src.core.constants import Constants
-from src.core.tools import save_img, rand_str_len32, get_md5, read_image_with_opencv, check_is_int
+from src.core.util.tools import save_img, rand_str_len32, get_md5, read_image_with_opencv, check_is_int
 from src.module.message import RobotMessage
 
 _lib_path = os.path.join(Constants.config["lib_path"], "Pick-One")
