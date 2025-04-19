@@ -10,9 +10,9 @@ from botpy import BotAPI
 from botpy.message import Message, GroupMessage, C2CMessage
 
 from src.core.constants import Constants
-from src.core.exception import handle_exception
-from src.core.perm import PermissionLevel
-from src.core.tools import april_fool_magic
+from src.core.util.exception import handle_exception
+from src.core.bot.perm import PermissionLevel
+from src.core.util.tools import april_fool_magic
 
 
 class MessageType(Enum):
@@ -120,11 +120,11 @@ class RobotMessage:
         if self.message_type == MessageType.GUILD:
             raise TypeError("No need to upload images for guild messages.")
 
-        method_map = {
+        method_map: dict = {
             MessageType.GROUP: self.api.post_group_file,
             MessageType.C2C: self.api.post_c2c_file
         }
-        common_args = {
+        common_args: dict = {
             "file_type": 1,
             **kwargs
         }

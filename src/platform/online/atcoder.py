@@ -4,12 +4,12 @@ from datetime import datetime
 import pixie
 from lxml.etree import Element
 
-from src.core.tools import fetch_url_element, fetch_url_json, format_int_delta, patch_https_url, decode_range, \
+from src.core.util.tools import fetch_url_element, fetch_url_json, format_int_delta, patch_https_url, decode_range, \
     check_intersect, get_today_timestamp_range
 from src.platform.online.codeforces import Codeforces
 from src.platform.collect.clist import Clist
 from src.platform.model import CompetitivePlatform, Contest
-from src.render.render_user_card import UserCardRenderer
+from src.render.pixie.render_user_card import UserCardRenderer
 
 
 class AtCoder(CompetitivePlatform):

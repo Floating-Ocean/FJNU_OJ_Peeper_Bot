@@ -3,7 +3,7 @@ from easy_pixie import draw_gradient_rect, GradientColor, Loc, GradientDirection
     draw_img, StyledString, draw_text, tuple_to_color
 
 from src.platform.model import CompetitivePlatform
-from src.render.model import Renderer
+from src.render.pixie.model import Renderer
 
 
 class UserCardRenderer(Renderer):

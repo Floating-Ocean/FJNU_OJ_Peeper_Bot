@@ -5,17 +5,17 @@ import traceback
 from pypinyin import pinyin, Style
 from thefuzz import process
 
-from src.core.command import command, __commands__
+from src.core.bot.command import command, __commands__
 from src.core.constants import Constants
-from src.core.exception import UnauthorizedError
-from src.core.output_cached import get_cached_prefix
-from src.core.tools import png2jpg, get_simple_qrcode, check_intersect, get_today_timestamp_range
+from src.core.util.exception import UnauthorizedError
+from src.core.util.output_cached import get_cached_prefix
+from src.core.util.tools import png2jpg, get_simple_qrcode, check_intersect, get_today_timestamp_range
 from src.module.message import RobotMessage, MessageType
 from src.platform.manual.manual import ManualPlatform
 from src.platform.online.atcoder import AtCoder
 from src.platform.online.codeforces import Codeforces
 from src.platform.online.nowcoder import NowCoder
-from src.render.render_contest_list import ContestListRenderer
+from src.render.pixie.render_contest_list import ContestListRenderer
 
 _fixed_reply = {
     "ping": "pong",
@@ -71,19 +71,22 @@ def call_handle_message(message: RobotMessage):
                     original_command(message)
                 except Exception as e:
                     message.report_exception(f'Command<{original_command.__name__}>', traceback.format_exc(), e)
-                return
+                return None
 
         # 如果是频道无at消息可能是发错了或者并非用户希望的处理对象
         if message.is_guild_public():
-            return
+            return None
 
         if '/' in func:
             message.reply("其他指令还在开发中")
+            return None
         else:
             message.reply(f"{match_key_words(func)}")
+            return None
 
     except Exception as e:
         message.report_exception('Core', traceback.format_exc(), e)
+        return None
 
 
 @command(tokens=list(_fixed_reply.keys()))

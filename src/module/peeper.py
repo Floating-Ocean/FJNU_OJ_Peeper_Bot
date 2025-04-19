@@ -5,11 +5,11 @@ import os
 from botpy import Client
 from thefuzz import process
 
-from src.core.command import command
+from src.core.bot.command import command
 from src.core.constants import Constants
-from src.core.exception import ModuleRuntimeError
-from src.core.output_cached import get_cached_prefix
-from src.core.tools import run_shell, escape_mail_url, png2jpg, check_is_int
+from src.core.util.exception import ModuleRuntimeError
+from src.core.util.output_cached import get_cached_prefix
+from src.core.util.tools import run_shell, escape_mail_url, png2jpg, check_is_int
 from src.module.atc import __atc_version__
 from src.module.cf import __cf_version__
 from src.module.color_rand import __color_rand_version__
