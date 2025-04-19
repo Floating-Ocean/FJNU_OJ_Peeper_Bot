@@ -119,7 +119,7 @@ def reply_rand_request(message: RobotMessage):
             message.reply(f'[Random]\n\n{Constants.help_contents["random"]}', modal_words=False)
 
     except Exception as e:
-        message.report_exception('Random', traceback.format_exc(), repr(e))
+        message.report_exception('Random', traceback.format_exc(), e)
 
 
 @command(tokens=["hitokoto", "来句", "来一句", "来句话", "来一句话"])

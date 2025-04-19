@@ -1,6 +1,6 @@
 import pixie
 from easy_pixie import draw_gradient_rect, GradientColor, Loc, GradientDirection, draw_mask_rect, darken_color, \
-    draw_img, StyledString, draw_text
+    draw_img, StyledString, draw_text, tuple_to_color
 
 from src.platform.model import CompetitivePlatform
 from src.render.model import Renderer
@@ -20,16 +20,17 @@ class UserCardRenderer(Renderer):
 
     def render(self) -> pixie.Image:
         img = pixie.Image(1664, 1040)
-        img.fill(pixie.Color(0, 0, 0, 1))
+        img.fill(tuple_to_color((0, 0, 0)))
 
         rk_color = self._platform.rks_color[self._rank_alias]
         draw_gradient_rect(img, Loc(32, 32, 1600, 976), GradientColor(["#fcfcfc", rk_color], [0.0, 1.0], ''),
                            GradientDirection.DIAGONAL_LEFT_TO_RIGHT, 96)
-        draw_mask_rect(img, Loc(32, 32, 1600, 976), pixie.Color(1, 1, 1, 0.6), 96)
+        draw_mask_rect(img, Loc(32, 32, 1600, 976), (255, 255, 255, 152), 96)
 
         text_color = darken_color(pixie.parse_color(rk_color), 0.2)
         pf_raw_text = f"{self._platform.platform_name} ID"
-        draw_img(img, self.get_img_path(self._platform.platform_name), Loc(144 + 32, 120 + 6 + 32, 48, 48), text_color)
+        platform_img = self.load_img_resource(self._platform.platform_name, text_color)
+        draw_img(img, platform_img, Loc(144 + 32, 120 + 6 + 32, 48, 48))
 
         pf_text = StyledString(pf_raw_text, 'H', 44, font_color=text_color, padding_bottom=30)
         handle_text = StyledString(self._handle, 'H', 96, font_color=text_color, padding_bottom=20)

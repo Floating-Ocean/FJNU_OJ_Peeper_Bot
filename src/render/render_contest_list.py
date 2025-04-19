@@ -4,7 +4,8 @@ from datetime import datetime
 
 import pixie
 from easy_pixie import StyledString, calculate_height, draw_text, calculate_width, Loc, draw_img, \
-    pick_gradient_color, draw_gradient_rect, GradientDirection, draw_mask_rect, darken_color
+    pick_gradient_color, draw_gradient_rect, GradientDirection, draw_mask_rect, darken_color, tuple_to_color, \
+    change_alpha
 
 from src.core.constants import Constants
 from src.core.tools import format_timestamp, format_timestamp_diff, format_seconds
@@ -36,8 +37,8 @@ class _ContestItem(RenderableSection):
         self._begin_x = _SIDE_PADDING + calculate_width(self._00_idx_text) + 48
         max_width = _CONTENT_WIDTH + 32 - self._begin_x - 48 - _SIDE_PADDING
 
-        self._time_logo_path = ContestListRenderer.get_img_path("Time")
-        self._info_logo_path = ContestListRenderer.get_img_path("Info")
+        self._time_logo_path = Renderer.load_img_resource("Time", (0, 0, 0))
+        self._info_logo_path = Renderer.load_img_resource("Info", (0, 0, 0))
         self._idx_text = StyledString(f"{self._idx:02d}",
                                       'H', 78,
                                       font_color=(0, 0, 0, 30), padding_bottom=12)
@@ -59,14 +60,14 @@ class _ContestItem(RenderableSection):
         draw_text(img, self._idx_text, current_x, current_y - 14)
         current_x = self._begin_x - _SIDE_PADDING + x
 
-        draw_img(img, ContestListRenderer.get_img_path(self._contest.platform), Loc(current_x, current_y + 4, 20, 20),
-                 pixie.Color(0, 0, 0, 1))
+        platform_img = Renderer.load_img_resource(self._contest.platform, (0, 0, 0))
+        draw_img(img, platform_img, Loc(current_x, current_y + 4, 20, 20))
         current_y = draw_text(img, self._subtitle_text, current_x + 28, current_y)
         current_y = draw_text(img, self._title_text, current_x, current_y)
 
-        draw_img(img, self._time_logo_path, Loc(current_x, current_y + 6, 32, 32), pixie.Color(0, 0, 0, 1))
+        draw_img(img, self._time_logo_path, Loc(current_x, current_y + 6, 32, 32))
         current_y = draw_text(img, self._time_text, current_x + 38, current_y)
-        draw_img(img, self._info_logo_path, Loc(current_x, current_y + 6, 32, 32), pixie.Color(0, 0, 0, 1))
+        draw_img(img, self._info_logo_path, Loc(current_x, current_y + 6, 32, 32))
         current_y = draw_text(img, self._status_text, current_x + 38, current_y)
 
         return current_y
@@ -76,16 +77,15 @@ class _TitleSection(RenderableSection):
 
     def __init__(self, accent_color: str):
         self.accent_dark_color = darken_color(pixie.parse_color(accent_color), 0.3)
-        self.accent_dark_color_tran = pixie.Color(self.accent_dark_color.r, self.accent_dark_color.g,
-                                                  self.accent_dark_color.b, 136 / 255)
-        self.logo_path = ContestListRenderer.get_img_path("Contest")
+        self.accent_dark_color_tran = change_alpha(self.accent_dark_color, 136)
+        self.logo_path = Renderer.load_img_resource("Contest", self.accent_dark_color)
         self.title_text = StyledString("近日算法竞赛", 'H', 96, padding_bottom=4,
                                        font_color=self.accent_dark_color)
         self.subtitle_text = StyledString("Recent Competitive Programming Competitions", 'H', 28,
                                           font_color=self.accent_dark_color_tran)
 
     def render(self, img: pixie.Image, x: int, y: int) -> int:
-        draw_img(img, self.logo_path, Loc(106, 181, 102, 102), self.accent_dark_color)
+        draw_img(img, self.logo_path, Loc(106, 181, 102, 102))
 
         current_x, current_y = x, y
         current_y = draw_text(img, self.title_text, 232, current_y)
@@ -104,17 +104,17 @@ class _ContestsSection(RenderableSection):
         self.running_contests = running_contests
         self.upcoming_contests = upcoming_contests
         self.finished_contests = finished_contests
-        self.running_logo_path = ContestListRenderer.get_img_path("Running")
-        self.upcoming_logo_path = ContestListRenderer.get_img_path("Pending")
-        self.finished_logo_path = ContestListRenderer.get_img_path("Ended")
-        self.mild_ext_text_color = pixie.Color(0.2, 0.2, 0.2, 1)
+        self.mild_ext_color = (0, 0, 0, 192)
+        self.running_logo_path = Renderer.load_img_resource("Running", self.mild_ext_color, 1, 192 / 255)
+        self.upcoming_logo_path = Renderer.load_img_resource("Pending", self.mild_ext_color, 1, 192 / 255)
+        self.finished_logo_path = Renderer.load_img_resource("Ended", self.mild_ext_color, 1, 192 / 255)
         self.none_title_text = StyledString("最近没有比赛，放松一下吧", 'H', 52, padding_bottom=72)
         self.running_title_text = StyledString("RUNNING 正在进行", 'H', 52, padding_bottom=72,
-                                               font_color=self.mild_ext_text_color)
+                                               font_color=self.mild_ext_color)
         self.upcoming_title_text = StyledString("PENDING 即将进行", 'H', 52, padding_bottom=72,
-                                                font_color=self.mild_ext_text_color)
+                                                font_color=self.mild_ext_color)
         self.finished_title_text = StyledString("ENDED 已结束", 'H', 52, padding_bottom=72,
-                                                font_color=self.mild_ext_text_color)
+                                                font_color=self.mild_ext_color)
         self.column = self.get_columns()
 
     def get_columns(self):
@@ -141,7 +141,7 @@ class _ContestsSection(RenderableSection):
                      (self.finished_contests, self.finished_logo_path, self.finished_title_text)]:
                 if len(_contests) > 0:
                     current_y += _TYPE_PADDING
-                    draw_img(img, _type_logo_path, Loc(current_x, current_y + 10, 50, 50), self.mild_ext_text_color)
+                    draw_img(img, _type_logo_path, Loc(current_x, current_y + 10, 50, 50))
                     current_y = draw_text(img, _type_title_text, current_x + 50 + 28, current_y)
                     column_count = math.ceil(len(_contests) / self.column)  # 其实不一定合理，因为item高度不固定
                     current_y -= _CONTEST_PADDING
@@ -181,18 +181,20 @@ class _ContestsSection(RenderableSection):
 class _CopyrightSection(RenderableSection):
 
     def __init__(self, gradient_color_name: str):
-        self.mild_text_color = pixie.Color(0, 0, 0, 136 / 255)
-        self.tips_title_text = StyledString("Tips:", 'H', 36, padding_bottom=64)
+        self.mild_text_color = (0, 0, 0, 136)
+        self.tips_title_text = StyledString("Tips:", 'H', 36, padding_bottom=64,
+                                            font_color=(0, 0, 0, 208))
         self.tips_detail_text = StyledString("数据源于平台数据爬取/API调用/手动填写，仅供参考", 'M', 28,
-                                        line_multiplier=1.32, padding_bottom=64,
-                                        max_width=(_CONTENT_WIDTH - 108 -  # 考虑右边界，不然画出去了
-                                                   calculate_width(self.tips_title_text) - 12 - 48))
+                                             line_multiplier=1.32, padding_bottom=64,
+                                             max_width=(_CONTENT_WIDTH - 108 -  # 考虑右边界，不然画出去了
+                                                        calculate_width(self.tips_title_text) - 12 - 48),
+                                             font_color=(0, 0, 0, 208))
         self.generator_text = StyledString("Contest List Renderer", 'H', 36,
-                                      font_color=(0, 0, 0, 208), padding_bottom=16)
+                                           font_color=(0, 0, 0, 208), padding_bottom=16)
         self.generation_info_text = StyledString(f'Generated at {datetime.now().strftime("%Y/%m/%d %H:%M:%S")}.\n'
-                                            f'Initiated by OBot\'s ACM {Constants.core_version}.\n'
-                                            f'{gradient_color_name}.', 'B', 20,
-                                            line_multiplier=1.32, font_color=self.mild_text_color)
+                                                 f'Initiated by OBot\'s ACM {Constants.core_version}.\n'
+                                                 f'{gradient_color_name}.', 'B', 20,
+                                                 line_multiplier=1.32, font_color=self.mild_text_color)
 
     def render(self, img: pixie.Image, x: int, y: int) -> int:
         current_x, current_y = x, y
@@ -234,11 +236,11 @@ class ContestListRenderer(Renderer):
                          _SECTION_PADDING * (len(render_sections) - 1) + _TOP_PADDING + _BOTTOM_PADDING)
 
         img = pixie.Image(width + 64, height + 64)
-        img.fill(pixie.Color(0, 0, 0, 1))  # 填充黑色背景
+        img.fill(tuple_to_color((0, 0, 0)))  # 填充黑色背景
 
         draw_gradient_rect(img, Loc(32, 32, width, height), gradient_color,
                            GradientDirection.DIAGONAL_RIGHT_TO_LEFT, 96)
-        draw_mask_rect(img, Loc(32, 32, width, height), pixie.Color(1, 1, 1, 0.7), 96)
+        draw_mask_rect(img, Loc(32, 32, width, height), (255, 255, 255, 178), 96)
 
         current_x, current_y = _SIDE_PADDING, _TOP_PADDING - _SECTION_PADDING
 

@@ -1,5 +1,6 @@
 import pixie
-from easy_pixie import draw_rect, Loc, choose_text_color, StyledString, draw_text, calculate_width
+from easy_pixie import draw_rect, Loc, choose_text_color, StyledString, draw_text, calculate_width, \
+    draw_full, hex_to_color
 
 from src.render.model import Renderer
 
@@ -15,10 +16,10 @@ class ColorCardRenderer(Renderer):
 
     def render(self) -> pixie.Image:
         img = pixie.Image(1664, 1050)
-        img.fill(pixie.Color(0, 0, 0, 1))
+        draw_full(img, (0, 0, 0))
 
         paint_bg = pixie.Paint(pixie.SOLID_PAINT)
-        paint_bg.color = pixie.parse_color(self._color["hex"])
+        paint_bg.color = hex_to_color(self._color["hex"])
         draw_rect(img, paint_bg, Loc(32, 32, 1600, 986), 96)
 
         text_color = choose_text_color(paint_bg.color)
