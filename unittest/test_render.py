@@ -1,7 +1,6 @@
 import os
 import random
 import unittest
-from datetime import datetime
 
 from src.core.constants import Constants
 from src.core.util.tools import png2jpg
@@ -10,7 +9,7 @@ from src.platform.manual.manual import ManualPlatform
 from src.platform.online.atcoder import AtCoder
 from src.platform.online.codeforces import Codeforces
 from src.platform.online.nowcoder import NowCoder
-from src.render.html.markdown import md_to_html, render_md_html
+from src.render.html.render_how_to_cook import render_how_to_cook
 from src.render.pixie.render_color_card import ColorCardRenderer
 from src.render.pixie.render_contest_list import ContestListRenderer
 
@@ -54,23 +53,8 @@ class Render(unittest.TestCase):
     def test_cook_md(self):
         _lib_path = os.path.join(Constants.config["lib_path"], "How-To-Cook")
         hui_guo_rou_path = os.path.join(_lib_path, "lib", "dishes", "meat_dish", "回锅肉", "回锅肉.md")
-        css_path = os.path.join(_lib_path, "style", "index.css")
         self.assertTrue(os.path.exists(hui_guo_rou_path))
-        extra_body = f"""
-        <div class="copyright">
-            <div class="tool-container">
-                <p class="tool-name">How to Cook</p>
-                <p class="tool-version">v1.4.0</p>
-            </div>
-            <p class="generation-info">Generated at {datetime.now().strftime("%Y/%m/%d %H:%M:%S")}.<br>
-                                       Initiated by OBot\'s ACM {Constants.core_version}.<br>
-                                       Wish you everything goes well.</p>
-        </div>
-        """
-        md_html = md_to_html(hui_guo_rou_path, css_path, extra_body)
-        print(md_html)
-        self.assertIsNotNone(md_html)
-        render_md_html(hui_guo_rou_path, css_path, "回锅肉.png", extra_body)
+        render_how_to_cook(hui_guo_rou_path, "回锅肉.png")
 
 if __name__ == '__main__':
     unittest.main()
