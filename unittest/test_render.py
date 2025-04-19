@@ -52,9 +52,9 @@ class Render(unittest.TestCase):
 
     def test_cook_md(self):
         _lib_path = os.path.join(Constants.config["lib_path"], "How-To-Cook")
-        hui_guo_rou_path = os.path.join(_lib_path, "lib", "dishes", "meat_dish", "回锅肉", "回锅肉.md")
-        self.assertTrue(os.path.exists(hui_guo_rou_path))
-        render_how_to_cook(hui_guo_rou_path, "回锅肉.png")
+        dish_path = os.path.join(_lib_path, "lib", "dishes", "vegetable_dish", "西红柿豆腐汤羹", "西红柿豆腐汤羹.md")
+        self.assertTrue(os.path.exists(dish_path))
+        render_how_to_cook(dish_path, "西红柿豆腐汤羹.png")
 
 if __name__ == '__main__':
     unittest.main()

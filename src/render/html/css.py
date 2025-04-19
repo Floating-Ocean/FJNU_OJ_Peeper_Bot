@@ -5,18 +5,18 @@ from re import Match
 
 
 def get_basic_css():
-    return f"""
-    body {{ 
+    return """
+    body {
         margin: 0; 
         padding: 20px;
         background: white;
-    }}
-    img {{
+    }
+    img {
         max-width: 100%;
         height: auto;
         display: block;
-        margin: 10px auto;
-    }}
+        margin: 10px auto 10px 0;
+    }
     """
 
 

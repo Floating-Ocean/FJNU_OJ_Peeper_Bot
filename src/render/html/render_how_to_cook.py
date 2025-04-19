@@ -20,5 +20,4 @@ def render_how_to_cook(dish_path: str, output_path: str):
                                        Wish you everything goes well.</p>
         </div>
         """
-    md_html = md_to_html(dish_path, _css_path, extra_body)
     render_md_html(dish_path, _css_path, output_path, extra_body)

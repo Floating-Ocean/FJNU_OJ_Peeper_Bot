@@ -3,6 +3,7 @@ from pathlib import Path
 
 import imgkit
 import markdown2
+from PIL import Image
 from lxml import html
 
 from src.render.html.css import get_basic_css, load_css
@@ -53,11 +54,21 @@ def md_to_html(markdown_path: str, css_path: str, extra_body: str = "") -> str:
 def render_md_html(markdown_path: str, css_path: str, output_path: str, extra_body: str = ""):
     md_html = md_to_html(markdown_path, css_path, extra_body)
     options = {
-        'enable-local-file-access': None,   # 允许本地文件访问
-        'encoding': "UTF-8",                # 强制指定编码
-        'width': '1088',
-        'disable-smart-width': None,        # 禁用自动宽度调整
-        'quality': '100',                   # 图片质量（避免压缩失真）
-        'format': 'png'                     # 明确指定输出格式
+        'enable-local-file-access': None,  # 允许本地文件访问
+        'disable-smart-width': None,  # 禁用自动宽度调整
+        'encoding': "UTF-8",
+        'zoom': '2',
+        'width': '2176',
+        'quality': '100',
+        'format': 'png'
     }
-    imgkit.from_string(md_html, output_path, options=options)
+    tmp_large_img_path = output_path + ".large"
+    imgkit.from_string(md_html, tmp_large_img_path, options=options)
+
+    with Image.open(tmp_large_img_path) as img:
+        width, height = img.size
+        new_size = (int(width * 0.5), int(height * 0.5))
+        resized_img = img.resize(new_size, Image.Resampling.LANCZOS)
+        resized_img.save(output_path, "PNG", optimize=True, quality=100)
+
+    os.remove(tmp_large_img_path)
